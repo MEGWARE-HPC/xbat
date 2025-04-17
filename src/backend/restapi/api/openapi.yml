@@ -1,0 +1,1253 @@
+---
+openapi: 3.0.0
+info:
+  title: xbat rest API
+  description: xbat rest API
+  version: 1.0.0
+  contact:
+    name: MEGWARE Computer Vertrieb und Service GmbH
+    url: https://megware.com
+    email: xbat@megware.com
+  license:
+    name: MIT
+  x-apiClientRegistration:
+    url: /oauth/register_form
+  x-swagger-ui-config:
+    docExpansion: list
+servers:
+  - url: https://localhost:7000/api/v1
+    description: main server
+tags:
+  - name: benchmarks
+    description: Benchmarks
+  - name: jobs
+    description: Jobs
+  - name: nodes
+    description: Info of nodes
+  - name: configuration
+    description: Configurations
+  - name: projects
+    description: Projects
+  - name: measurements
+    description: Measurements
+  - name: users
+    description: Users
+  - name: slurm
+    description: Slurm related information
+  - name: xbatd
+    description: xbatd-related API calls
+  - name: maintenance
+    description: Maintenance
+paths:
+  /benchmarks/{runNr}:
+    get:
+      operationId: backend.restapi.api.benchmarks.get
+      parameters:
+        - $ref: "#/components/parameters/RunNr"
+      tags:
+        - benchmarks
+      summary: Basic information for benchmark
+      responses:
+        "200":
+          description: Successfully retrieved benchmark
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/benchmark"
+      security:
+        - oauth2:
+            - benchmarks_r
+    patch:
+      operationId: backend.restapi.api.benchmarks.patch
+      tags:
+        - benchmarks
+      parameters:
+        - $ref: "#/components/parameters/RunNr"
+      summary: Patch benchmark
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BenchmarkPatch"
+        required: true
+      responses:
+        "204":
+          description: Successfully patched benchmark
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/benchmark"
+      security:
+        - oauth2:
+            - benchmarks_w
+    delete:
+      operationId: backend.restapi.api.benchmarks.delete
+      parameters:
+        - $ref: "#/components/parameters/RunNr"
+      tags:
+        - benchmarks
+      summary: Delete benchmark
+      responses:
+        "200":
+          description: Successfully deleted benchmark
+      security:
+        - oauth2:
+            - benchmarks_w
+  /benchmarks/{runNr}/cancel:
+    post:
+      tags:
+        - slurm
+      summary: Cancel all jobs of specified runNr
+      parameters:
+        - $ref: "#/components/parameters/RunNr"
+      operationId: backend.restapi.api.slurm.cancel_benchmark
+      responses:
+        "204":
+          description: Benchmark cancelled successfully
+      security:
+        - oauth2:
+            - benchmarks_w
+  /benchmarks:
+    get:
+      operationId: backend.restapi.api.benchmarks.get_all
+      tags:
+        - benchmarks
+      parameters:
+        - $ref: "#/components/parameters/BenchmarkIdsQuery"
+      summary: Benchmarks
+      responses:
+        "200":
+          description: Successfully retrieved benchmarks
+      security:
+        - oauth2:
+            - benchmarks_r
+    post:
+      operationId: backend.restapi.api.benchmarks.post
+      tags:
+        - benchmarks
+      summary: Start benchmark
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BenchmarkPost"
+        required: true
+      responses:
+        "204":
+          description: Successfully submitted benchmark
+      security:
+        - oauth2:
+            - benchmarks_submit
+  /benchmarks/export:
+    post:
+      operationId: backend.restapi.api.benchmarks.export_benchmark
+      tags:
+        - maintenance
+      summary: Export benchmark(s)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BenchmarkExport"
+        required: true
+      responses:
+        "200":
+          description: Successfully exported benchmark data
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              description: Indicates that the response contains an attachment file
+              schema:
+                type: string
+                example: attachment; filename="exported_<uuid>.tgz"
+        "204":
+          description: No benchmark data available for export
+      security:
+        - oauth2:
+            - benchmarks_r
+  /benchmarks/import:
+    post:
+      operationId: backend.restapi.api.benchmarks.import_benchmark
+      tags:
+        - maintenance
+      summary: Import benchmark(s)
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/BenchmarkImport"
+        required: true
+      responses:
+        "204":
+          description: Successfully imported benchmark data
+      security:
+        - oauth2:
+            - benchmarks_w
+  /benchmarks/purge:
+    post:
+      operationId: backend.restapi.api.benchmarks.purge
+      tags:
+        - maintenance
+      summary: Purge old benchmarks from QuestDB
+      responses:
+        "204":
+          description: Successfully purged old benchmarks
+      security:
+        - oauth2:
+            - benchmarks_w
+  /jobs:
+    get:
+      operationId: backend.restapi.api.jobs.get_all
+      tags:
+        - jobs
+      parameters:
+        - $ref: "#/components/parameters/JobIdsQuery"
+        - $ref: "#/components/parameters/RunNrsQuery"
+        - $ref: "#/components/parameters/ShortQuery"
+      summary: Returns all jobs
+      responses:
+        "200":
+          description: Retrieved jobs
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - benchmarks_r
+  /jobs/{jobId}:
+    patch:
+      operationId: backend.restapi.api.jobs.patch
+      tags:
+        - jobs
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      summary: Patch job
+      security:
+        - oauth2:
+            - benchmarks_w
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobPatch"
+        required: true
+      responses:
+        "200":
+          description: Successfully patched job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+  /jobs/{jobId}/register:
+    post:
+      operationId: backend.restapi.api.jobs.register
+      tags:
+        - xbatd
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      summary: Register CLI job
+      security:
+        - oauth2:
+            - benchmarks_dw
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobRegister"
+        required: true
+      responses:
+        "200":
+          description: Successfully registered job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobRegistered"
+  /jobs/{jobId}/output:
+    get:
+      operationId: backend.restapi.api.jobs.get_output
+      tags:
+        - jobs
+      summary: Returns output of specified job
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          description: Retrieved Output
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId:
+                    type: integer
+                  output:
+                    type: string
+      security:
+        - oauth2:
+            - benchmarks_r
+  /nodes:
+    get:
+      operationId: backend.restapi.api.nodes.get_all
+      tags:
+        - nodes
+      parameters:
+        - $ref: "#/components/parameters/NodeHashesQuery"
+      summary: Returns system information for specified hashes
+      responses:
+        "200":
+          description: Retrieved nodes
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - benchmarks_r
+  /nodes/{node_hash}/register:
+    post:
+      operationId: backend.restapi.api.nodes.register
+      tags:
+        - xbatd
+      parameters:
+        - $ref: "#/components/parameters/NodeHash"
+      summary: Register node with system information and benchmarks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NodeRegister"
+      responses:
+        "200":
+          description: Successfully registered node
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NodeRegistered"
+      security:
+        - oauth2:
+            - benchmarks_dr
+  /configurations:
+    get:
+      operationId: backend.restapi.api.configurations.get_all
+      tags:
+        - configuration
+      parameters:
+        - $ref: "#/components/parameters/ProjectIdQuery"
+      summary: Returns all previously added configurations
+      responses:
+        "200":
+          description: Successfully retrieved configurations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Configurations"
+      security:
+        - oauth2:
+            - configurations_r
+    post:
+      operationId: backend.restapi.api.configurations.post
+      tags:
+        - configuration
+      summary: Add new configuration
+      requestBody:
+        description: Configuration object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Configuration"
+      responses:
+        "200":
+          description: Successfully added configuration
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - configurations_w
+  /configurations/{_id}:
+    get:
+      operationId: backend.restapi.api.configurations.get
+      parameters:
+        - $ref: "#/components/parameters/DatabaseId"
+      tags:
+        - configuration
+      summary: Returns the specified configuration
+      responses:
+        "200":
+          description: Successfully retrieved configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Configuration"
+      security:
+        - oauth2:
+            - configurations_r
+    put:
+      operationId: backend.restapi.api.configurations.put
+      parameters:
+        - $ref: "#/components/parameters/DatabaseId"
+      tags:
+        - configuration
+      requestBody:
+        description: Configuration object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Configuration"
+      summary: Replaces entire configuration!
+      responses:
+        "200":
+          description: Successfully patched configuration
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - configurations_w
+    delete:
+      operationId: backend.restapi.api.configurations.delete
+      parameters:
+        - $ref: "#/components/parameters/DatabaseId"
+      tags:
+        - configuration
+      summary: Delete specified configuration.
+      responses:
+        "204":
+          description: Successfully deleted configuration
+      security:
+        - oauth2:
+            - configurations_w
+  /projects:
+    get:
+      operationId: backend.restapi.api.projects.get_all
+      tags:
+        - projects
+      summary: Returns all projects
+      responses:
+        "200":
+          description: Successfully retrieved projects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Projects"
+      security:
+        - oauth2:
+            - projects_r
+    post:
+      operationId: backend.restapi.api.projects.post
+      tags:
+        - projects
+      summary: Add new project
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Project"
+        required: true
+      responses:
+        "200":
+          description: Successfully added project
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - projects_w
+  /projects/{project}:
+    get:
+      operationId: backend.restapi.api.projects.get
+      tags:
+        - projects
+      summary: Returns specified project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Successfully retrieved project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+      security:
+        - oauth2:
+            - projects_r
+    patch:
+      operationId: backend.restapi.api.projects.patch
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      tags:
+        - projects
+      summary: Patch project
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Project"
+        required: true
+      responses:
+        "200":
+          description: Successfully patched project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+      security:
+        - oauth2:
+            - projects_w
+    delete:
+      operationId: backend.restapi.api.projects.delete
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      tags:
+        - projects
+      summary: Delete project
+      responses:
+        "204":
+          description: Successfully deleted project
+      security:
+        - oauth2:
+            - projects_w
+  /measurements/{jobId}:
+    get:
+      operationId: backend.restapi.api.measurements.get_measurements
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - $ref: "#/components/parameters/GroupQuery"
+        - $ref: "#/components/parameters/MetricQuery"
+        - $ref: "#/components/parameters/LevelQuery"
+        - $ref: "#/components/parameters/NodeQuery"
+        - $ref: "#/components/parameters/DecilesQuery"
+      tags:
+        - measurements
+      summary: Measurement results
+      description: Returns all results for all measurements of the specified runNr
+      responses:
+        "200":
+          description: Successfully retrieved measurements
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - benchmarks_r
+  /metrics:
+    get:
+      operationId: backend.restapi.api.measurements.get_available_metrics
+      parameters:
+        # oneOf not working here for jobId(s) - see JobIdQuery definition
+        - $ref: "#/components/parameters/JobIdQuery"
+        - $ref: "#/components/parameters/JobIdsQuery"
+        - in: query
+          name: intersect
+          schema:
+            type: boolean
+          description: Returns metrics that are present in all of the specified jobs
+      tags:
+        - measurements
+      summary: Available measurements for specified jobIds
+      description: Returns available metrics for the specified jobIds
+      responses:
+        "200":
+          description: Successfully retrieved meta information
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - benchmarks_r
+  /settings:
+    get:
+      operationId: backend.restapi.api.settings.get
+      tags:
+        - users
+      summary: Get settings
+      responses:
+        "200":
+          description: Successfully retrieved settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Whitelists"
+      security:
+        - oauth2:
+            - settings_r
+    patch:
+      tags:
+        - users
+      operationId: backend.restapi.api.settings.patch
+      summary: Update settings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Whitelists"
+        required: true
+      responses:
+        "200":
+          description: Successfully updated settings
+      security:
+        - oauth2:
+            - settings_w
+  /users:
+    get:
+      operationId: backend.restapi.api.users.get_all
+      tags:
+        - users
+      summary: Get all users
+      responses:
+        "200":
+          description: Successfully retrieved all users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Users"
+      security:
+        - oauth2:
+            - users_r
+  /users/{user_name}:
+    patch:
+      tags:
+        - users
+      operationId: backend.restapi.api.users.patch
+      summary: Update user
+      parameters:
+        - $ref: "#/components/parameters/UserName"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserPatch"
+      responses:
+        "200":
+          description: Successfully updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+      security:
+        - oauth2:
+            - users_w
+  /users/swagger:
+    get:
+      tags:
+        - users
+      summary: Get swagger redirect uris
+      operationId: backend.restapi.api.users.get_swagger_redirect
+      responses:
+        "200":
+          description: Swagger Redirect URIs
+      security:
+        - oauth2:
+            - users_r
+    patch:
+      tags:
+        - users
+      operationId: backend.restapi.api.users.patch_swagger_redirect
+      summary: Update swagger redirect uris
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SwaggerRedirect"
+        required: true
+      responses:
+        "200":
+          description: Successfully updated redirect uris
+      security:
+        - oauth2:
+            - users_w
+  /current_user:
+    get:
+      tags:
+        - users
+      summary: Get currently logged in user
+      operationId: backend.restapi.api.users.current_user
+      responses:
+        "200":
+          description: User info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+      security:
+        - oauth2:
+            - user_self_r
+  /slurm/nodes:
+    get:
+      tags:
+        - slurm
+      summary: Get slurm nodes
+      operationId: backend.restapi.api.slurm.get_nodes
+      responses:
+        "200":
+          description: Successfully retrieved nodes information
+      security:
+        - oauth2:
+            - benchmarks_r
+  /slurm/jobs:
+    get:
+      tags:
+        - slurm
+      summary: Get active slurm jobs
+      operationId: backend.restapi.api.slurm.get_jobs
+      responses:
+        "200":
+          description: Successfully retrieved jobs
+      security:
+        - oauth2:
+            - benchmarks_r
+  /slurm/jobs/{jobId}/cancel:
+    post:
+      tags:
+        - slurm
+      summary: Cancel job
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      operationId: backend.restapi.api.slurm.cancel_job
+      responses:
+        "204":
+          description: Cancelled job successfully
+      security:
+        - oauth2:
+            - benchmarks_w
+  /slurm/partitions:
+    get:
+      tags:
+        - slurm
+      summary: Get slurm partitions
+      operationId: backend.restapi.api.slurm.get_partitions
+      responses:
+        "200":
+          description: Successfully retrieved partitions
+      security:
+        - oauth2:
+            - benchmarks_r
+components:
+  parameters:
+    ProjectIdQuery:
+      name: project
+      in: query
+      schema:
+        type: string
+      description: Project ID
+    ProjectId:
+      name: project
+      in: path
+      schema:
+        type: string
+      required: true
+      description: Project ID
+    UserName:
+      name: user_name
+      required: true
+      in: path
+      schema:
+        type: string
+      description: User Name
+    DatabaseId:
+      name: _id
+      in: path
+      schema:
+        type: string
+      description: Database Id
+      required: true
+    JobId:
+      name: jobId
+      description: Job ID
+      in: path
+      required: true
+      schema:
+        type: integer
+    GroupQuery:
+      name: group
+      description: Metric group
+      in: query
+      required: true
+      schema:
+        type: string
+    MetricQuery:
+      name: metric
+      description: Metric name
+      in: query
+      required: true
+      schema:
+        type: string
+    LevelQuery:
+      name: level
+      description: Aggregation level
+      in: query
+      required: true
+      schema:
+        type: string
+    NodeQuery:
+      name: node
+      description: Node
+      in: query
+      schema:
+        type: string
+    DecilesQuery:
+      name: deciles
+      description: Controls whether traces are summarized to deciles. Only works with level 'thread' or 'core'
+      in: query
+      schema:
+        type: boolean
+    RunNr:
+      in: path
+      name: runNr
+      schema:
+        type: integer
+      required: true
+      description: Run Number
+    RunNrsQuery:
+      name: runNrs
+      in: query
+      schema:
+        type: array
+        items:
+          type: integer
+      description: Run Numbers
+    ShortQuery:
+      name: short
+      in: query
+      schema:
+        type: boolean
+      description: Reduced information
+    # common definition for JobId and JobIds currently not possible due to https://github.com/spec-first/connexion/issues/1569
+    # schema:
+    #     oneOf:
+    #       - type: array
+    #       - type: integer
+    JobIdQuery:
+      name: jobId
+      in: query
+      schema:
+        type: integer
+      description: Job ID
+    JobIdsQuery:
+      name: jobIds
+      in: query
+      schema:
+        type: array
+        items:
+          type: integer
+      description: Job IDs
+    NodeHash:
+      name: node_hash
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Hash for the node
+    NodeHashesQuery:
+      name: node_hashes
+      in: query
+      schema:
+        type: array
+        items:
+          type: string
+      description: Hashes for nodes
+    BenchmarkIdsQuery:
+      name: runNrs
+      in: query
+      schema:
+        type: array
+        items:
+          type: integer
+      description: Benchmark Run Numbers
+  schemas:
+    Users:
+      type: array
+      items:
+        $ref: "#/components/schemas/User"
+    User:
+      description: User
+      properties:
+        user_name:
+          type: string
+        password:
+          type: string
+          format: password
+        user_type:
+          $ref: "#/components/schemas/UserType"
+        uidnumber:
+          type: integer
+        gidnumber:
+          type: integer
+        homedirectory:
+          type: string
+        blocked:
+          type: boolean
+        projects:
+          type: array
+    UserPatch:
+      description: User patch request body
+      properties:
+        user_type:
+          $ref: "#/components/schemas/UserType"
+        blocked:
+          type: boolean
+        projects:
+          type: array
+    Configurations:
+      type: array
+      items:
+        $ref: "#/components/schemas/Configuration"
+    Configuration:
+      description: Benchmark configuration
+      required:
+        - configuration
+      properties:
+        configuration:
+          type: object
+        sharedProjects:
+          type: array
+          items:
+            type: string
+        misc:
+          type: object
+        _id:
+          type: string
+    UserType:
+      description: User Types
+      type: string
+      default: admin
+      enum:
+        - guest
+        - user
+        - manager
+        - admin
+    Node:
+      description: Node data
+      properties:
+        hash:
+          type: string
+        benchmarks:
+          type: object
+        bios:
+          type: object
+        cpu:
+          type: object
+        gpu:
+          type: object
+        memory:
+          type: object
+        os:
+          type: object
+        system:
+          type: object
+    Nodes:
+      description: Nodes by hash
+      type: object
+      additionalProperties:
+        $ref: "#/components/schemas/Node"
+    NodeRegister:
+      description: Node registration data
+      properties:
+        benchmarks:
+          type: object
+        bios:
+          type: object
+        cpu:
+          type: object
+        gpu:
+          type: object
+        memory:
+          type: object
+        os:
+          type: object
+        system:
+          type: object
+    NodeRegistered:
+      description: Response when registering node
+      properties:
+        hash:
+          type: string
+        lastUpdate:
+          type: string
+          format: date-time
+    Job:
+      description: Job
+      properties:
+        configuration:
+          type: object
+        identificator:
+          type: string
+        iteration:
+          type: integer
+        jobId:
+          type: integer
+        jobscriptFile:
+          type: string
+        userJobscriptFile:
+          type: string
+        permutationNr:
+          type: integer
+        runNr:
+          type: integer
+        variables:
+          type: object
+        nodes:
+          type: object
+        jobInfo:
+          type: object
+        runtime:
+          type: string
+        runtimeSeconds:
+          type: integer
+        capturetime:
+          type: string
+        capturetimeSeconds:
+          type: integer
+        captureStart:
+          type: string
+          nullable: true
+        captureEnd:
+          type: string
+          nullable: true
+    JobPatch:
+      description: Data to patch job
+      properties:
+        variantName:
+          type: string
+    JobRegister:
+      description: Register Job
+      properties:
+        hostname:
+          type: string
+        hash:
+          type: string
+    JobRegistered:
+      description: Response when registering job
+      properties:
+        jobId:
+          type: integer
+        enableMonitoring:
+          type: boolean
+        enableLikwid:
+          type: boolean
+        interval:
+          type: integer
+        benchmarkRequired:
+          type: boolean
+    SwaggerRedirect:
+      description: Swagger redirect URIs
+      properties:
+        redirect_uris:
+          type: string
+    BenchmarkPost:
+      description: Object containing all information to start a benchmark
+      required:
+        - name
+        - configId
+      properties:
+        name:
+          type: string
+        configId:
+          type: string
+        sharedProjects:
+          type: array
+          items:
+            type: string
+        variables:
+          type: array
+          items:
+            type: object
+        # for compatibility with TRIGGER_PAYLOAD if submitted via gitlab ci proxy
+        ref:
+          type: string
+        id:
+          type: string
+    BenchmarkPatch:
+      description: Data to patch benchmark
+      properties:
+        sharedProjects:
+          type: array
+          items:
+            type: string
+        name:
+          type: string
+    BenchmarkExport:
+      description: Export benchmarks
+      properties:
+        runNrs:
+          type: array
+          items:
+            type: integer
+          description: List of run numbers to export
+        anonymise:
+          type: boolean
+          default: false
+          description: Anonymise the exported data
+    BenchmarkImport:
+      description: Import benchmarks
+      type: object
+      required:
+        - file
+      properties:
+        file:
+          type: string
+          format: binary
+          description: File to import benchmarks
+        reassignRunNr:
+          type: boolean
+          default: true
+          description: Reassign run numbers during import
+        updateColl:
+          type: boolean
+          default: true
+          description: Update collections during import
+    benchmark:
+      description: Benchmarks
+      properties:
+        runNr:
+          type: integer
+        startTime:
+          type: string
+        endTime:
+          type: string
+        name:
+          type: string
+        issuer:
+          type: string
+        failureReason:
+          type: string
+        configuration:
+          type: object
+        jobIds:
+          type: array
+          items:
+            type: integer
+        state:
+          type: string
+        sharedProjects:
+          type: array
+          items:
+            type: string
+    benchmarkId:
+      description: Benchmark runNr
+      properties:
+        runNr:
+          type: integer
+    Project:
+      description: Projects
+      required:
+        - name
+        - members
+      properties:
+        name:
+          type: string
+        members:
+          type: array
+          items:
+            type: string
+    Projects:
+      type: array
+      items:
+        $ref: "#/components/schemas/Project"
+    Whitelist:
+      description: Whitelist
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        users:
+          type: array
+          items:
+            type: string
+    Whitelists:
+      description: Whitelist object
+      type: object
+      properties:
+        whitelist:
+          $ref: "#/components/schemas/Whitelist"
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      x-tokenInfoFunc: backend.restapi.mod_oauth.get_tokeninfo
+      flows:
+        implicit:
+          authorizationUrl: /oauth/authorize
+          scopes:
+            benchmarks_r: Read benchmarks.
+            benchmarks_w: Write benchmarks.
+            benchmarks_dr: Daemon read benchmarks.
+            benchmarks_dw: Daemon write benchmarks.
+            benchmarks_submit: Submit benchmarks.
+            configurations_r: Read configurations.
+            configurations_w: Write configurations.
+            projects_r: Read projects.
+            projects_w: Write projects.
+            settings_r: Read settings.
+            settings_w: Write settings.
+            users_r: Read users.
+            users_w: Write users.
+            user_self_r: Read own user info
+            user_self_w: Change own user info
+          x-scopesUser:
+            demo:
+              - benchmarks_r
+              - configurations_r
+              - projects_r
+              - settings_r
+              - user_self_r
+              - users_r
+              - benchmarks_dr
+            guest:
+              - benchmarks_r
+              - configurations_r
+              - projects_r
+              - user_self_r
+            user:
+              - benchmarks_r
+              - benchmarks_w
+              - benchmarks_submit
+              - configurations_r
+              - configurations_w
+              - projects_r
+              - user_self_r
+              - user_self_w
+            manager:
+              - benchmarks_r
+              - benchmarks_w
+              - benchmarks_submit
+              - configurations_r
+              - configurations_w
+              - projects_r
+              - projects_w
+              - settings_r
+              - settings_w
+              - user_self_r
+              - user_self_w
+              - users_r
+              - users_w
+            admin:
+              - benchmarks_r
+              - benchmarks_w
+              - configurations_r
+              - configurations_w
+              - projects_r
+              - projects_w
+              - settings_r
+              - settings_w
+              - user_self_r
+              - user_self_w
+              - users_r
+              - users_w
+              - benchmarks_dr
+              - benchmarks_dw
+            xbatd:
+              - benchmarks_dr
+              - benchmarks_dw

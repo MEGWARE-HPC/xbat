@@ -1,0 +1,585 @@
+{
+    "cpu": {
+        "Branching": {
+            "metrics": {
+                "likwid_branch_rate": {
+                    "name": "branch rate",
+                    "description": "Rate of a branch occuring across all instructions (branches / total instructions)"
+                },
+                "likwid_branch_mis_rate": {
+                    "name": "branch misprediction rate",
+                    "description": "Rate of a branch misprediction occuring across all instructions (mispredicted branches / total instructions)"
+                },
+                "likwid_branch_mis_ratio": {
+                    "name": "branch misprediction ratio",
+                    "description": "Ratio of all branch instructions that were mispredicted (mispredicted branches / total branches)"
+                }
+            },
+            "unit": "%",
+            "description": "Branch (mis)prediction",
+            "uri": "cpu#branch-prediction-and-mis-prediction"
+        },
+        "Clock": {
+            "metrics": {
+                "likwid_clk": "clock",
+                "likwid_uncore_clk": "uncore clock"
+            },
+            "description": "CPU clock frequency",
+            "uri": "cpu#clock-speed"
+        },
+        "CPI": {
+            "metrics": {
+                "likwid_cpi": {
+                    "name": "CPI",
+                    "description": "clock frequency / instructions"
+                }
+            },
+            "description": "Clocks per Instruction",
+            "uri": "cpu#clocks-per-instruction-cpi"
+        },
+        "Cycles w/o Execution": {
+            "metrics": {
+                "likwid_cycles_wo_exec": {
+                    "name": "cycles w/o exec",
+                    "description": "cycles without execution / total cycles"
+                },
+                "likwid_cycles_wo_exec_l1d": {
+                    "name": "cycles w/o exec due to L1D",
+                    "description": "cycles without execution due to L1 miss and outstanding load / total cycles"
+                },
+                "likwid_cycles_wo_exec_l2": {
+                    "name": "cycles w/o exec due to L2",
+                    "description": "cycles without execution due to L2 miss and outstanding load / total cycles"
+                },
+                "likwid_cycles_wo_exec_mem_l": {
+                    "name": "cycles w/o exec due to memory loads",
+                    "description": "cycles without execution due to outstanding load on memory subsystem / total cycles"
+                }
+            },
+            "unit": "%",
+            "description": "Cycles spent waiting for data from cache and memory hierarchy",
+            "uri": "cpu#cycles-without-execution"
+        },
+        "FLOPS": {
+            "metrics": {
+                "likwid_flops_sp": {
+                    "name": "SP",
+                    "description": "SP FLOPS scalar and packed (includes AVX/AVX512)"
+                },
+                "likwid_flops_dp": {
+                    "name": "DP",
+                    "description": "DP FLOPS scalar and packed (includes AVX/AVX512)"
+                },
+                "likwid_flops_avx_sp": {
+                    "name": "AVX SP",
+                    "description": "SP FLOPS AVX and AVX512"
+                },
+                "likwid_flops_avx_dp": {
+                    "name": "AVX DP",
+                    "description": "DP FLOPS AVX and AVX512"
+                },
+                "likwid_flops_avx512_sp": {
+                    "name": "AVX512 SP",
+                    "description": "SP FLOPS AVX512"
+                },
+                "likwid_flops_avx512_dp": {
+                    "name": "AVX512 DP",
+                    "description": "DP FLOPS AVX512"
+                }
+            },
+            "unit": "FLOPS",
+            "description": "FLOPS SP/DP",
+            "aggregation": "sum",
+            "uri": "cpu#floating-point-operations-per-second-flops"
+        },
+        "Instructions per Branch (IPB)": {
+            "metrics": {
+                "likwid_instr_branch": {
+                    "name": "ipb",
+                    "description": "total instructions / total branches"
+                }
+            },
+            "uri": "cpu#instructions-per-branch-ipb"
+        },
+        "Stall Count": {
+            "metrics": {
+                "likwid_cycle_stalls": "total stalls"
+            },
+            "description": "Stalls caused by data traffic in cache hierarchy",
+            "aggregation": "sum",
+            "uri": "cpu#stall-count"
+        },
+        "Stalls": {
+            "metrics": {
+                "likwid_cycle_stalls_rate": {
+                    "name": "stall rate",
+                    "description": "stalls / total cycles"
+                },
+                "likwid_cycle_stalls_l1d_mis": {
+                    "name": "stalls L1D misses",
+                    "description": "stalls caused by L1D misses / total stalls"
+                },
+                "likwid_cycle_stalls_l2_mis": {
+                    "name": "stalls L2 misses",
+                    "description": "stalls caused by L2 misses / total stalls"
+                },
+                "likwid_cycle_stalls_mem_l": {
+                    "name": "stalls memory loads",
+                    "description": "stalls caused by memory loads / total stalls"
+                },
+                "likwid_cycle_stalls_l1d_mis_rate": {
+                    "name": "stall rate L1D misses",
+                    "description": "cycles with stalls caused by L1D misses / total cycles"
+                },
+                "likwid_cycle_stalls_l2_mis_rate": {
+                    "name": "stall rate L2 misses",
+                    "description": "cycles with stalls caused by L2 misses / total cycles"
+                },
+                "likwid_cycle_stalls_mem_l_rate": {
+                    "name": "stall rate memory loads",
+                    "description": "cycles with stalls caused by memory loads / total cycles"
+                }
+            },
+            "unit": "%",
+            "description": "Causes for stalls due to data traffic in cache hierarchy",
+            "uri": "cpu#stalls"
+        },
+        "SSE Operations": {
+            "metrics": {
+                "likwid_scalar_sp": {
+                    "name": "scalar SP",
+                    "description": "scalar SP operations"
+                },
+                "likwid_scalar_dp": {
+                    "name": "scalar DP",
+                    "description": "scalar DP operations"
+                },
+                "likwid_packed_sp": {
+                    "name": "packed SP",
+                    "description": "packed SP operations"
+                },
+                "likwid_packed_dp": {
+                    "name": "packed DP",
+                    "description": "packed DP operations"
+                }
+            },
+            "unit": "UOPS",
+            "description": "Scalar and packed operations SP/DP",
+            "aggregation": "sum",
+            "uri": "cpu#sse-operations"
+        },
+        "Usage": {
+            "metrics": {
+                "cpu_user": "user",
+                "cpu_system": "system",
+                "cpu_iowait": "iowait",
+                "cpu_nice": "nice",
+                "cpu_virtual": "virtual"
+            },
+            "stack_min_level": "node",
+            "stacked": false,
+            "unit": "%",
+            "description": "CPU kernel/system activity",
+            "uri": "cpu#cpu-usage"
+        },
+        "Vectorization": {
+            "metrics": {
+                "likwid_vectorization_ratio_sp": {
+                    "name": "vectorization ratio SP",
+                    "description": "vectorized SP operations / total SP operations"
+                },
+                "likwid_vectorization_ratio_dp": {
+                    "name": "vectorization ratio DP",
+                    "description": "vectorized DP operations / total DP operations"
+                }
+            },
+            "description": "Ratio of vectorized code",
+            "unit": "%",
+            "uri": "cpu#vectorisation"
+        }
+    },
+    "cache": {
+        "Bandwidth": {
+            "metrics": {
+                "likwid_l2_bw": "L2 bandwidth",
+                "likwid_l3_bw": "L3 bandwidth",
+                "likwid_l2d_l_bw": "L2D load bandwidth",
+                "likwid_l2d_e_bw": "L2D evict bandwidth",
+                "likwid_l3_l_bw": "L3 load bandwidth",
+                "likwid_l3_e_bw": "L3 evict bandwidth"
+            },
+            "unit": "bytes/s",
+            "description": "L2/L3 cache bandwidth",
+            "aggregation": "sum",
+            "uri": "cache#bandwidth"
+        },
+        "Data Volume": {
+            "metrics": {
+                "likwid_l2_vol": "L2 volume",
+                "likwid_l3_vol": "L3 volume",
+                "likwid_l2d_l_vol": "L2D load volume",
+                "likwid_l3_l_vol": "L3 load volume",
+                "likwid_l2d_e_vol": "L2D evict volume",
+                "likwid_l3_e_vol": "L3 evict volume"
+            },
+            "unit": "byte",
+            "description": "L2/L3 cache data volume",
+            "aggregation": "sum",
+            "uri": "cache#data-volume"
+        },
+        "Miss Rate": {
+            "metrics": {
+                "likwid_l2_mis_rate": {
+                    "name": "L2 miss rate",
+                    "description": "L2 misses / total instructions"
+                },
+                "likwid_l3_mis_rate": {
+                    "name": "L3 miss rate",
+                    "description": "L3 misses / total instructions"
+                }
+            },
+            "unit": "%",
+            "description": "Rate of requested data not in cache",
+            "uri": "cache#miss-rate"
+        },
+        "Miss Ratio": {
+            "metrics": {
+                "likwid_l2_mis_ratio": {
+                    "name": "L2 miss ratio",
+                    "description": "L2 misses / total requests"
+                },
+                "likwid_l3_mis_ratio": {
+                    "name": "L3 miss ratio",
+                    "description": "L3 misses / total requests"
+                }
+            },
+            "description": "Ratio of data loaded from higher levels",
+            "uri": "cache#miss-ratio"
+        },
+        "Request Rate": {
+            "metrics": {
+                "likwid_l2_req_rate": {
+                    "name": "L2 request rate",
+                    "description": "L2 requests / total instructions"
+                },
+                "likwid_l3_req_rate": {
+                    "name": "L3 request rate",
+                    "description": "L3 requests / total instructions"
+                }
+            },
+            "unit": "%",
+            "description": "Data intensity (accesses per instruction)",
+            "uri": "cache#request-rate"
+        },
+        "L1I Rates": {
+            "metrics": {
+                "likwid_l1i_mis_rate": "L1I miss rate",
+                "likwid_l1i_req_ratio": "L1I request rate",
+                "likwid_l1i_stall_rate": "L1I stall rate"
+            },
+            "unit": "%",
+            "description": "L1 instruction cache miss rate",
+            "uri": "cache#l1i-rates"
+        },
+        "L1I Miss Ratio": {
+            "metrics": {
+                "likwid_l1i_miss_ratio": "L1I miss ratio"
+            },
+            "description": "L1 instruction cache miss ratio",
+            "uri": "cache#l1i-miss-ratio"
+        }
+    },
+    "memory": {
+        "Bandwidth": {
+            "metrics": {
+                "likwid_mem_bw": "total",
+                "likwid_mem_r_bw": "read",
+                "likwid_mem_l_bw": "load",
+                "likwid_mem_w_bw": "write",
+                "likwid_mem_e_bw": "evict"
+            },
+            "unit": "bytes/s",
+            "description": "Data bandwidth from and to main memory",
+            "aggregation": "sum",
+            "uri": "memory#bandwidth"
+        },
+        "Data Volume": {
+            "metrics": {
+                "likwid_mem_vol": "total",
+                "likwid_mem_r_vol": "read",
+                "likwid_mem_l_vol": "load",
+                "likwid_mem_w_vol": "write",
+                "likwid_mem_e_vol": "evict"
+            },
+            "unit": "bytes",
+            "description": "Data transferred from and to main memory",
+            "aggregation": "sum",
+            "uri": "memory#data-volume"
+        },
+        "DRAM Usage": {
+            "metrics": {
+                "mem_usage": "usage",
+                "mem_swap_usage": "swap usage"
+            },
+            "unit": "%",
+            "uri": "memory#dram-usage"
+        },
+        "DRAM Used": {
+            "metrics": {
+                "mem_used": "used",
+                "mem_swap_used": "swap used",
+                "mem_buffers": "buffers",
+                "mem_cached": "cached"
+            },
+            "unit": "byte",
+            "uri": "memory#dram-used"
+        },
+        "Load To Store Ratio": {
+            "metrics": {
+                "likwid_l_s_ratio": "load to store"
+            },
+            "uri": "memory#load-to-store-ratio"
+        },
+        "HBM Bandwidth": {
+            "metrics": {
+                "likwid_hbm_r_bw": "read",
+                "likwid_hbm_w_bw": "write bandwidth",
+                "likwid_hbm_bw": "total bandwidth"
+            },
+            "unit": "bytes/s",
+            "aggregation": "sum",
+            "uri": "memory#hbm-bandwidth"
+        },
+        "HBM Volume": {
+            "metrics": {
+                "likwid_hbm_vol": "total",
+                "likwid_hbm_r_vol": "read",
+                "likwid_hbm_w_vol": "write"
+            },
+            "unit": "bytes",
+            "aggregation": "sum",
+            "uri": "memory#hbm-volume"
+        },
+        "UPI Bandwidth": {
+            "metrics": {
+                "likwid_upi_bw": "total",
+                "likwid_upi_r_bw": "received",
+                "likwid_upi_t_bw": "sent"
+            },
+            "unit": "bytes/s",
+            "description": "UPI (Ultra Path Interconnect) bandwidth",
+            "aggregation": "sum",
+            "uri": "memory#upi-bandwidth"
+        },
+        "UPI Data Volume": {
+            "metrics": {
+                "likwid_upi_vol": "total",
+                "likwid_upi_r_vol": "received",
+                "likwid_upi_t_vol": "sent"
+            },
+            "unit": "bytes",
+            "description": "UPI (Ultra Path Interconnect) data volume",
+            "aggregation": "sum"
+        }
+    },
+    "gpu": {
+        "Clock": {
+            "metrics": {
+                "gpu_clk_sm": "sm",
+                "gpu_clk_mem": "memory",
+                "gpu_clk_graphics": "graphics",
+                "gpu_clk_video": "video"
+            },
+            "unit": "MHz",
+            "uri": "gpu#clock"
+        },
+        "Memory Usage": {
+            "metrics": {
+                "gpu_mem_fb_usage": "frame buffer",
+                "gpu_mem_bar1_usage": "bar1",
+                "gpu_mem_util": "global"
+            },
+            "unit": "%",
+            "uri": "gpu#memory-usage"
+        },
+        "Memory Used": {
+            "metrics": {
+                "gpu_mem_fb_used": "frame buffer",
+                "gpu_mem_bar1_used": "bar1"
+            },
+            "unit": "byte",
+            "uri": "gpu#memory-used"
+        },
+        "P-States": {
+            "metrics": {
+                "gpu_pstate": "p-state"
+            },
+            "uri": "gpu#p-states"
+        },
+        "Utilization": {
+            "metrics": {
+                "gpu_util": "util",
+                "gpu_enc_util": "encoder util",
+                "gpu_dec_util": "decoder util",
+                "gpu_mm_util": "multimedia util"
+            },
+            "unit": "%",
+            "uri": "gpu#utilization"
+        }
+    },
+    "energy": {
+        "CPU Power": {
+            "metrics": {
+                "likwid_cpu_power": "cpu power"
+            },
+            "unit": "W",
+            "aggregation": "sum",
+            "uri": "energy#cpu-power"
+        },
+        "Core Power": {
+            "metrics": {
+                "likwid_core_power": "core power"
+            },
+            "unit": "W",
+            "aggregation": "sum",
+            "uri": "energy#core-power"
+        },
+        "DRAM Power": {
+            "metrics": {
+                "likwid_dram_power": "dram power"
+            },
+            "unit": "W",
+            "aggregation": "sum",
+            "uri": "energy#dram-power"
+        },
+        "FPGA Power": {
+            "metrics": {
+                "fpga_power": "fpga power"
+            },
+            "unit": "W",
+            "aggregation": "sum",
+            "uri": "energy#fpga-power-xilinx"
+        },
+        "GPU Power": {
+            "metrics": {
+                "gpu_power": "gpu power",
+                "gpu_power_limit": "gpu power limit"
+            },
+            "unit": "W",
+            "aggregation": "sum",
+            "uri": "energy#gpu-power"
+        },
+        "System Power": {
+            "metrics": {
+                "ipmi_power_system": "system power"
+            },
+            "unit": "W",
+            "aggregation": "sum",
+            "uri": "energy#system-power"
+        },
+        "CPU Temperature": {
+            "metrics": {
+                "likwid_cpu_temp": "cpu temperature"
+            },
+            "unit": "°C"
+        }
+    },
+    "disk": {
+        "Bandwidth": {
+            "metrics": {
+                "disk_r_bw": "read",
+                "disk_w_bw": "write"
+            },
+            "unit": "byte/s",
+            "aggregation": "sum",
+            "uri": "disk#bandwidth"
+        },
+        "Merged Requests": {
+            "metrics": {
+                "disk_rqm": "all",
+                "disk_rrqm": "read",
+                "disk_wrqm": "write",
+                "disk_drqm": "discard"
+            },
+            "unit": "%",
+            "uri": "disk#merged-requests"
+        },
+        "Requests": {
+            "metrics": {
+                "disk_r_req_s": "read",
+                "disk_w_req_s": "write",
+                "disk_d_req_s": "discard",
+                "disk_f_req_s": "flush"
+            },
+            "unit": "requests/s",
+            "aggregation": "sum",
+            "uri": "disk#requests"
+        },
+        "Request Size": {
+            "metrics": {
+                "disk_areq_sz": "all",
+                "disk_rareq_sz": "read",
+                "disk_wareq_sz": "write",
+                "disk_dareq_sz": "discard"
+            },
+            "unit": "byte",
+            "description": "Average request size",
+            "uri": "disk#request-size"
+        },
+        "Utilization": {
+            "metrics": {
+                "disk_util": "utilization"
+            },
+            "unit": "%",
+            "uri": "disk#utilization"
+        },
+        "Wait Time": {
+            "metrics": {
+                "disk_await": "all",
+                "disk_r_await": "read",
+                "disk_w_await": "write"
+            },
+            "unit": "ms",
+            "description": "Average wait time for requests to be served",
+            "uri": "disk#wait-time"
+        }
+    },
+    "interconnect": {
+        "Ethernet Bandwidth": {
+            "metrics": {
+                "eth_rcv_bw": "receive",
+                "eth_xmit_bw": "transmit"
+            },
+            "unit": "bytes/s",
+            "aggregation": "sum",
+            "uri": "interconnect#ethernet-bandwidth"
+        },
+        "Ethernet Packages": {
+            "metrics": {
+                "eth_rcv_pkg": "receive",
+                "eth_xmit_pkg": "transmit"
+            },
+            "unit": "packets/s",
+            "aggregation": "sum",
+            "uri": "interconnect#ethernet-packages"
+        },
+        "Infiniband Bandwidth": {
+            "metrics": {
+                "ib_rcv_bw": "receive",
+                "ib_xmit_bw": "transmit"
+            },
+            "unit": "bytes/s",
+            "aggregation": "sum",
+            "uri": "interconnect#infiniband-bandwidth"
+        },
+        "Infiniband Packages": {
+            "metrics": {
+                "ib_rcv_pkg": "receive",
+                "ib_xmit_pkg": "transmit"
+            },
+            "unit": "packets/s",
+            "aggregation": "sum",
+            "uri": "interconnect#infiniband-packages"
+        }
+    }
+}

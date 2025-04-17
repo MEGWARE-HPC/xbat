@@ -1,0 +1,29 @@
+[Unit]
+Description=xbat compose infrastructure
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+
+# for questdb
+LimitNOFILE=infinity
+LimitMEMLOCK=infinity
+
+WorkingDirectory=/usr/local/share/xbat
+
+# extract some environment variables from xbat.conf for docker-compose.yml
+ExecStartPre=/bin/bash /usr/local/share/xbat/docker-env.sh
+EnvironmentFile=-/etc/xbat/docker-compose.env
+
+Environment=PIPE_POOLSIZE=4
+ExecStartPre= /bin/bash /usr/local/share/xbat/pipe-setup.sh
+ExecStartPre=/bin/bash /usr/local/share/xbat/pgbouncer-setup.sh
+ExecStart=#EXECUTOR#-compose up
+ExecStop=#EXECUTOR#-compose down
+ExecStopPost=/usr/local/share/xbat/pipe-teardown.sh
+
+[Install]
+WantedBy=multi-user.target

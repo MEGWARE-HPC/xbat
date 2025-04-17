@@ -1,0 +1,18 @@
+# service only required when deploying database outside of docker-compose infrastructure
+[Unit]
+Description=Podman xbat questdb
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Restart=always
+TimeoutStopSec=30
+# remove container if not properly cleaned up on previous run
+ExecStartPre=-podman rm xbat-questdb
+ExecStart=/usr/bin/podman run --conmon-pidfile=/run/xbat-questdb.pid --detach --rm -p 9000:9000 -p 9009:9009 -p 8812:8812 -v /etc/localtime:/etc/localtime:ro -v /var/lib/questdb:/var/lib/questdb -v /var/log/questdb:/var/log/questdb -v /etc/xbat/questdb.conf:/var/lib/questdb/conf/server.conf:ro --name xbat-questdb questdb/questdb:7.3.10
+ExecStop=/usr/bin/podman stop -t 10 xbat-questdb
+PIDFile=/run/xbat-questdb.pid
+Type=forking
+
+[Install]
+WantedBy=multi-user.target

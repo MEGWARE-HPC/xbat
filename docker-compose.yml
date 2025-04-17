@@ -1,0 +1,131 @@
+version: "3"
+
+services:
+    xbat-nginx:
+        image: xbat_nginx
+        container_name: xbat-nginx
+        restart: unless-stopped
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+            -  #CERT_DIR#:/etc/ssl/:ro
+        ports:
+            - "#FRONTEND_NETWORK#:#FRONTEND_PORT#:7000"
+        depends_on:
+            - xbat-ui
+            - xbat-backend
+    xbat-backend:
+        image: xbat_backend
+        container_name: xbat-backend
+        restart: unless-stopped
+        environment:
+            - PYTHONUNBUFFERED=1
+        volumes:
+            - /etc/xbat/xbat.conf:/etc/xbat/xbat.conf:ro
+            - /etc/localtime:/etc/localtime:ro
+            - /var/log/xbat/:/var/log/xbat/
+            - /run/xbat/:/run/xbat/
+            #### for PAM authentication  ####
+            - /var/lib/sss/pipes/:/var/lib/sss/pipes/
+            - /etc/pam.d/:/etc/pam.d/:ro
+            # symlinked to /etc/pam.d/system-auth if authselect used
+            - /etc/authselect:/etc/authselect:ro
+        depends_on:
+            - xbat-mongodb
+            - xbat-ctld
+            - xbat-valkey
+            - xbat-pgbouncer
+        expose:
+            - 7001
+    xbat-ctld:
+        image: xbat_ctld
+        container_name: xbat-ctld
+        restart: unless-stopped
+        environment:
+            - PYTHONUNBUFFERED=1
+        volumes:
+            - /etc/xbat/xbat.conf:/etc/xbat/xbat.conf:ro
+            - /etc/localtime:/etc/localtime:ro
+            - /var/log/xbat/:/var/log/xbat/
+            # for docker-host-pipe
+            - /run/xbat/:/run/xbat/
+            # mount as 'shared' to help with autofs/automount problems
+            #- HOME_MNT#:shared
+        depends_on:
+            - xbat-mongodb
+            - xbat-pgbouncer
+        expose:
+            - 7002
+    xbat-ui:
+        image: xbat_ui
+        container_name: xbat-ui
+        restart: unless-stopped
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+        environment:
+            - NUXT_PUBLIC_DEMO_MODE=${DEMO_ENABLED}
+            - NUXT_PUBLIC_DEMO_USER=${DEMO_USER}
+            - NUXT_PUBLIC_DEMO_PASSWORD=${DEMO_PASSWORD}
+        depends_on:
+            - xbat-backend
+        expose:
+            - 7003
+    xbat-mongodb:
+        image: xbat_mongodb
+        restart: unless-stopped
+        container_name: xbat-mongodb
+        user: "#XBAT_UID#:#XBAT_GID#"
+        volumes:
+            -  #VAR_LIB#/mongodb/:/var/lib/mongodb/
+            -  #VAR_LOG#/mongodb/mongod.log:/var/log/mongodb/mongod.log
+            - /etc/xbat/mongod.conf:/etc/mongod.conf:ro
+            - /etc/localtime:/etc/localtime:ro
+            # TODO mongo user fails creating socket in container due to permissions (but only with podman)
+            # Mounting tmp is only a workaround
+            - /tmp/:/tmp/
+        ports:
+            - "#FRONTEND_NETWORK#:27017:27017"
+
+    xbat-questdb:
+        image: docker.io/questdb/questdb:8.1.4
+        restart: unless-stopped
+        container_name: xbat-questdb
+        user: "#XBAT_UID#:#XBAT_GID#"
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+            -  #VAR_LIB#/questdb:/var/lib/questdb
+            -  #VAR_LOG#/questdb:/var/log/questdb
+            - /etc/xbat/questdb.conf:/var/lib/questdb/conf/server.conf:ro
+            - /etc/xbat/questdb-log.conf:/var/lib/questdb/conf/log.conf:ro
+        expose:
+            - 8812
+        ports:
+            #- "#FRONTEND_NETWORK#:8812:8812"
+            - "#FRONTEND_NETWORK#:9000:9000"
+            - "#FRONTEND_NETWORK#:9003:9003"
+    xbat-valkey:
+        image: docker.io/valkey/valkey:7.2
+        restart: unless-stopped
+        container_name: xbat-valkey
+        user: "#XBAT_UID#:#XBAT_GID#"
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+            - /etc/xbat/valkey.conf:/usr/local/etc/valkey/valkey.conf
+            #-  #VAR_LIB#/valkey:/data
+        expose:
+            - 6379
+        command: ["/usr/local/etc/valkey/valkey.conf"]
+    xbat-pgbouncer:
+        image: docker.io/bitnami/pgbouncer:1.23.1
+        restart: unless-stopped
+        container_name: xbat-pgbouncer
+        user: "#XBAT_UID#:#XBAT_GID#"
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+            - /etc/xbat/pgbouncer.ini:/bitnami/pgbouncer/conf/pgbouncer.ini:ro
+            - /etc/xbat/userlists.txt:/bitnami/pgbouncer/conf/userlists.txt:ro
+        depends_on:
+            - xbat-questdb
+        expose:
+            - 6432
+        entrypoint: ["/opt/bitnami/pgbouncer/bin/pgbouncer"]
+        command: ["/bitnami/pgbouncer/conf/pgbouncer.ini"]

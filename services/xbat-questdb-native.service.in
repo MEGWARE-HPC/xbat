@@ -1,0 +1,26 @@
+# service only required when deploying database outside of docker-compose infrastructure
+#
+# Create user and home dir:
+# groupadd -r questdb
+# useradd -r -g questdb -d /var/lib/questdb -s /sbin/nologin -c "QuestDB user" questdb
+# mkdir /var/lib/questdb && chown questdb: /var/lib/questdb
+# chmod 700 /var/lib/questdb
+[Unit]
+Description=xbat service for native questdb instance
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=questdb
+Group=questdb
+Restart=always
+TimeoutStopSec=60
+ExecStart=<install-path>/questdb/bin/questdb.sh start -d <home-path>/data
+ExecStop=<install-path>/questdb/bin/questdb.sh stop -d <home-path>/data
+Type=forking
+PrivateTmp=true
+ProtectSystem=full
+UMask=007
+
+[Install]
+WantedBy=multi-user.target

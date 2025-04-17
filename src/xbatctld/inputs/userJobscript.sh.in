@@ -1,0 +1,11 @@
+#!/bin/bash
+#SBATCH --job-name=#JOB-NAME#
+#SBATCH --ntasks=#NTASKS#
+#SBATCH --partition=#PARTITION#
+#SBATCH --nodes=#NODES#
+#SBATCH --nodelist=#NODELIST#
+#SBATCH --time=#TIME#
+#SBATCH --output=#OUTPUT#
+#SBATCH --error=#ERROR#
+
+#SCRIPT#

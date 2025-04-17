@@ -1,0 +1,10 @@
+{
+    // https://nuxt.com/docs/guide/concepts/typescript
+    "compilerOptions": {
+        "typeRoots": [
+            "./node_modules/@types",
+            "./types"
+        ],
+    },
+    "extends": "./.nuxt/tsconfig.json",
+}

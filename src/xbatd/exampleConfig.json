@@ -1,0 +1,10 @@
+{
+    "jobId": "15868",
+    "hostname": "laptop",
+    "interval": "3",
+    "enableLikwid": false,
+    "outputPath": "/home/ntippman/.xbat/measurements/9999",
+    "user": "ntippman",
+    "dbAddress": "localhost",
+    "dbPort": "9009"
+}

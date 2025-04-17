@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        {% block head %}
+
+            <meta charset="utf-8">
+
+            <link rel="shortcut icon" type="image/ico" href="/favicon.ico" />
+
+            <meta http-equiv="X-UA-Compatible" content="IE=edge">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+
+            {% block title %}
+                {% if title %}
+                <title>xbat - {{ title }}</title>
+                {% else %}
+                <title>xbat</title>
+                {% endif %}
+            {% endblock %}
+        {% endblock head %}
+    </head>
+
+    <body>
+        {% block body %}{% endblock %}
+    </body>
+</html>

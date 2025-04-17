@@ -1,0 +1,117 @@
+user              root;
+worker_processes  8;
+
+error_log  /var/log/nginx/error.log;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+
+	include       /etc/nginx/mime.types;
+	default_type  application/octet-stream;
+
+	log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+		'$status $body_bytes_sent "$http_referer" '
+		'"$http_user_agent" "$http_x_forwarded_for"';
+
+	access_log  /var/log/nginx/access.log  main;
+
+	sendfile       on;
+	tcp_nopush     on;
+	tcp_nodelay    off;
+
+	keepalive_timeout  65;
+
+	client_max_body_size 0;
+
+	gzip  on;
+    gzip_types text/plain text/css application/json application/javascript font/woff font/woff2 text/javascript;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_buffers 16 8k;
+    gzip_min_length 256;
+
+    upstream docker-xbat-backend {
+        server xbat-backend:7001;
+    }
+
+    upstream docker-xbat-ui {
+        server xbat-ui:7003;
+    }
+
+    upstream docker-xbat-questdb {
+        server #QUESTDB_ADDRESS#;
+    }
+
+    map $http_referer $is_questdb_referer {
+        default 0;
+        "~*questdb" 1;
+    }
+
+    server {
+        listen 7000 ssl;
+        listen [::]:7000 ssl;
+
+        # ssl redirection (use $http_host to have same port as http request, e.g. for ssh tunneling)
+        error_page 497 301 =307 https://$http_host$request_uri;
+
+        access_log /var/log/nginx/data-access.log combined;
+
+        ssl_certificate #SSL_CERTIFICATE#;
+        ssl_certificate_key #SSL_CERTIFICATE_KEY#;
+
+        client_max_body_size 10M;
+        proxy_read_timeout 60s;
+
+        proxy_set_header X-Real-IP  $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+
+        location / {
+
+            # pass all subsequent questdb request with "questdb" in referer to xbat-questdb
+            if ($is_questdb_referer) {
+                proxy_pass http://docker-xbat-questdb;
+            }
+
+            proxy_pass http://docker-xbat-ui;
+            proxy_redirect http://docker-xbat-ui/ $scheme://$http_host/;
+        }
+
+        # /import route with higher read timeout and increased client body size
+        location ~ /benchmarks/import {
+            client_max_body_size 2G;
+            proxy_pass http://docker-xbat-backend;
+            proxy_redirect http://docker-xbat-backend/ $scheme://$http_host/;
+            proxy_read_timeout 300s;
+            proxy_buffering off;
+
+            
+        }
+
+        # /export route with higher read timeout
+        location ~ /benchmarks/export {
+            proxy_pass http://docker-xbat-backend;
+            proxy_redirect http://docker-xbat-backend/ $scheme://$http_host/;
+            proxy_read_timeout 300s;
+            proxy_buffering off;
+        }
+
+        location ~ /(api/v1|oauth|swagger)/ {
+            proxy_pass http://docker-xbat-backend;
+            proxy_redirect http://docker-xbat-backend/ $scheme://$http_host/;
+        }
+
+        # proxy initial questdb request to xbat-questdb
+        # to make questdb UI accessible through same port as xbat
+        location /questdb/ {
+            proxy_pass http://docker-xbat-questdb/;
+            proxy_redirect http://docker-xbat-questdb/ $scheme://$http_host/questdb/;
+        }
+    }
+
+}

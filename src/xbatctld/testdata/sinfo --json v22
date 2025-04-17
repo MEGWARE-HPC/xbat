@@ -1,0 +1,65 @@
+{
+    "meta": {
+        "plugin": {
+            "type": "openapi\/v0.0.38",
+            "name": "Slurm OpenAPI v0.0.38"
+        },
+        "Slurm": {
+            "version": {
+                "major": 22,
+                "micro": 6,
+                "minor": 5
+            },
+            "release": "22.05.6"
+        }
+    },
+    "errors": [],
+    "nodes": [{
+        "architecture": "x86_64",
+        "burstbuffer_network_address": "",
+        "boards": 1,
+        "boot_time": 1711356715,
+        "comment": "",
+        "cores": 36,
+        "cpu_binding": 0,
+        "cpu_load": 2314,
+        "extra": "",
+        "free_memory": 117172,
+        "cpus": 144,
+        "last_busy": 1712838293,
+        "features": "xbat",
+        "active_features": "xbat",
+        "gres": "",
+        "gres_drained": "N\/A",
+        "gres_used": "gpu:0",
+        "mcs_label": "",
+        "name": "node0001",
+        "next_state_after_reboot": "invalid",
+        "address": "node0001",
+        "hostname": "node0001",
+        "state": "idle",
+        "state_flags": [],
+        "next_state_after_reboot_flags": [],
+        "operating_system":
+        "Linux 4.18.0-372.9.1.el8.x86_64 #1 SMP Tue May 10 14:48:47 UTC 2022",
+        "owner": null,
+        "partitions": ["benchmark", "dev"],
+        "port": 6818,
+        "real_memory": 245000,
+        "reason": "",
+        "reason_changed_at": 0,
+        "reason_set_by_user": null,
+        "slurmd_start_time": 1711359230,
+        "sockets": 2,
+        "threads": 2,
+        "temporary_disk": 0,
+        "weight": 1,
+        "tres": "cpu=144,mem=245000M,billing=144",
+        "slurmd_version": "22.05.6",
+        "alloc_memory": 0,
+        "alloc_cpus": 0,
+        "idle_cpus": 144,
+        "tres_used": null,
+        "tres_weighted": 0.0
+    }]
+}

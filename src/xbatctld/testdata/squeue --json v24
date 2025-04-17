@@ -1,0 +1,397 @@
+{
+    "jobs": [
+        {
+            "account": "beta",
+            "accrue_time": {
+                "set": true,
+                "infinite": false,
+                "number": 1730982828
+            },
+            "admin_comment": "",
+            "allocating_node": "login01",
+            "array_job_id": {
+                "set": true,
+                "infinite": false,
+                "number": 0
+            },
+            "array_task_id": {
+                "set": false,
+                "infinite": false,
+                "number": 0
+            },
+            "array_max_tasks": {
+                "set": true,
+                "infinite": false,
+                "number": 0
+            },
+            "array_task_string": "",
+            "association_id": 90,
+            "batch_features": "",
+            "batch_flag": true,
+            "batch_host": "",
+            "flags": [
+                "EXACT_TASK_COUNT_REQUESTED",
+                "USING_DEFAULT_ACCOUNT",
+                "USING_DEFAULT_QOS",
+                "USING_DEFAULT_WCKEY"
+            ],
+            "burst_buffer": "",
+            "burst_buffer_state": "",
+            "cluster": "testcluster",
+            "cluster_features": "",
+            "command": "\/beegfs\/home\/d\/demo\/.xbat\/jobscripts\/269-0-0.sh",
+            "comment": "",
+            "container": "",
+            "container_id": "",
+            "contiguous": false,
+            "core_spec": 0,
+            "thread_spec": 32766,
+            "cores_per_socket": {
+                "set": false,
+                "infinite": false,
+                "number": 0
+            },
+            "billable_tres": {
+                "set": false,
+                "infinite": false,
+                "number": 0.0
+            },
+            "cpus_per_task": {
+                "set": true,
+                "infinite": false,
+                "number": 1
+            },
+            "cpu_frequency_minimum": {
+                "set": false,
+                "infinite": false,
+                "number": 0
+            },
+            "cpu_frequency_maximum": {
+                "set": false,
+                "infinite": false,
+                "number": 0
+            },
+            "cpu_frequency_governor": {
+                "set": false,
+                "infinite": false,
+                "number": 0
+            },
+            "cpus_per_tres": "",
+            "cron": "",
+            "deadline": {
+                "set": true,
+                "infinite": false,
+                "number": 0
+            },
+            "delay_boot": {
+                "set": true,
+                "infinite": false,
+                "number": 0
+            },
+            "dependency": "",
+            "derived_exit_code": {
+                "status": [
+                    "SUCCESS"
+                ],
+                "return_code": {
+                    "set": true,
+                    "infinite": false,
+                    "number": 0
+                },
+                "signal": {
+                    "id": {
+                        "set": false,
+                        "infinite": false,
+                        "number": 0
+                    },
+                    "name": ""
+                }
+            },
+            "eligible_time": {
+                "set": true,
+                "infinite": false,
+                "number": 1730982828
+            },
+            "end_time": {
+                "set": true,
+                "infinite": false,
+                "number": 0
+            },
+            "excluded_nodes": "",
+            "exit_code": {
+                "status": [
+                    "SUCCESS"
+                ],
+                "return_code": {
+                    "set": true,
+                    "infinite": false,
+                    "number": 0
+                },
+                "signal": {
+                    "id": {
+                        "set": false,
+                        "infinite": false,
+                        "number": 0
+                    },
+                    "name": ""
+                }
+            },
+            "extra": "",
+            "failed_node": "",
+            "features": "xbat",
+            "federation_origin": "",
+            "federation_siblings_active": "",
+            "federation_siblings_viable": "",
+            "gres_detail": [],
+            "group_id": 215119,
+            "group_name": "demo",
+            "het_job_id": {
+                "set": true,
+                "infinite": false,
+                "number": 0
+            },
+            "het_job_id_set": "",
+            "het_job_offset": {
+                "set": true,
+                "infinite": false,
+                "number": 0
+            },
+            "job_id": 368717,
+            "job_resources": {},
+            "job_size_str": [],
+            "job_state": [
+                "PENDING"
+            ],
+            "last_sched_evaluation": {
+                "set": true,
+                "infinite": false,
+                "number": 1730983716
+            },
+            "licenses": "",
+            "mail_type": [],
+            "mail_user": "demo@test.de",
+            "max_cpus": {
+                "set": true,
+                "infinite": false,
+                "number": 0
+            },
+            "max_nodes": {
+                "set": true,
+                "infinite": false,
+                "number": 4
+            },
+            "mcs_label": "",
+            "memory_per_tres": "",
+            "name": "lammps-no",
+            "network": "",
+            "nodes": "",
+            "nice": 0,
+            "tasks_per_core": {
+                "set": true,
+                "infinite": false,
+                "number": 1
+            },
+            "tasks_per_tres": {
+                "set": true,
+                "infinite": false,
+                "number": 0
+            },
+            "tasks_per_node": {
+                "set": true,
+                "infinite": false,
+                "number": 0
+            },
+            "tasks_per_socket": {
+                "set": false,
+                "infinite": true,
+                "number": 0
+            },
+            "tasks_per_board": {
+                "set": true,
+                "infinite": false,
+                "number": 0
+            },
+            "cpus": {
+                "set": true,
+                "infinite": false,
+                "number": 288
+            },
+            "node_count": {
+                "set": true,
+                "infinite": false,
+                "number": 4
+            },
+            "tasks": {
+                "set": true,
+                "infinite": false,
+                "number": 288
+            },
+            "partition": "small",
+            "prefer": "",
+            "memory_per_cpu": {
+                "set": false,
+                "infinite": false,
+                "number": 0
+            },
+            "memory_per_node": {
+                "set": true,
+                "infinite": false,
+                "number": 0
+            },
+            "minimum_cpus_per_node": {
+                "set": true,
+                "infinite": false,
+                "number": 1
+            },
+            "minimum_tmp_disk_per_node": {
+                "set": true,
+                "infinite": false,
+                "number": 0
+            },
+            "power": {
+                "flags": []
+            },
+            "preempt_time": {
+                "set": true,
+                "infinite": false,
+                "number": 0
+            },
+            "preemptable_time": {
+                "set": true,
+                "infinite": false,
+                "number": 0
+            },
+            "pre_sus_time": {
+                "set": true,
+                "infinite": false,
+                "number": 0
+            },
+            "hold": false,
+            "priority": {
+                "set": true,
+                "infinite": false,
+                "number": 66472
+            },
+            "profile": [
+                "NOT_SET"
+            ],
+            "qos": "normal",
+            "reboot": false,
+            "required_nodes": "",
+            "minimum_switches": 0,
+            "requeue": true,
+            "resize_time": {
+                "set": true,
+                "infinite": false,
+                "number": 0
+            },
+            "restart_cnt": 0,
+            "resv_name": "",
+            "scheduled_nodes": "",
+            "selinux_context": "",
+            "shared": [
+                "none"
+            ],
+            "exclusive": [
+                "true"
+            ],
+            "oversubscribe": false,
+            "show_flags": [
+                "DETAIL",
+                "LOCAL"
+            ],
+            "sockets_per_board": 0,
+            "sockets_per_node": {
+                "set": false,
+                "infinite": false,
+                "number": 0
+            },
+            "start_time": {
+                "set": true,
+                "infinite": false,
+                "number": 0
+            },
+            "state_description": "",
+            "state_reason": "Priority",
+            "standard_error": "\/beegfs\/home\/d\/demo\/.xbat\/outputs\/368717.out",
+            "standard_input": "\/dev\/null",
+            "standard_output": "\/beegfs\/home\/d\/demo\/.xbat\/outputs\/368717.out",
+            "submit_time": {
+                "set": true,
+                "infinite": false,
+                "number": 1730982828
+            },
+            "suspend_time": {
+                "set": true,
+                "infinite": false,
+                "number": 0
+            },
+            "system_comment": "",
+            "time_limit": {
+                "set": true,
+                "infinite": false,
+                "number": 600
+            },
+            "time_minimum": {
+                "set": true,
+                "infinite": false,
+                "number": 0
+            },
+            "threads_per_core": {
+                "set": false,
+                "infinite": false,
+                "number": 0
+            },
+            "tres_bind": "",
+            "tres_freq": "",
+            "tres_per_job": "",
+            "tres_per_node": "",
+            "tres_per_socket": "",
+            "tres_per_task": "",
+            "tres_req_str": "cpu=288,mem=980000M,node=4,billing=288",
+            "tres_alloc_str": "",
+            "user_id": 123456,
+            "user_name": "demo",
+            "maximum_switch_wait_time": 0,
+            "wckey": "*",
+            "current_working_directory": "\/beegfs\/home\/d\/demo"
+        }
+    ],
+    "last_backfill": {
+        "set": true,
+        "infinite": false,
+        "number": 1730983744
+    },
+    "last_update": {
+        "set": true,
+        "infinite": false,
+        "number": 1730983748
+    },
+    "meta": {
+        "plugin": {
+            "type": "",
+            "name": "",
+            "data_parser": "data_parser\/v0.0.41",
+            "accounting_storage": "accounting_storage\/slurmdbd"
+        },
+        "client": {
+            "source": "\/dev\/pts\/93",
+            "user": "root",
+            "group": "root"
+        },
+        "command": [
+            "squeue"
+        ],
+        "slurm": {
+            "version": {
+                "major": "24",
+                "micro": "3",
+                "minor": "05"
+            },
+            "release": "24.05.3",
+            "cluster": "testcluster"
+        }
+    },
+    "errors": [],
+    "warnings": []
+}

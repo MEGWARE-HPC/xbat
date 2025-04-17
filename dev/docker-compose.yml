@@ -1,0 +1,35 @@
+version: "3"
+services:
+    xbat-ldap:
+        image: osixia/openldap:1.5.0
+        container_name: xbat-ldap
+        environment:
+            - LDAP_ORGANISATION=exampleorg
+            - LDAP_DOMAIN=example.com
+            - "LDAP_BASE_DN=dc=example,dc=com"
+            - LDAP_ADMIN_PASSWORD=password
+        volumes:
+            - ./ldap_setup.sh:/ldap_setup.sh
+        ports:
+            - 389:389
+            - 636:636
+    xbat-valkey:
+        image: valkey/valkey
+        container_name: xbat-valkey
+        volumes:
+            - /etc/xbat/valkey.conf:/usr/local/etc/valkey/valkey.conf:ro
+        ports:
+            - 6379:6379
+    xbat-pgbouncer:
+        image: bitnami/pgbouncer:latest
+        container_name: xbat-pgbouncer
+        network_mode: "host"
+        user: "${XBAT_UID}:${XBAT_GID}"
+        volumes:
+            - /etc/xbat/pgbouncer.ini:/bitnami/pgbouncer/conf/pgbouncer.ini:ro
+            - /etc/xbat/userlists.txt:/bitnami/pgbouncer/conf/userlists.txt:ro
+        entrypoint:
+            [
+                "/opt/bitnami/pgbouncer/bin/pgbouncer",
+                "/bitnami/pgbouncer/conf/pgbouncer.ini"
+            ]

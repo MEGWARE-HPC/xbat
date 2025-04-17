@@ -1,0 +1,12 @@
+# Disable database if installed with --no-db option.
+# --profile option is not yet supported by podman-compose
+
+version: "3"
+
+services:
+    xbat-mongodb:
+        deploy:
+            replicas: 0
+    xbat-questdb:
+        deploy:
+            replicas: 0

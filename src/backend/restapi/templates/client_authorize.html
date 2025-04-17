@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% set title = 'OAuth2 Authorization' %}
+
+{% block body %}
+
+<h1>{{ title }}</h1>
+
+<div>
+    <p>The client '{{ request.client.client_id }}' ({{ request.client.name }}) wants access to following scopes:</p>
+    <ul>
+        {% for scope in scopes %}
+        <li>{{ scope }}</li>
+        {% endfor %}
+    </ul>
+
+    <form action="" method="post">
+        <input type="hidden" name="_csrf" value="{{ _csrf }}">
+        {% if scope %}<input type="hidden" name="scope" value="{{ scope }}">{% endif %}
+        <button type="submit">Accept</button>
+        <button onclick="window.close()">Cancel</button>
+    </form>
+</div>
+{% endblock %}

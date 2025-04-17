@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+package xbat;
+
+service xbatctld {
+  rpc GetNodes (google.protobuf.Empty) returns (NodeData);
+  rpc GetJobs (google.protobuf.Empty) returns (JobData);
+  rpc GetPartitions (google.protobuf.Empty) returns (PartitionNodeMapping);
+  rpc SubmitBenchmark (NewBenchmark) returns (google.protobuf.Empty);
+  rpc CancelJobs (JobIds) returns (google.protobuf.Empty);
+  rpc GetUserInfo (UserName) returns (UserData);
+  rpc PurgeQuestDB (google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
+message JobIds {
+    repeated int32 jobIds = 1;
+}
+
+message UserName {
+    string userName = 1;
+}
+
+message UserData {
+    string userName = 1;
+    int32 uidnumber = 2;
+    int32 gidnumber = 3;
+    string homedirectory = 4;
+}
+
+message PartitionNodeMapping {
+    map<string, google.protobuf.ListValue> partitions = 1;
+}
+
+message JobData {
+    map<string, JobDetail> jobs = 1;
+}
+
+message JobDetail {
+    string batchHost = 1;
+    string cluster = 2;
+    string command = 3;
+    string currentWorkingDirectory = 4;
+    google.protobuf.Timestamp endTime = 5;
+    int64 jobId = 6;
+    repeated string jobState = 7;
+    string name = 8;
+    string nodes = 9;
+    string partition = 10;
+    string standardError = 11;
+    string standardOutput = 12;
+    google.protobuf.Timestamp startTime = 13;
+    google.protobuf.Timestamp submitTime = 14;
+    string userName = 15;
+}
+
+
+message NewBenchmark {
+    string issuer = 1;
+    string name = 2;
+    string configId = 3;
+    repeated string sharedProjects = 4;
+    repeated JobVariable variables = 5;  // Changed from Variable to JobVariable for consistency
+}
+
+message JobVariable {
+    string key = 1;
+    repeated string values = 2;
+    repeated string selected = 3;
+    string input = 4;
+}
+
+message NodeInfo {
+    int32 cores = 1;
+    int32 cpus = 2;
+    string hostname = 3;
+    string state = 4;
+    repeated string stateFlags = 5;
+    repeated string partitions = 6;
+    int64 realMemory = 7;
+    int32 sockets = 8;
+    int32 threads = 9;
+}
+
+message NodeData {
+    map<string, NodeInfo> nodes = 1;
+}

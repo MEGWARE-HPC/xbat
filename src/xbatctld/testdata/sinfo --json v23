@@ -1,0 +1,243 @@
+{
+    "sinfo": [
+        {
+            "port": 6818,
+            "node": {
+                "state": [
+                    "IDLE"
+                ]
+            },
+            "nodes": {
+                "allocated": 0,
+                "idle": 2,
+                "other": 0,
+                "total": 2,
+                "hostnames": [],
+                "addresses": [],
+                "nodes": [
+                    "node0001",
+                    "node0002"
+                ]
+            },
+            "cpus": {
+                "allocated": 0,
+                "idle": 0,
+                "other": 224,
+                "total": 224,
+                "minimum": 1,
+                "maximum": 224,
+                "load": {
+                    "minimum": 0,
+                    "maximum": 0
+                },
+                "per_node": {
+                    "max": {
+                        "set": false,
+                        "infinite": true,
+                        "number": 0
+                    }
+                }
+            },
+            "sockets": {
+                "minimum": 2,
+                "maximum": 2
+            },
+            "cores": {
+                "minimum": 52,
+                "maximum": 56
+            },
+            "threads": {
+                "minimum": 2,
+                "maximum": 2
+            },
+            "disk": {
+                "minimum": 0,
+                "maximum": 0
+            },
+            "memory": {
+                "minimum": 1,
+                "maximum": 1,
+                "free": {
+                    "minimum": {
+                        "set": false,
+                        "infinite": false,
+                        "number": 0
+                    },
+                    "maximum": {
+                        "set": false,
+                        "infinite": false,
+                        "number": 0
+                    }
+                },
+                "allocated": 0
+            },
+            "weight": {
+                "minimum": 1,
+                "maximum": 1
+            },
+            "features": {
+                "total": "xbat",
+                "active": "xbat"
+            },
+            "gres": {
+                "total": "",
+                "used": ""
+            },
+            "cluster": "",
+            "comment": "",
+            "extra": "",
+            "reason": {},
+            "reservation": "",
+            "partition": {
+                "nodes": {
+                    "allowed_allocation": "",
+                    "configured": "node0001,node0002",
+                    "total": 50
+                },
+                "accounts": {
+                    "allowed": "",
+                    "deny": ""
+                },
+                "groups": {
+                    "allowed": ""
+                },
+                "qos": {
+                    "allowed": "",
+                    "deny": "",
+                    "assigned": ""
+                },
+                "alternate": "",
+                "tres": {
+                    "billing_weights": "",
+                    "configured": "cpu=10456,mem=50M,node=50,billing=10456"
+                },
+                "cluster": "",
+                "cpus": {
+                    "task_binding": 0,
+                    "total": 10456
+                },
+                "defaults": {
+                    "memory_per_cpu": 0,
+                    "partition_memory_per_cpu": {
+                        "set": false,
+                        "infinite": false,
+                        "number": 0
+                    },
+                    "partition_memory_per_node": {
+                        "set": true,
+                        "infinite": false,
+                        "number": 0
+                    },
+                    "time": {
+                        "set": false,
+                        "infinite": false,
+                        "number": 0
+                    },
+                    "job": ""
+                },
+                "grace_time": 0,
+                "maximums": {
+                    "cpus_per_node": {
+                        "set": false,
+                        "infinite": true,
+                        "number": 0
+                    },
+                    "cpus_per_socket": {
+                        "set": false,
+                        "infinite": true,
+                        "number": 0
+                    },
+                    "memory_per_cpu": 0,
+                    "partition_memory_per_cpu": {
+                        "set": false,
+                        "infinite": false,
+                        "number": 0
+                    },
+                    "partition_memory_per_node": {
+                        "set": true,
+                        "infinite": false,
+                        "number": 0
+                    },
+                    "nodes": {
+                        "set": false,
+                        "infinite": true,
+                        "number": 0
+                    },
+                    "shares": 1,
+                    "oversubscribe": {
+                        "jobs": 1,
+                        "flags": []
+                    },
+                    "time": {
+                        "set": true,
+                        "infinite": false,
+                        "number": 20160
+                    },
+                    "over_time_limit": {
+                        "set": false,
+                        "infinite": false,
+                        "number": 0
+                    }
+                },
+                "minimums": {
+                    "nodes": 0
+                },
+                "name": "ALL",
+                "node_sets": "",
+                "priority": {
+                    "job_factor": 1,
+                    "tier": 1
+                },
+                "timeouts": {
+                    "resume": {
+                        "set": false,
+                        "infinite": false,
+                        "number": 0
+                    },
+                    "suspend": {
+                        "set": false,
+                        "infinite": false,
+                        "number": 0
+                    }
+                },
+                "partition": {
+                    "state": [
+                        "UP"
+                    ]
+                },
+                "suspend_time": {
+                    "set": false,
+                    "infinite": false,
+                    "number": 0
+                }
+            }
+        }
+    ],
+    "meta": {
+        "plugin": {
+            "type": "",
+            "name": "",
+            "data_parser": "data_parser\/v0.0.40",
+            "accounting_storage": "accounting_storage\/slurmdbd"
+        },
+        "client": {
+            "source": "\/dev\/pts\/6",
+            "user": "demo",
+            "group": "demo"
+        },
+        "command": [
+            "sinfo"
+        ],
+        "slurm": {
+            "version": {
+                "major": "23",
+                "micro": "1",
+                "minor": "11"
+            },
+            "release": "23.11.1",
+            "cluster": "benchmarkcenter.megware.com"
+        }
+    },
+    "errors": [],
+    "warnings": []
+}

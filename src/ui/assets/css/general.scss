@@ -1,0 +1,62 @@
+@use "~/assets/css/colors.scss" as *;
+
+$font-family: "Source Sans Pro";
+
+.v-application {
+    [class*="text-"] {
+        font-family: $font-family, sans-serif !important;
+    }
+    font-family: $font-family, sans-serif !important;
+}
+
+.m-switch {
+    :deep(label) {
+        margin-bottom: 0;
+    }
+}
+.capitalize {
+    text-transform: capitalize !important;
+}
+
+.relative {
+    position: relative;
+}
+
+.clickable-table {
+    white-space: pre-line;
+    word-break: break-all;
+    td {
+        cursor: pointer;
+    }
+}
+
+// Reversed input variant
+.v-input--reverse :deep(.v-input__slot) {
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    .v-application--is-ltr & {
+        .v-input--selection-controls__input {
+            margin-right: 0;
+            margin-left: 8px;
+        }
+    }
+    .v-application--is-rtl & {
+        .v-input--selection-controls__input {
+            margin-left: 0;
+            margin-right: 8px;
+        }
+    }
+}
+.gap-10 {
+    gap: 10px;
+}
+
+.gap-20 {
+    gap: 20px;
+}
+
+.error-hint {
+    color: red;
+    opacity: 0.75;
+    font-size: 0.775rem;
+}

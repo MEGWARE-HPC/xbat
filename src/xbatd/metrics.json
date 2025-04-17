@@ -1,0 +1,401 @@
+{
+    "ENERGY": {
+        "Clock": {
+            "name": "clk",
+            "level": "core"
+        },
+        "Uncore Clock": {
+            "name": "clk_uncore",
+            "level": "socket"
+        },
+        "CPI": {
+            "name": "cpi"
+        },
+        "Power": {
+            "name": "cpu_power",
+            "level": "socket"
+        },
+        "Power DRAM": {
+            "name": "dram_power",
+            "level": "socket"
+        },
+        "Power PP0": {
+            "name": "core_power",
+            "level": "core"
+        },
+        "Power PLATFORM": {
+            "name": "platform_power",
+            "level": "node"
+        },
+        "Power Core": {
+            "name": "core_power",
+            "level": "core"
+        },
+        "Power PKG": {
+            "name": "cpu_power",
+            "level": "socket"
+        },
+        "Temperature": {
+            "name": "cpu_temp",
+            "level": "core"
+        }
+    },
+    "MEM": {
+        "Memory read bandwidth": {
+            "name": "mem_r_bw",
+            "scale": 1048576,
+            "level": "socket"
+        },
+        "Memory read data volume": {
+            "name": "mem_r_vol",
+            "scale": 1073741824,
+            "level": "socket"
+        },
+        "Memory load bandwidth": {
+            "name": "mem_l_bw",
+            "scale": 1048576,
+            "level": "socket"
+        },
+        "Memory load data volume": {
+            "name": "mem_l_vol",
+            "scale": 1073741824,
+            "level": "socket"
+        },
+        "Memory write bandwidth": {
+            "name": "mem_w_bw",
+            "scale": 1048576,
+            "level": "socket"
+        },
+        "Memory write data volume": {
+            "name": "mem_w_vol",
+            "scale": 1073741824,
+            "level": "socket"
+        },
+        "Memory evict bandwidth": {
+            "name": "mem_e_bw",
+            "scale": 1048576,
+            "level": "socket"
+        },
+        "Memory evict data volume": {
+            "name": "mem_e_vol",
+            "scale": 1073741824,
+            "level": "socket"
+        },
+        "Memory bandwidth": {
+            "name": "mem_bw",
+            "scale": 1048576,
+            "level": "socket"
+        },
+        "Memory data volume": {
+            "name": "mem_vol",
+            "scale": 1073741824,
+            "level": "socket"
+        }
+    },
+    "HBM": {
+        "HBM read bandwidth": {
+            "name": "hbm_r_bw",
+            "scale": 1048576,
+            "level": "socket"
+        },
+        "HBM read data volume": {
+            "name": "hbm_r_vol",
+            "scale": 1073741824,
+            "level": "socket"
+        },
+        "HBM write bandwidth": {
+            "name": "hbm_w_bw",
+            "scale": 1048576,
+            "level": "socket"
+        },
+        "HBM write data volume": {
+            "name": "hbm_w_vol",
+            "scale": 1073741824,
+            "level": "socket"
+        },
+        "HBM bandwidth": {
+            "name": "hbm_bw",
+            "scale": 1048576,
+            "level": "socket"
+        },
+        "HBM data volume": {
+            "name": "hbm_vol",
+            "scale": 1073741824,
+            "level": "socket"
+        }
+    },
+    "UPI": {
+        "Received data bandwidth": {
+            "name": "upi_r_bw",
+            "scale": 1048576,
+            "level": "socket"
+        },
+        "Received data volume": {
+            "name": "upi_r_vol",
+            "scale": 1073741824,
+            "level": "socket"
+        },
+        "Sent data bandwidth": {
+            "name": "upi_t_bw",
+            "scale": 1048576,
+            "level": "socket"
+        },
+        "Sent data volume": {
+            "name": "upi_t_vol",
+            "scale": 1073741824,
+            "level": "socket"
+        },
+        "Total data bandwidth": {
+            "name": "upi_bw",
+            "scale": 1048576,
+            "level": "socket"
+        },
+        "Total data volume": {
+            "name": "upi_vol",
+            "scale": 1073741824,
+            "level": "socket"
+        }
+    },
+    "MEMREAD": {
+        "Memory read bandwidth": {
+            "name": "mem_r_bw",
+            "scale": 1048576,
+            "level": "socket"
+        },
+        "Memory read data volume": {
+            "name": "mem_r_vol",
+            "scale": 1073741824,
+            "level": "socket"
+        }
+    },
+    "MEMWRITE": {
+        "Memory write bandwidth": {
+            "name": "mem_r_bw",
+            "scale": 1048576,
+            "level": "socket"
+        },
+        "Memory write data volume": {
+            "name": "mem_r_vol",
+            "scale": 1073741824,
+            "level": "socket"
+        }
+    },
+    "FLOPS_SP": {
+        "SP": {
+            "name": "flops_sp",
+            "scale": 1000000
+        },
+        "AVX SP": {
+            "name": "flops_avx_sp",
+            "scale": 1000000
+        },
+        "AVX512 SP": {
+            "name": "flops_avx512_sp",
+            "scale": 1000000
+        },
+        "Packed": {
+            "name": "packed_sp",
+            "scale": 1000000
+        },
+        "Scalar": {
+            "name": "scalar_sp",
+            "scale": 1000000
+        },
+        "Vectorization ratio": {
+            "name": "vectorization_ratio_sp"
+        }
+    },
+    "FLOPS_DP": {
+        "DP": {
+            "name": "flops_dp",
+            "scale": 1000000
+        },
+        "AVX DP": {
+            "name": "flops_avx_dp",
+            "scale": 1000000
+        },
+        "AVX512 DP": {
+            "name": "flops_avx512_dp",
+            "scale": 1000000
+        },
+        "Packed": {
+            "name": "packed_dp",
+            "scale": 1000000
+        },
+        "Scalar": {
+            "name": "scalar_dp",
+            "scale": 1000000
+        },
+        "Vectorization ratio": {
+            "name": "vectorization_ratio_dp"
+        }
+    },
+    "BRANCH": {
+        "Branch rate": {
+            "name": "branch_rate",
+            "scale": 100
+        },
+        "Branch misprediction rate": {
+            "name": "branch_mis_rate",
+            "scale": 100
+        },
+        "Branch misprediction ratio": {
+            "name": "branch_mis_ratio",
+            "scale": 100
+        },
+        "Instructions per branch": {
+            "name": "instr_branch"
+        }
+    },
+    "DATA": {
+        "Load to store ratio": {
+            "name": "l_s_ratio"
+        }
+    },
+    "ICACHE": {
+        "L1I request rate": {
+            "name": "l1i_req_rate",
+            "scale": 100
+        },
+        "L1I miss rate": {
+            "name": "l1i_mis_rate",
+            "scale": 100
+        },
+        "L1I miss ratio": {
+            "name": "l1i_mis_ratio"
+        },
+        "L1I stalls": {
+            "name": "l1i_stalls"
+        },
+        "L1I stall rate": {
+            "name": "l1i_stall_rate",
+            "scale": 100
+        }
+    },
+    "L2CACHE": {
+        "L2 request rate": {
+            "name": "l2_req_rate",
+            "scale": 100
+        },
+        "L2 miss rate": {
+            "name": "l2_mis_rate",
+            "scale": 100
+        },
+        "L2 miss ratio": {
+            "name": "l2_mis_ratio"
+        }
+    },
+    "L3CACHE": {
+        "L3 request rate": {
+            "name": "l3_req_rate",
+            "scale": 100
+        },
+        "L3 miss rate": {
+            "name": "l3_mis_rate",
+            "scale": 100
+        },
+        "L3 miss ratio": {
+            "name": "l3_mis_ratio"
+        }
+    },
+    "L2": {
+        "L2D load bandwidth": {
+            "name": "l2d_l_bw",
+            "scale": 1048576
+        },
+        "L2D load data volume": {
+            "name": "l2d_l_vol",
+            "scale": 1073741824
+        },
+        "L2D evict bandwidth": {
+            "name": "l2d_e_bw",
+            "scale": 1048576
+        },
+        "L2D evict data volume": {
+            "name": "l2d_e_vol",
+            "scale": 1073741824
+        },
+        "L2 bandwidth": {
+            "name": "l2_bw",
+            "scale": 1048576
+        },
+        "L2 data volume": {
+            "name": "l2_vol",
+            "scale": 1073741824
+        }
+    },
+    "L3": {
+        "L3 load bandwidth": {
+            "name": "l3_l_bw",
+            "scale": 1048576
+        },
+        "L3 load data volume": {
+            "name": "l3_l_vol",
+            "scale": 1073741824
+        },
+        "L3 evict bandwidth": {
+            "name": "l3_e_bw",
+            "scale": 1048576
+        },
+        "L3 evict data volume": {
+            "name": "l3d_e_vol",
+            "scale": 1073741824
+        },
+        "L3|MEM evict bandwidth": {
+            "name": "l3_mem_e_bw",
+            "scale": 1048576
+        },
+        "L3|MEM evict data volume": {
+            "name": "l3_mem_e_vol",
+            "scale": 1073741824
+        },
+        "L3 bandwidth": {
+            "name": "l3_bw",
+            "scale": 1048576
+        },
+        "L3 data volume": {
+            "name": "l3_vol",
+            "scale": 1073741824
+        }
+    },
+    "CYCLE_ACTIVITY": {
+        "Cycles without execution": {
+            "name": "cycles_wo_exec"
+        },
+        "Cycles without execution due to L1D": {
+            "name": "cycles_wo_exec_l1d"
+        },
+        "Cycles without execution due to L2": {
+            "name": "cycles_wo_exec_l2"
+        },
+        "Cycles without execution due to memory loads": {
+            "name": "cycles_wo_exec_mem_l"
+        }
+    },
+    "CYCLE_STALLS": {
+        "Total execution stalls": {
+            "name": "cycle_stalls"
+        },
+        "Stalls caused by L1D misses": {
+            "name": "cycle_stalls_l1d_mis"
+        },
+        "Stalls caused by L2 misses": {
+            "name": "cycle_stalls_l2_mis"
+        },
+        "Stalls caused by memory loads": {
+            "name": "cycle_stalls_mem_l"
+        },
+        "Execution stall rate": {
+            "name": "cycle_stalls_rate"
+        },
+        "Stalls caused by L1D misses rate": {
+            "name": "cycle_stalls_l1d_mis_rate"
+        },
+        "Stalls caused by L2 misses rate": {
+            "name": "cycle_stalls_l2_mis_rate"
+        },
+        "Stalls caused by memory loads rate": {
+            "name": "cycle_stalls_mem_l_rate"
+        }
+    }
+}
