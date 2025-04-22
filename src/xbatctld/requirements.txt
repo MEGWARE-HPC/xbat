@@ -1,5 +1,5 @@
 pymongo==3.10.1
-wheel==0.37.1
+wheel==0.45.1
 chardet==5.0.0
 filelock==3.16.1
 grpcio==1.69.0
