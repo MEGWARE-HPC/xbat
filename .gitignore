@@ -1,0 +1,64 @@
+# Environment files
+.env
+.env.*
+.env.local
+.env.*.local
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+venv
+
+# Node.js
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build and dependency artifacts
+*.egg-info
+.egg-link
+build/
+dist/
+dist
+*.o
+*.d
+*.rpm
+
+# Logs
+logs
+*.log
+
+# macOS
+.DS_Store
+
+# IDE and editor files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Fleet
+.fleet
+
+# Other caches and outputs
+*/.cache/
+.cache
+.output
+.data
+.nuxt
+.nitro
+
+# SIF files
+*.sif
+sif/
+
+# Specific files and patterns
+**/public/CHANGELOG.md
+src/xbatd/xbatd
+**/xbat_pb2_grpc.py
+**/xbat_pb2.py
