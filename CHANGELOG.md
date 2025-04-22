@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Added
+
+### Changed
+
+-   always overwrite valkey.conf on installation
+
+### Fixed
+
 ## v1.0.0 - 2025-04-17
 
 _If you are migrating from a prior release modification of `xbatd.conf` is required to include settings for the REST API and QuestDB - see `conf/xbatd.conf` and adjust accordingly!_
