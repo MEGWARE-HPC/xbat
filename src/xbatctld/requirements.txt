@@ -1,8 +1,8 @@
 pymongo==4.12.0
 wheel==0.45.1
-chardet==5.0.0
-filelock==3.16.1
-grpcio==1.69.0
-grpcio-tools==1.69.0
-psycopg[binary]==3.1.18
-numpy==1.26.4 # for shared/helpers
+chardet==5.2.0
+filelock==3.18.0
+grpcio==1.71.0
+grpcio-tools==1.71.0
+psycopg[binary]==3.2.6
+numpy==2.2.5 # for shared/helpers
