@@ -10,21 +10,24 @@
                     {{ $store.currentDocType }} Documentation
                 </div>
                 <div class="d-flex align-center justify-center">
-                    <template
-                        v-for="[idx, docType] of ['user', 'admin', 'developer']
-                            .filter((x) => x != $store.currentDocType)
-                            .entries()"
+                    <v-btn
+                        variant="plain"
+                        :to="docStartingRoutes[prevDocType]"
+                        prepend-icon="$arrowLeft"
+                        :title="`Visit ${prevDocType} documentation`"
+                        size="small"
                     >
-                        <v-btn
-                            variant="plain"
-                            :to="docStartingRoutes[docType]"
-                            :prepend-icon="idx == 0 ? '$arrowLeft' : ''"
-                            :append-icon="idx == 1 ? '$arrowRight' : ''"
-                            :title="`Visit ${docType} documentation`"
-                            size="small"
-                            >{{ docType }}</v-btn
-                        ></template
+                        {{ prevDocType }}
+                    </v-btn>
+                    <v-btn
+                        variant="plain"
+                        :to="docStartingRoutes[nextDocType]"
+                        append-icon="$arrowRight"
+                        :title="`Visit ${nextDocType} documentation`"
+                        size="small"
                     >
+                        {{ nextDocType }}
+                    </v-btn>
                 </div>
             </div>
             <v-list
@@ -39,8 +42,7 @@
                         :title="item.title"
                         :value="item._path"
                         :to="item._path"
-                    >
-                    </v-list-item>
+                    ></v-list-item>
                     <v-list-group v-else :value="item._path">
                         <template v-slot:activator="{ props }">
                             <v-list-item
@@ -48,30 +50,27 @@
                                 :title="item.title"
                             ></v-list-item>
                         </template>
-
                         <v-list-item
                             v-for="entry of item.children"
                             :title="entry.title"
                             :value="entry._path"
                             :to="entry._path"
-                        >
-                        </v-list-item>
+                        ></v-list-item>
                     </v-list-group>
                 </template>
             </v-list>
         </template>
     </v-navigation-drawer>
 </template>
+
 <script setup lang="ts">
 import type { NavItem } from "@nuxt/content";
 const route = useRoute();
-
 const docStartingRoutes: { [key: string]: string } = {
     user: "/docs/user/introduction",
     admin: "/docs/admin/setup/installation",
     developer: "/docs/developer/contribute"
 };
-
 const { $store } = useNuxtApp();
 
 const props = defineProps({
@@ -88,12 +87,37 @@ const items: Ref<NavItem | null> = computed(() => {
     const categories = props.links?.[0]?.children || [];
     const regex = new RegExp(`^/docs/([a-zA-Z]+)/.*$`);
     const currentCategory = route.path.match(regex)?.[1];
-
     const filteredCategories = categories.filter((category) =>
         category._path.startsWith(`/docs/${currentCategory}`)
     );
-
     return filteredCategories.length ? filteredCategories[0] : null;
+});
+
+// Define the order of document types
+const docTypes = ["user", "admin", "developer"];
+
+// Find the current index of the selected document type
+const currentIndex = computed(() => {
+    return docTypes.indexOf($store.currentDocType);
+});
+
+// Calculate the next document type in the loop
+const nextIndex = computed(() => {
+    return (currentIndex.value + 1) % docTypes.length;
+});
+
+// Calculate the previous document type in the loop
+const prevIndex = computed(() => {
+    return (currentIndex.value - 1 + docTypes.length) % docTypes.length;
+});
+
+// Get the next and previous document types based on index
+const nextDocType = computed(() => {
+    return docTypes[nextIndex.value];
+});
+
+const prevDocType = computed(() => {
+    return docTypes[prevIndex.value];
 });
 </script>
 <style scoped lang="scss">
@@ -106,7 +130,6 @@ const items: Ref<NavItem | null> = computed(() => {
 .doc-selection {
     :deep(.v-list-item-title) {
         font-size: 1rem;
-
         background-color: unset;
     }
     :deep(.v-list-item__overlay) {
@@ -119,7 +142,6 @@ const items: Ref<NavItem | null> = computed(() => {
         font-weight: 600;
     }
 }
-
 .doc-type-head {
     font-size: 1.125rem;
     text-align: center;
