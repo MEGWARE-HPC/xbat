@@ -88,7 +88,7 @@ import {
 } from "@mdi/js";
 
 // TODO remove when out of lab stage
-import { VNumberInput } from "vuetify/labs/VNumberInput";
+import { VNumberInput } from 'vuetify/components/VNumberInput';
 import { VTreeview } from "vuetify/labs/VTreeview";
 
 /*
