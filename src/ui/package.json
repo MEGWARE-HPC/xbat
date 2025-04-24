@@ -30,7 +30,7 @@
     "nuxt": "^3.16.2",
     "ofetch": "^1.4.1",
     "pinia": "^3.0.2",
-    "plotly.js-basic-dist-min": "^2.35.3",
+    "plotly.js-basic-dist-min": "^3.0.1",
     "popper.js": "^1.16.1",
     "prismjs": "^1.30.0",
     "read-ini-file": "^4.0.0",
