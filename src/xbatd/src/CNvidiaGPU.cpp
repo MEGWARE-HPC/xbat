@@ -131,14 +131,17 @@ int CNvidiaGPU::collect() {
                 double_data.push_back(CQueue::ILP<double>{"gpu_dec_util", tags, static_cast<double>(utilization), intervalEnd});
         }
 
-        /* TODO nvlink */
-        // for (unsigned int j = 0; j < NVML_NVLINK_MAX_LINKS; j++) {
-        //     nvmlEnableState_t nvlink;
-        //     if (nvmlDeviceGetNvLinkState(device, j, &nvlink) == NVML_SUCCESS) {
-        //         if (nvlink != NVML_FEATURE_ENABLED)
-        //             continue;
-        //     }
-        // }
+        nvmlFieldValue_t fields[2];
+        fields[0].fieldId = NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_RX;
+        fields[1].fieldId = NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_TX;
+
+        result = nvmlDeviceGetFieldValues(device, 2, fields);
+        if (result == NVML_SUCCESS) {
+            logger.log(CLogging::info, "RX: ", + std::string(nvmlErrorString(fields[0].value.ullVal)) + " bytes/sec");
+            logger.log(CLogging::info,"TX: ", std::string(nvmlErrorString(fields[1].value.ullVal)) + " bytes/sec");
+        } else {
+            logger.log(CLogging::error, "Failed to get throughput: - " + std::string(nvmlErrorString(result)));
+        }
     }
 
     if ((int_data.size() + double_data.size()) == 0)
