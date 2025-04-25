@@ -65,7 +65,7 @@
             <div class="d-flex align-center text-medium-emphasis mt-6">
                 Edit this Page on
                 <NuxtLink
-                    :to="`https://github.com/MEGWARE-HPC/xbat/blob/main/${page?._file}`"
+                    :to="`https://github.com/MEGWARE-HPC/xbat/tree/master/docs/content/${page?._file}`"
                     target="_blank"
                 >
                     <span class="font-weight-bold ml-1">GitHub</span>

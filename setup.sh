@@ -158,7 +158,7 @@ prepare_databases() {
         rm -f "$VALKEY_PATH/dump.rdb"
     fi
 
-    cp --no-clobber "$CONF_SRC_PATH/valkey.conf" "$CONF_DEST_PATH/valkey.conf"
+    cp "$CONF_SRC_PATH/valkey.conf" "$CONF_DEST_PATH/valkey.conf"
 }
 
 install_action() {

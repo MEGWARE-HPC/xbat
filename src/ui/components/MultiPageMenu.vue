@@ -39,7 +39,7 @@
                     </v-list-item>
                     <v-list-item
                         v-bind:title.attr="'Changelog'"
-                        href="https://github.com/MEGWARE-HPC/xbat/blob/main/CHANGELOG.md"
+                        href="https://github.com/MEGWARE-HPC/xbat/blob/master/CHANGELOG.md"
                         target="_blank"
                     >
                         <template #prepend
