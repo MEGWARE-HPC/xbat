@@ -29,8 +29,6 @@ ENV LIKWID_VERSION="v5.3.0"
 RUN git clone https://github.com/RRZE-HPC/likwid.git && cd likwid && git checkout "${LIKWID_VERSION}" && \
     sed -i -e 's!PREFIX ?= /usr/local#NO SPACE!PREFIX ?= /usr/local/share/xbatd/#NO SPACE!g' config.mk && \
     sed -i -e 's!MAX_NUM_THREADS = 500!MAX_NUM_THREADS = 1024!g' config.mk \
-    #&& sed -i -e 's!ACCESSMODE = accessdaemon#NO SPACE!ACCESSMODE = direct#NO SPACE!g' config.mk \
-    #&& sed -i -e 's!ACCESSDAEMON = $(SBINPREFIX)/likwid-accessD#NO SPACE!ACCESSDAEMON = /usr/local/share/xbatd/sbin/likwid-accessD#NO SPACE!g' config.mk \
     && make -j $(nproc) \
     && make install
 
