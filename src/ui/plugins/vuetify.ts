@@ -89,7 +89,6 @@ import {
 } from "@mdi/js";
 
 // TODO remove when out of lab stage
-import { VNumberInput } from "vuetify/components/VNumberInput";
 import { VTreeview } from "vuetify/labs/VTreeview";
 
 /*
@@ -104,7 +103,6 @@ export default defineNuxtPlugin((app) => {
     const vuetify = createVuetify({
         ssr: true,
         components: {
-            VNumberInput,
             VTreeview,
             VFileUpload
         },
