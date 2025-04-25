@@ -1,7 +1,5 @@
 FROM almalinux:9.2
 
-LABEL maintainer="NicoTippmann@MEGWARE"
-
 RUN dnf -y update && \
     dnf -y install epel-release && \
     dnf clean all
