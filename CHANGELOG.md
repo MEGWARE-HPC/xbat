@@ -13,7 +13,8 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
--   link to edit page on GitHub
+-   link to edit page and changelog on GitHub
+-   node info and benchmarks not being registered correctly
 
 ## v1.0.0 - 2025-04-17
 

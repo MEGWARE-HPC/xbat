@@ -963,7 +963,7 @@ components:
         cpu:
           type: object
         gpu:
-          type: object
+          type: array
         memory:
           type: object
         os:
