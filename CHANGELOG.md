@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 -   always overwrite valkey.conf on installation
+-   use chrt instead of nice by default for xbatd for more reliable scheduling
 
 ### Fixed
 
