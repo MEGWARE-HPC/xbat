@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 
 -   always overwrite valkey.conf on installation
 -   use chrt instead of nice by default for xbatd for more reliable scheduling
+-   temporarily downgrade LIKWID to v5.3.0 due to errors on some architectures with v5.4.1
 
 ### Fixed
 
