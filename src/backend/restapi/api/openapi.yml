@@ -568,7 +568,7 @@ paths:
               description: Indicates that the response contains an attachment file
               schema:
                 type: string
-                example: attachment; filename="<jobId>_<metric>.json"
+                example: attachment; filename="<jobId>_<group>.json"
   /measurements/{jobId}/csv:
    get:
       operationId: backend.restapi.api.measurements.export_csv
@@ -595,7 +595,7 @@ paths:
               description: Indicates that the response contains an attachment file
               schema:
                 type: string
-                example: attachment; filename="<jobId>_<metric>.csv"
+                example: attachment; filename="<jobId>_<group>.csv"
   /metrics:
     get:
       operationId: backend.restapi.api.measurements.get_available_metrics

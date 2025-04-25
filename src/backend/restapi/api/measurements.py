@@ -2,7 +2,7 @@ import itertools
 import re
 import logging
 import numpy as np
-from flask import request
+from flask import request, Response, jsonify
 from pathlib import Path
 from shared import httpErrors
 from shared import questdb as qdb
@@ -517,6 +517,32 @@ async def get_measurements(jobId,
         valkey.set(valkey_key, result)
 
     return result, 200
+
+
+async def export_json(jobId,
+                      group="",
+                      metric="",
+                      level="",
+                      node="",
+                      deciles=False):
+    result = await calculate_metrics(jobId, group, metric, level, node,
+                                     deciles)
+    if result is None: raise httpErrors.NotFound()
+    response = jsonify(result)
+    filename = f"{jobId}_{group}.json"
+    response.headers[
+        "Content-Disposition"] = f"attachment; filename={filename}"
+    return response, 200
+
+
+# TODO: Implement CSV export
+async def export_csv(jobId,
+                     group="",
+                     metric="",
+                     level="",
+                     node="",
+                     deciles=False):
+    return 0
 
 
 def get_request_uri():
