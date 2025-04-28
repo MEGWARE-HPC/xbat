@@ -1,7 +1,9 @@
 import itertools
+import csv
 import re
 import logging
 import numpy as np
+from io import StringIO
 from flask import request, Response, jsonify
 from pathlib import Path
 from shared import httpErrors
@@ -535,14 +537,35 @@ async def export_json(jobId,
     return response, 200
 
 
-# TODO: Implement CSV export
 async def export_csv(jobId,
                      group="",
                      metric="",
                      level="",
                      node="",
                      deciles=False):
-    return 0
+    result = await calculate_metrics(jobId, group, metric, level, node,
+                                     deciles)
+    if result is None: raise httpErrors.NotFound()
+    output = StringIO()
+    fieldnames = ['jobId', 'metric'] + [
+        f'interval {i}' for i in range(len(result["traces"][0]['rawValues']))
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in result["traces"]:
+        row_data = {'jobId': item['jobId'], 'metric': item['rawName']}
+        row_data.update({
+            f'interval {i}': value
+            for i, value in enumerate(item['rawValues'])
+        })
+        writer.writerow(row_data)
+    csv_content = output.getvalue()
+    output.close()
+    filename = f"{jobId}_{group}.csv"
+    return Response(
+        csv_content,
+        mimetype="text/csv",
+        headers={"Content-disposition": f"attachment; filename={filename}"})
 
 
 def get_request_uri():
