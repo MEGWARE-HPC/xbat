@@ -3,6 +3,7 @@ import "@mdi/font/css/materialdesignicons.css";
 import "vuetify/styles";
 import { createVuetify } from "vuetify";
 import { aliases, mdi } from "vuetify/iconsets/mdi-svg";
+// TODO wait for stable update and resolution of icon aliases
 import { VFileUpload } from "vuetify/labs/VFileUpload";
 
 import {
@@ -88,7 +89,6 @@ import {
 } from "@mdi/js";
 
 // TODO remove when out of lab stage
-import { VNumberInput } from "vuetify/labs/VNumberInput";
 import { VTreeview } from "vuetify/labs/VTreeview";
 
 /*
@@ -103,7 +103,6 @@ export default defineNuxtPlugin((app) => {
     const vuetify = createVuetify({
         ssr: true,
         components: {
-            VNumberInput,
             VTreeview,
             VFileUpload
         },
