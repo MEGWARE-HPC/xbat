@@ -440,7 +440,7 @@ const exportCSV = computed(() => {
                 ...trace[state.exportUnscaled ? "rawValues" : "values"]
             ];
             csv += lineEntries.join(",") + "\n";
-            maxEntries = Math.max(maxEntries, lineEntries.length);
+            maxEntries = Math.max(maxEntries, lineEntries.length - 2);
             if (!unit) {
                 unit = trace.unit;
                 rawUnit = trace.rawUnit;
