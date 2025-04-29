@@ -530,11 +530,12 @@ async def export_json(jobId,
     result = await calculate_metrics(jobId, group, metric, level, node,
                                      deciles)
     if result is None: raise httpErrors.NotFound()
-    response = jsonify(result)
+    json_content = jsonify(result).data
     filename = f"{jobId}_{group}.json"
-    response.headers[
-        "Content-Disposition"] = f"attachment; filename={filename}"
-    return response, 200
+    return Response(
+        json_content,
+        mimetype="application/json",
+        headers={"Content-disposition": f"attachment; filename={filename}"})
 
 
 async def export_csv(jobId,
@@ -547,20 +548,23 @@ async def export_csv(jobId,
                                      deciles)
     if result is None: raise httpErrors.NotFound()
     output = StringIO()
-    fieldnames = ['jobId', 'metric'] + [
-        f'interval {i}' for i in range(len(result["traces"][0]['rawValues']))
-    ]
-    writer = csv.DictWriter(output, fieldnames=fieldnames)
-    writer.writeheader()
-    for item in result["traces"]:
-        row_data = {'jobId': item['jobId'], 'metric': item['rawName']}
-        row_data.update({
-            f'interval {i}': value
-            for i, value in enumerate(item['rawValues'])
-        })
-        writer.writerow(row_data)
-    csv_content = output.getvalue()
-    output.close()
+    try:
+        fieldnames = ['jobId', 'metric'] + [
+            f'interval {i}'
+            for i in range(len(result["traces"][0]['rawValues']))
+        ]
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        for item in result["traces"]:
+            row_data = {'jobId': item['jobId'], 'metric': item['rawName']}
+            row_data.update({
+                f'interval {i}': value
+                for i, value in enumerate(item['rawValues'])
+            })
+            writer.writerow(row_data)
+        csv_content = output.getvalue()
+    finally:
+        output.close()
     filename = f"{jobId}_{group}.csv"
     return Response(
         csv_content,
