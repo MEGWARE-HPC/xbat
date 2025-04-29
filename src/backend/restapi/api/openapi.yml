@@ -554,12 +554,12 @@ paths:
         - $ref: "#/components/parameters/DecilesQuery"
       tags:
         - measurements
-      summary: Export measurement results in json
+      summary: Export measurement results in JSON format
       responses:
         "200":
-          description: Successfully exported measurement results in json format
+          description: Successfully exported measurement results in JSON format
           content:
-            application/octet-stream:
+            application/json:
               schema:
                 type: string
                 format: binary
@@ -581,12 +581,12 @@ paths:
         - $ref: "#/components/parameters/DecilesQuery"
       tags:
         - measurements
-      summary: Export measurement results in csv
+      summary: Export measurement results in CSV format
       responses:
         "200":
-          description: Successfully exported measurement results in csv format
+          description: Successfully exported measurement results in CSV format
           content:
-            application/octet-stream:
+            text/csv:
               schema:
                 type: string
                 format: binary
