@@ -324,5 +324,8 @@ const handleMount = (
 .slurm-info {
     position: absolute;
     z-index: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 </style>
