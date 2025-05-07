@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+-   dedicated API CSV and JSON file endpoints for graph measurements (#9)
+
 ### Changed
 
 -   always overwrite valkey.conf on installation
@@ -16,6 +18,7 @@ All notable changes to this project will be documented in this file.
 
 -   link to edit page and changelog on GitHub
 -   node info and benchmarks not being registered correctly
+-   incorrect CSV headers on graph export
 
 ## v1.0.0 - 2025-04-17
 
