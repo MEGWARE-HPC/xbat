@@ -120,7 +120,7 @@ class User():
 
     @staticmethod
     def load_user_by_uid(uid):
-        user = db.getOne("users", {"uid": str(uid)})
+        user = db.getOne("users", {"uidnumber": str(uid)})
         return None if user is None else User(
             **filter_dict(user, ["whitelisted"]))
 

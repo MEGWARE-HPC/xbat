@@ -150,12 +150,10 @@ def validate_client(client_id):
             app.logger.error("User '%s' already exists with UID '%s' as '%s'",
                              username, uid, user_by_uid.user_name)
             raise httpErrors.OAuthLoginError(
-                "User with the same UID already exists under a different username. Please contact your administrator."
+                "A user with this UID already exists but under a different username. Please log in using the exact same username as your first login. If you're unsure, contact your system administrator."
             )
     else:
-        # always set uidnumber/gidnumber in case it changed
-        user.uidnumber = uid
-        user.gidnumber = gid
+        # always set homedirectory in case it changed
         user.homedirectory = homedirectory
         if not user.update():
             app.logger.error("Could not update user '%s' in database",
