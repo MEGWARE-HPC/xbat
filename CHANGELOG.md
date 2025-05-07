@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
--   dedicated API CSV and JSON file endpoints for graph measurements
+-   dedicated API CSV and JSON file endpoints for graph measurements (#9)
 
 ### Changed
 
