@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
 
 -   link to edit page and changelog on GitHub
 -   node info and benchmarks not being registered correctly
+-   misaligned links to Slurm documentation in job script editor (#7)
 
 ## v1.0.0 - 2025-04-17
 
