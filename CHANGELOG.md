@@ -19,6 +19,7 @@ All notable changes to this project will be documented in this file.
 -   link to edit page and changelog on GitHub
 -   node info and benchmarks not being registered correctly
 -   incorrect CSV headers on graph export
+-   different capitalization of username leading to creation of multiple accounts (#21)
 
 ## v1.0.0 - 2025-04-17
 

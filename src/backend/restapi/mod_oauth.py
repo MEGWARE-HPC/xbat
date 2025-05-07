@@ -78,18 +78,19 @@ def validate_client(client_id):
     password = form["password"]
 
     user = User.load_user(username)
-    if user is not None and not user.is_active():
-        app.logger.warning("Invalid or blocked user '%s' login request",
-                           username)
-        raise httpErrors.OAuthLoginError(
-            "User does not exist or is denied access")
 
     # admin and demo are already checked by query_client
     # and must not be imported by external authentication system
+    # since they are internal accounts
     if user is not None and (user.user_type == "admin" or
                              (app.config["DEMO_MODE"]
                               and user.user_type == "demo")):
         return True
+
+    # user found but blocked
+    if user is not None and not user.is_active():
+        app.logger.warning("Blocked user '%s' login request", username)
+        raise httpErrors.OAuthLoginError()
 
     user_info = None
 
@@ -128,16 +129,29 @@ def validate_client(client_id):
     homedirectory = get_entry_string(user_info["homedirectory"])
 
     if user is None:
-        user = User(user_name=username,
-                    password="",
-                    user_type="user",
-                    uidnumber=uid,
-                    gidnumber=gid,
-                    homedirectory=homedirectory)
-        if user.insert() is None:
-            app.logger.error("Could not create new user '%s' in database",
-                             username)
-            raise httpErrors.InternalServerError()
+        # Some authentication providers check the username in a case-insensitive way.
+        # This may lead to multiple users with the same UID but different usernames e.g. "user", "User", "uSer".
+        # Therefore we need to check if the UID already exists in the database.
+        # Warning: this does not account for UID changes in the external authentication system.
+        user_by_uid = User.load_user_by_uid(uid)
+
+        if user_by_uid is None:
+            user = User(user_name=username,
+                        password="",
+                        user_type="user",
+                        uidnumber=uid,
+                        gidnumber=gid,
+                        homedirectory=homedirectory)
+            if user.insert() is None:
+                app.logger.error("Could not create new user '%s' in database",
+                                 username)
+                raise httpErrors.InternalServerError()
+        else:
+            app.logger.error("User '%s' already exists with UID '%s' as '%s'",
+                             username, uid, user_by_uid.user_name)
+            raise httpErrors.OAuthLoginError(
+                "User with the same UID already exists under a different username. Please contact your administrator."
+            )
     else:
         # always set uidnumber/gidnumber in case it changed
         user.uidnumber = uid
