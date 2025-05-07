@@ -106,6 +106,7 @@ class QuestDBAPI:
         logger.info(
             f"Export completed: {success_count} successful, {skip_count} skipped (no data), {failure_count} failed"
         )
+        return success_count
 
     async def import_from_csv(self, table_name, path):
         """
@@ -255,7 +256,8 @@ async def save_as_csv(job_id, runNr_path):
     if job_id == "()" or not job_id:
         raise httpErrors.NotFound("JobId not found")
     table_names = await get_table_names()
-    await questapi.export_tables(table_names, runNr_path, job_id)
+    csv_count = await questapi.export_tables(table_names, runNr_path, job_id)
+    return csv_count
 
 
 def replace_key_fields(data, target_keys, target_value, replaced_value='demo'):
@@ -570,7 +572,7 @@ async def save_benchmarks(runNr, anonymise, folder_path, db):
                         job_db = data_anonymise(job_db, orig_username)
                     with open(file_path, "w") as file:
                         json.dump(sanitize_mongo(job_db), file)
-                    await save_as_csv(job_id, runNr_path)
+                    csv_count = await save_as_csv(job_id, runNr_path)
                 else:
                     save_as_json(file_path, collection,
                                  collections[collection]['filter'],
@@ -581,6 +583,7 @@ async def save_benchmarks(runNr, anonymise, folder_path, db):
                 raise httpErrors.InternalServerError(
                     "Error saving %s for runNr %s to file." %
                     (collection, runNr))
+        return csv_count
 
 
 async def get_import_runNr(data, db, reassignRunNr):
