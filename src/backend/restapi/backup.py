@@ -632,7 +632,7 @@ def get_tablepath_dict(path):
 
     """
     csv_files = path.glob("*.csv")
-    if not csv_files:
+    if not list(csv_files):
         logger.error(f"No CSV files found in the directory:{path}")
     table_dict = {}
     for csv_file in csv_files:
@@ -707,6 +707,8 @@ def process_collection(collection, data, db, updateColl):
 
 async def process_table(csvs_path, jobId_map):
     table_dict = get_tablepath_dict(csvs_path)
+    # TODO: Maybe add an additional feature to decide whether to import when QuestDB Data does not exist.
+    # man can just check if(not table_dict)
     if table_dict:
         jobId_list = []
         try:
