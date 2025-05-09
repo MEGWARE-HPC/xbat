@@ -90,7 +90,8 @@ def validate_client(client_id):
     # user found but blocked
     if user is not None and not user.is_active():
         app.logger.warning("Blocked user '%s' login request", username)
-        raise httpErrors.OAuthLoginError()
+        raise httpErrors.OAuthLoginError(
+            f"User '{username}' blocked from login due to inactive account")
 
     user_info = None
 
