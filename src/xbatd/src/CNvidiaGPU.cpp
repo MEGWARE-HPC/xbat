@@ -132,13 +132,16 @@ int CNvidiaGPU::collect() {
         }
 
         nvmlFieldValue_t fields[2];
+        // scopeId with UINT_MAX returns sum of total nvlink bandwidth
         fields[0].fieldId = NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_RX;
+        fields[0].scopeId = UINT_MAX;
         fields[1].fieldId = NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_TX;
+        fields[1].scopeId = UINT_MAX;
 
         auto result = nvmlDeviceGetFieldValues(device, 2, fields);
         if (result == NVML_SUCCESS) {
-            logger.log(CLogging::info, "RX: " + std::to_string(fields[0].value.ullVal) + " bytes/sec");
-            logger.log(CLogging::info, "TX: " + std::to_string(fields[1].value.ullVal) + " bytes/sec");
+            logger.log(CLogging::info, "RX: " + std::to_string(fields[0].value.ullVal) + " KiB/sec");
+            logger.log(CLogging::info, "TX: " + std::to_string(fields[1].value.ullVal) + " KiB/sec");
         } else {
             logger.log(CLogging::error, "Failed to get throughput: - " + std::string(nvmlErrorString(result)));
         }
