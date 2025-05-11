@@ -221,7 +221,7 @@ async def export_benchmark():
         try:
             csv_count = await save_benchmarks(runNr, anonymise, folder_path,
                                               db)
-            csv_counts = csv_count + csv_counts
+            csv_counts += csv_count
         except Exception as e:
             app.logger.error("Benchmark export failed: %s" % e)
             raise httpErrors.InternalServerError("Benchmark runNr %s failed." %

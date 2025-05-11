@@ -707,8 +707,8 @@ def process_collection(collection, data, db, updateColl):
 
 async def process_table(csvs_path, jobId_map):
     table_dict = get_tablepath_dict(csvs_path)
-    # TODO: Maybe add an additional feature to decide whether to import when QuestDB Data does not exist.
-    # man can just check if(not table_dict)
+    # TODO: Consider adding logic to conditionally import data when QuestDB data is absent.
+    # This can be achieved by checking if not table_dict.
     if table_dict:
         jobId_list = []
         try:
