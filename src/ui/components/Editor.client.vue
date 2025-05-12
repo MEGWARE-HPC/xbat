@@ -324,5 +324,11 @@ const handleMount = (
 .slurm-info {
     position: absolute;
     z-index: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.slurm-info > .v-btn {
+  transform: translate(10%, 0);
 }
 </style>

@@ -1,8 +1,10 @@
 import itertools
+import csv
 import re
 import logging
 import numpy as np
-from flask import request
+from io import StringIO
+from flask import request, Response, jsonify
 from pathlib import Path
 from shared import httpErrors
 from shared import questdb as qdb
@@ -517,6 +519,57 @@ async def get_measurements(jobId,
         valkey.set(valkey_key, result)
 
     return result, 200
+
+
+async def export_json(jobId,
+                      group="",
+                      metric="",
+                      level="",
+                      node="",
+                      deciles=False):
+    result = await calculate_metrics(jobId, group, metric, level, node,
+                                     deciles)
+    if result is None: raise httpErrors.NotFound()
+    json_content = jsonify(result).data
+    filename = f"{jobId}_{group}.json"
+    return Response(
+        json_content,
+        mimetype="application/json",
+        headers={"Content-disposition": f"attachment; filename={filename}"})
+
+
+async def export_csv(jobId,
+                     group="",
+                     metric="",
+                     level="",
+                     node="",
+                     deciles=False):
+    result = await calculate_metrics(jobId, group, metric, level, node,
+                                     deciles)
+    if result is None: raise httpErrors.NotFound()
+    output = StringIO()
+    try:
+        fieldnames = ['jobId', 'metric'] + [
+            f'interval {i}'
+            for i in range(len(result["traces"][0]['rawValues']))
+        ]
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        for item in result["traces"]:
+            row_data = {'jobId': item['jobId'], 'metric': item['rawName']}
+            row_data.update({
+                f'interval {i}': value
+                for i, value in enumerate(item['rawValues'])
+            })
+            writer.writerow(row_data)
+        csv_content = output.getvalue()
+    finally:
+        output.close()
+    filename = f"{jobId}_{group}.csv"
+    return Response(
+        csv_content,
+        mimetype="text/csv",
+        headers={"Content-disposition": f"attachment; filename={filename}"})
 
 
 def get_request_uri():
