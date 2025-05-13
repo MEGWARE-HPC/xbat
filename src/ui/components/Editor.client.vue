@@ -106,6 +106,42 @@ import { useElementHover } from "@vueuse/core";
 
 type MonacoEditor = typeof monacoEditor;
 
+// CSV language registration
+const csvLangId = "csv";
+monacoEditor.languages.register({ id: csvLangId });
+
+// Color list
+const colors = [
+    "#D73A49",
+    "#005CC5",
+    "#22863A",
+    "#6F42C1",
+    "#E36209",
+    "#1B1F23",
+    "#0366D6",
+    "#B31D28",
+    "#2F363D",
+    "#735DD0",
+    "#FF33E1",
+    "#B3FF33"
+];
+
+monacoEditor.languages.setMonarchTokensProvider(csvLangId, {
+    tokenizer: {
+        root: [
+            [/[^,\r\n]+/, { token: "identifier" }],
+            [/,/, "delimiter"],
+            [/$/, ""]
+        ]
+    }
+});
+
+const styleElement = document.createElement("style");
+colors.forEach((color, index) => {
+    styleElement.innerHTML += `.csv-column-${index} { color: ${color}; }`;
+});
+document.head.appendChild(styleElement);
+
 const value = ref<string | Jobscript>("");
 
 let editorInstance: monacoEditor.editor.IStandaloneCodeEditor | null = null;
@@ -273,6 +309,51 @@ const handleMount = (
     editorInstance = _editor;
     editorInstance.onDidContentSizeChange(updateHeight);
 
+    if (props.language === csvLangId) {
+        const applyRainbowColors = () => {
+            const model = editorInstance.getModel();
+            if (!model) return;
+
+            const decorations: monacoEditor.editor.IModelDeltaDecoration[] = [];
+            const text = model.getValue();
+            const lines = text.split("\n");
+
+            lines.forEach((line, lineNumber) => {
+                const columns = line.split(",");
+                let currentOffset = 1;
+                columns.forEach((column, columnIndex) => {
+                    if (colors[columnIndex % colors.length]) {
+                        decorations.push({
+                            range: new monacoEditor.Range(
+                                lineNumber + 1,
+                                currentOffset,
+                                lineNumber + 1,
+                                currentOffset + column.length
+                            ),
+                            options: {
+                                inlineClassName: `csv-column-${
+                                    columnIndex % colors.length
+                                }`
+                            }
+                        });
+                    }
+                    currentOffset += column.length + 1;
+                });
+            });
+
+            editorInstance.deltaDecorations([], decorations);
+        };
+
+        applyRainbowColors();
+
+        const model = editorInstance.getModel();
+        if (model) {
+            model.onDidChangeContent(() => {
+                applyRainbowColors();
+            });
+        }
+    }
+
     if (!props.constrainedJobscript) return;
 
     initConstrainedEditor(_editor, monaco);
@@ -329,6 +410,6 @@ const handleMount = (
     align-items: center;
 }
 .slurm-info > .v-btn {
-  transform: translate(10%, 0);
+    transform: translate(10%, 0);
 }
 </style>
