@@ -22,6 +22,9 @@ class CNvidiaGPU : public CDataCollectionBase {
     int prepare();
     int collect();
     std::vector<nvmlDevice_t> devices;
+    std::vector<int> device_nvlinks;
+    std::vector<std::vector<unsigned long long int>> former_nvlink_tx;
+    std::vector<std::vector<unsigned long long int>> former_nvlink_rx;
     std::map<std::string, nvmlClockType_enum> clockTypes = {{"gpu_clk_graphics", NVML_CLOCK_GRAPHICS},
                                                             {"gpu_clk_sm", NVML_CLOCK_SM},
                                                             {"gpu_clk_mem", NVML_CLOCK_MEM},

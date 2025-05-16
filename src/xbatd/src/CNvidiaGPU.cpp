@@ -58,8 +58,36 @@ int CNvidiaGPU::prepare() {
             return 1;
         }
         devices.push_back(device);
+        int number_of_links = 0;
+        std::vector<unsigned long long int> initial_nvlink_tx_throughput;
+        std::vector<unsigned long long int> initial_nvlink_rx_throughput;
+        for (int link = 0; link < NVML_NVLINK_MAX_LINKS; ++link) {
+            nvmlEnableState_t isActive;
+            if (nvmlDeviceGetNvLinkState(device, link, &isActive) == NVML_SUCCESS &&
+                isActive == NVML_FEATURE_ENABLED) {
+                number_of_links++;
+                nvmlFieldValue_t fields[2];
+                fields[0].fieldId = NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_RX;
+                fields[0].scopeId = link;
+                fields[1].fieldId = NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_TX;
+                fields[1].scopeId = link;
+                auto result = nvmlDeviceGetFieldValues(device, 2, fields);
+                if (result == NVML_SUCCESS) {
+                    // TODO Time between initial value and first query from collect() is not equal to interval
+                    initial_nvlink_tx_throughput.push_back(fields[0].value.ullVal);
+                    initial_nvlink_rx_throughput.push_back(fields[1].value.ullVal);
+                }
+                else {
+                    // TODO Might require error info instead of filling zeros
+                    initial_nvlink_tx_throughput.push_back(0);
+                    initial_nvlink_rx_throughput.push_back(0);
+                }
+            }
+        }
+        device_nvlinks.push_back(number_of_links);
+        former_nvlink_tx.push_back(initial_nvlink_tx_throughput);
+        former_nvlink_rx.push_back(initial_nvlink_rx_throughput);
     }
-
     return 0;
 }
 
@@ -131,20 +159,26 @@ int CNvidiaGPU::collect() {
                 double_data.push_back(CQueue::ILP<double>{"gpu_dec_util", tags, static_cast<double>(utilization), intervalEnd});
         }
 
-        nvmlFieldValue_t fields[2];
-        // scopeId with UINT_MAX returns sum of total nvlink bandwidth
-        fields[0].fieldId = NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_RX;
-        fields[0].scopeId = UINT_MAX;
-        fields[1].fieldId = NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_TX;
-        fields[1].scopeId = UINT_MAX;
-
-        auto result = nvmlDeviceGetFieldValues(device, 2, fields);
-        if (result == NVML_SUCCESS) {
-            logger.log(CLogging::info, "RX: " + std::to_string(fields[0].value.ullVal) + " KiB/sec");
-            logger.log(CLogging::info, "TX: " + std::to_string(fields[1].value.ullVal) + " KiB/sec");
-        } else {
-            logger.log(CLogging::error, "Failed to get throughput: - " + std::string(nvmlErrorString(result)));
+        // NvLink Throughput
+        std::string result_info = "Device ID: " + std::to_string(i);
+        for (int link = 0; link < device_nvlinks[i]; ++link) {
+            nvmlFieldValue_t fields[2];
+            fields[0].fieldId = NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_RX;
+            fields[0].scopeId = link;
+            fields[1].fieldId = NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_TX;
+            fields[1].scopeId = link;
+            auto result = nvmlDeviceGetFieldValues(device, 2, fields);
+            if (result == NVML_SUCCESS) {
+                unsigned long long rx_throughput = (fields[0].value.ullVal - former_nvlink_rx[i][link]) / interval;
+                unsigned long long tx_throughput = (fields[1].value.ullVal - former_nvlink_tx[i][link]) / interval;
+                former_nvlink_rx[i][link] = fields[0].value.ullVal;
+                former_nvlink_tx[i][link] = fields[1].value.ullVal;
+                result_info += " Link: " + std::to_string(link) + " RX: " + std::to_string(rx_throughput) + " TX: " + std::to_string(tx_throughput);
+            } else {
+                logger.log(CLogging::error, "Failed to get throughput: - " + std::string(nvmlErrorString(result)));
+            }
         }
+        logger.log(CLogging::info, result_info);
     }
 
     if ((int_data.size() + double_data.size()) == 0)
