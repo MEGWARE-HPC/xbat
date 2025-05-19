@@ -18,7 +18,7 @@
     "@nuxtjs/sitemap": "^7.2.10",
     "@pinia/nuxt": "0.11.0",
     "glob": "^11.0.2",
-    "nuxt": "3.17.1",
+    "nuxt": "^3.17.1",
     "pinia": "^3.0.2",
     "vue": "latest",
     "vue-router": "latest"
