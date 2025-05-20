@@ -112,18 +112,16 @@ monacoEditor.languages.register({ id: csvLangId });
 
 // Color list
 const colors = [
-    "#D73A49",
-    "#005CC5",
-    "#22863A",
-    "#6F42C1",
-    "#E36209",
-    "#1B1F23",
-    "#0366D6",
-    "#B31D28",
-    "#2F363D",
-    "#735DD0",
-    "#FF33E1",
-    "#B3FF33"
+    "#c00040",
+    "#00a000",
+    "#8000c0",
+    "#c09e18",
+    "#0080a0",
+    "#e000e0",
+    "#60a000",
+    "#0020f0",
+    "#e08000",
+    "#00c080"
 ];
 
 monacoEditor.languages.setMonarchTokensProvider(csvLangId, {
