@@ -346,6 +346,8 @@ const handleMount = (
         if (model) {
             model.onDidChangeContent(() => {
                 applyRainbowColors();
+                // console.log("props.language", props.language, "csvLangId", csvLangId);
+                // console.log("model", model);
             });
         }
     }
