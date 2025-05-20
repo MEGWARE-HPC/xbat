@@ -308,8 +308,8 @@ const handleMount = (
     editorInstance.onDidContentSizeChange(updateHeight);
 
     if (props.language === csvLangId) {
+        const model = editorInstance.getModel();
         const applyRainbowColors = () => {
-            const model = editorInstance.getModel();
             if (!model) return;
 
             const decorations: monacoEditor.editor.IModelDeltaDecoration[] = [];
@@ -343,8 +343,6 @@ const handleMount = (
         };
 
         applyRainbowColors();
-
-        const model = editorInstance.getModel();
         if (model) {
             model.onDidChangeContent(() => {
                 applyRainbowColors();
