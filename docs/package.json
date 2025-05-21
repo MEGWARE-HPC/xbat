@@ -15,10 +15,10 @@
     "@nuxt/fonts": "^0.11.4",
     "@nuxt/image": "^1.10.0",
     "@nuxtjs/robots": "^5.2.10",
-    "@nuxtjs/sitemap": "^7.2.10",
+    "@nuxtjs/sitemap": "^7.3.0",
     "@pinia/nuxt": "0.11.0",
     "glob": "^11.0.2",
-    "nuxt": "^3.17.1",
+    "nuxt": "^3.17.4",
     "pinia": "^3.0.2",
     "vue": "latest",
     "vue-router": "latest"
@@ -27,6 +27,6 @@
     "@mdi/js": "^7.4.47",
     "sass": "^1.89.0",
     "vite-plugin-vuetify": "^2.1.1",
-    "vuetify": "^3.8.5"
+    "vuetify": "^3.8.6"
   }
 }
