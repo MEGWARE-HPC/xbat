@@ -15,7 +15,8 @@ import {
     mdiArrowRight,
     mdiOpenInNew,
     mdiFileDocumentOutline,
-    mdiTelevisionPlay
+    mdiTelevisionPlay,
+    mdiMenu
 } from "@mdi/js";
 
 /*
@@ -78,7 +79,8 @@ export default defineNuxtPlugin((app) => {
                 linkExternal: mdiOpenInNew,
                 chevronRight: mdiChevronRight,
                 file: mdiFileDocumentOutline,
-                play: mdiTelevisionPlay
+                play: mdiTelevisionPlay,
+                menu: mdiMenu
             },
             sets: {
                 mdi

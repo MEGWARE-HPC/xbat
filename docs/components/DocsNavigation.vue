@@ -1,8 +1,10 @@
 <template>
     <v-navigation-drawer
-        permanent
+        v-model="$store.docsDrawerOpen"
         v-model:selected="selectedEntry"
         class="pl-2 pr-2"
+        :permanent="windowWidth > 992"
+        :temporary="windowWidth <= 992"
     >
         <template v-if="items">
             <div class="mt-13">
@@ -65,6 +67,10 @@
 <script setup lang="ts">
 import type { NavItem } from "@nuxt/content";
 const route = useRoute();
+
+import { useWindowSize } from "@vueuse/core";
+
+const { width: windowWidth } = useWindowSize();
 
 const docStartingRoutes: { [key: string]: string } = {
     user: "/docs/user/introduction",
