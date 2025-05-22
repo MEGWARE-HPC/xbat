@@ -66,10 +66,9 @@
 </template>
 <script setup lang="ts">
 import type { NavItem } from "@nuxt/content";
-const route = useRoute();
-
 import { useWindowSize } from "@vueuse/core";
 
+const route = useRoute();
 const { width: windowWidth } = useWindowSize();
 
 const docStartingRoutes: { [key: string]: string } = {
