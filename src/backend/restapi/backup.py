@@ -195,9 +195,10 @@ questapi = QuestDBAPI()
 
 def data_anonymise(collection_db, username):
     target_keys = [
-        'issuer', 'configuration.misc.owner', 'configuration.OUTPUT_DIRECTORY',
-        'configuration.LOG_DIRECTORY', 'jobscriptFile', 'jobInfo.command',
-        'jobInfo.standardError', 'jobInfo.standardOutput', 'jobInfo.userName',
+        'issuer', 'owner', 'configuration.misc.owner',
+        'configuration.OUTPUT_DIRECTORY', 'configuration.LOG_DIRECTORY',
+        'jobscriptFile', 'jobInfo.command', 'jobInfo.standardError',
+        'jobInfo.standardOutput', 'jobInfo.userName',
         'jobInfo.currentWorkingDirectory', 'standardOutput', 'user_name',
         'homedirectory', 'misc.owner', 'members', 'user_type', 'uidnumber',
         'gidnumber', 'last_login'
@@ -285,6 +286,8 @@ def replace_key_fields(data, target_keys, target_value, replaced_value='demo'):
                         data[key] = [replaced_value]
                     # Treat the user type of 'demo' as demo now.
                     elif key == 'user_type':
+                        data[key] = 'demo'
+                    elif key == 'owner':
                         data[key] = 'demo'
                     elif key == 'uidnumber':
                         data[key] = "1001"
