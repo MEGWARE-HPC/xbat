@@ -11,19 +11,16 @@
                             class="ml-5"
                         ></NuxtImg>
                     </NuxtLink>
-                    <span style="font-size: 1rem"> XBAT </span>
+                    <span style="font-size: 1rem" class="hide-sm"> XBAT </span>
                 </div>
             </template>
 
             <v-app-bar-title>
                 <div class="d-flex">
-                    <v-btn
-                        append-icon="$chevronDown"
-                        @click="router.push('/docs/user/introduction')"
-                    >
+                    <v-btn append-icon="$chevronDown">
                         Documentation
 
-                        <v-menu activator="parent" location="end" open-on-hover>
+                        <v-menu activator="parent" location="end">
                             <v-list>
                                 <v-list-item
                                     title="User"
@@ -52,13 +49,13 @@
                         </v-menu>
                     </v-btn>
                     <v-btn to="/docs/about">About</v-btn>
-                    <v-btn to="/docs/demo">Demo</v-btn>
+                    <v-btn to="/docs/demo" class="hide-sm">Demo</v-btn>
                 </div>
             </v-app-bar-title>
 
             <template #append>
                 <div class="d-flex align-center">
-                    <div>
+                    <div class="hide-sm">
                         <v-text-field
                             placeholder="Search..."
                             hide-details
@@ -74,24 +71,35 @@
                             >
                         </v-text-field>
                     </div>
+                    <div class="hide-sm">
+                        <v-btn
+                            size="large"
+                            href="https://www.megware.com/en/products/xbat"
+                            target="_blank"
+                        >
+                            <NuxtImg
+                                src="/logo/megware-logo-white.svg"
+                                alt="Megware logo"
+                                width="70px"
+                                title="Visit MEGWARE"
+                            ></NuxtImg>
+                        </v-btn>
+                        <v-btn
+                            icon="$github"
+                            size="large"
+                            href="https://github.com/MEGWARE-HPC/xbat"
+                            target="_blank"
+                            title="Visit GitHub"
+                        ></v-btn>
+                    </div>
                     <v-btn
-                        size="large"
-                        href="https://www.megware.com/en/products/xbat"
-                        target="_blank"
-                    >
-                        <NuxtImg
-                            src="/logo/megware-logo-white.svg"
-                            alt="Megware logo"
-                            width="70px"
-                            title="Visit MEGWARE"
-                        ></NuxtImg>
-                    </v-btn>
-                    <v-btn
-                        icon="$github"
-                        size="large"
-                        href="https://github.com/MEGWARE-HPC/xbat"
-                        target="_blank"
-                        title="Visit GitHub"
+                        icon="$menu"
+                        v-if="
+                            windowWidth <= 992 &&
+                            route.path.startsWith('/docs') &&
+                            route.path !== '/docs/about'
+                        "
+                        @click="$store.docsDrawerOpen = !$store.docsDrawerOpen"
                     ></v-btn>
                 </div>
             </template>
@@ -100,16 +108,31 @@
     </div>
 </template>
 <script setup lang="ts">
-const searchDialog = ref(false);
+import { useWindowSize } from "@vueuse/core";
 
-const router = useRouter();
+const searchDialog = ref(false);
+const { width: windowWidth } = useWindowSize();
 
 const { $store } = useNuxtApp();
+
+const route = useRoute();
 </script>
 <style lang="scss" scoped>
 .search-info {
     font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.5);
     white-space: nowrap;
+}
+
+@media (max-width: 1200px) {
+    .search {
+        display: none;
+    }
+}
+
+@media (max-width: 992px) {
+    .hide-sm {
+        display: none;
+    }
 }
 </style>
