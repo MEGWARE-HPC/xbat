@@ -113,7 +113,7 @@ let editorInstance: monacoEditor.editor.IStandaloneCodeEditor | null = null;
 const editorRef = ref<HTMLElement | null>(null);
 const containerRef = ref<HTMLElement | null>(null);
 
-const theme = useCookie("xbat_theme");
+const theme = useCookie("xbat_theme", { default: () => "light" });
 const emit = defineEmits(["update:modelValue", "update:validity"]);
 
 const containerHovered = useElementHover(containerRef);
