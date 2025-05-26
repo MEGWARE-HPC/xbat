@@ -109,7 +109,15 @@ type MonacoEditor = typeof monacoEditor;
 // CSV language registration
 const csvLangId = "csv";
 monacoEditor.languages.register({ id: csvLangId });
-
+monacoEditor.languages.setMonarchTokensProvider(csvLangId, {
+    tokenizer: {
+        root: [
+            [/[^,\r\n]+/, { token: "identifier" }],
+            [/,/, "delimiter"],
+            [/$/, ""]
+        ]
+    }
+});
 // Color list
 const colors = [
     "#c00040",
@@ -124,15 +132,10 @@ const colors = [
     "#00c080"
 ];
 
-monacoEditor.languages.setMonarchTokensProvider(csvLangId, {
-    tokenizer: {
-        root: [
-            [/[^,\r\n]+/, { token: "identifier" }],
-            [/,/, "delimiter"],
-            [/$/, ""]
-        ]
-    }
-});
+// onMounted(() => {
+//     applyRainbowColors();
+//     console.log("onMounted apply");
+// });
 
 const styleElement = document.createElement("style");
 colors.forEach((color, index) => {
@@ -300,6 +303,51 @@ const updateHeight = () => {
     containerRef.value.style.height = `${contentHeight}px`;
 };
 
+const currentDecorationIds = ref<string[]>([]);
+
+const applyRainbowColors = () => {
+    if (!editorInstance) return;
+    const model = editorInstance.getModel();
+    if (!model) return;
+
+    const decorations: monacoEditor.editor.IModelDeltaDecoration[] = [];
+    const text = model.getValue();
+    const lines = text.split("\n");
+
+    lines.forEach((line, lineNumber) => {
+        const columns = line.split(",");
+        let currentOffset = 1;
+        columns.forEach((column, columnIndex) => {
+            if (colors[columnIndex % colors.length]) {
+                decorations.push({
+                    range: new monacoEditor.Range(
+                        lineNumber + 1,
+                        currentOffset,
+                        lineNumber + 1,
+                        currentOffset + column.length
+                    ),
+                    options: {
+                        inlineClassName: `csv-column-${
+                            columnIndex % colors.length
+                        }`
+                    }
+                });
+            }
+            currentOffset += column.length + 1;
+        });
+    });
+
+    // currentDecorationIds.value = editorInstance.deltaDecorations(
+    //     currentDecorationIds.value,
+    //     decorations
+    // );
+    currentDecorationIds.value = model.deltaDecorations(
+        currentDecorationIds.value,
+        decorations
+    );
+    // editorInstance.deltaDecorations([], decorations);
+};
+
 const handleMount = (
     _editor: monacoEditor.editor.IStandaloneCodeEditor,
     monaco: MonacoEditor
@@ -307,47 +355,30 @@ const handleMount = (
     editorInstance = _editor;
     editorInstance.onDidContentSizeChange(updateHeight);
 
+    editorInstance.onDidChangeModel(() => {
+        if (!editorInstance) return;
+        const model = editorInstance.getModel();
+        if (props.language === csvLangId) {
+            applyRainbowColors();
+            console.log("editorInstance csv-language apply");
+            if (model) {
+                model.onDidChangeContent(() => {
+                    applyRainbowColors();
+                    console.log("editorInstance onDidChangeContent apply");
+                });
+            }
+        }
+    });
+
     if (props.language === csvLangId) {
         const model = editorInstance.getModel();
-        const applyRainbowColors = () => {
-            if (!model) return;
-
-            const decorations: monacoEditor.editor.IModelDeltaDecoration[] = [];
-            const text = model.getValue();
-            const lines = text.split("\n");
-
-            lines.forEach((line, lineNumber) => {
-                const columns = line.split(",");
-                let currentOffset = 1;
-                columns.forEach((column, columnIndex) => {
-                    if (colors[columnIndex % colors.length]) {
-                        decorations.push({
-                            range: new monacoEditor.Range(
-                                lineNumber + 1,
-                                currentOffset,
-                                lineNumber + 1,
-                                currentOffset + column.length
-                            ),
-                            options: {
-                                inlineClassName: `csv-column-${
-                                    columnIndex % colors.length
-                                }`
-                            }
-                        });
-                    }
-                    currentOffset += column.length + 1;
-                });
-            });
-
-            editorInstance.deltaDecorations([], decorations);
-        };
-
         applyRainbowColors();
+        console.log("csv-language apply");
+
         if (model) {
             model.onDidChangeContent(() => {
                 applyRainbowColors();
-                // console.log("props.language", props.language, "csvLangId", csvLangId);
-                // console.log("model", model);
+                console.log("onDidChangeContent apply");
             });
         }
     }
@@ -355,6 +386,9 @@ const handleMount = (
     if (!props.constrainedJobscript) return;
 
     initConstrainedEditor(_editor, monaco);
+    if (props.language === csvLangId) {
+        applyRainbowColors();
+    }
 };
 </script>
 <style lang="scss" scoped>
