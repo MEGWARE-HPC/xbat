@@ -544,32 +544,37 @@ async def export_csv(jobId,
                      level="",
                      node="",
                      deciles=False):
-    result = await calculate_metrics(jobId, group, metric, level, node,
-                                     deciles)
-    if result is None: raise httpErrors.NotFound()
-    output = StringIO()
-    try:
-        fieldnames = ['jobId', 'metric'] + [
-            f'interval {i}'
-            for i in range(len(result["traces"][0]['rawValues']))
-        ]
-        writer = csv.DictWriter(output, fieldnames=fieldnames)
-        writer.writeheader()
-        for item in result["traces"]:
-            row_data = {'jobId': item['jobId'], 'metric': item['rawName']}
-            row_data.update({
-                f'interval {i}': value
-                for i, value in enumerate(item['rawValues'])
-            })
-            writer.writerow(row_data)
-        csv_content = output.getvalue()
-    finally:
-        output.close()
-    filename = f"{jobId}_{group}.csv"
-    return Response(
-        csv_content,
-        mimetype="text/csv",
-        headers={"Content-disposition": f"attachment; filename={filename}"})
+    if not group and not metric and not level:
+        return {f"Export all metrics data of benchmark #{jobId} at once."}
+    else:
+        result = await calculate_metrics(jobId, group, metric, level, node,
+                                         deciles)
+        if result is None: raise httpErrors.NotFound()
+        output = StringIO()
+        try:
+            fieldnames = ['jobId', 'metric'] + [
+                f'interval {i}'
+                for i in range(len(result["traces"][0]['rawValues']))
+            ]
+            writer = csv.DictWriter(output, fieldnames=fieldnames)
+            writer.writeheader()
+            for item in result["traces"]:
+                row_data = {'jobId': item['jobId'], 'metric': item['rawName']}
+                row_data.update({
+                    f'interval {i}': value
+                    for i, value in enumerate(item['rawValues'])
+                })
+                writer.writerow(row_data)
+            csv_content = output.getvalue()
+        finally:
+            output.close()
+        filename = f"{jobId}_{group}_{metric}_{level}.csv"
+        return Response(csv_content,
+                        mimetype="text/csv",
+                        headers={
+                            "Content-disposition":
+                            f"attachment; filename={filename}"
+                        })
 
 
 def get_request_uri():
