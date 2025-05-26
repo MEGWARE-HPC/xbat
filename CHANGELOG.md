@@ -21,6 +21,7 @@ All notable changes to this project will be documented in this file.
 -   misaligned links to Slurm documentation in job script editor (#7)
 -   incorrect CSV headers on graph export
 -   different capitalization of username leading to creation of multiple accounts (#21)
+-   theme and fonts issues in editor (#13, #14)
 
 ## v1.0.0 - 2025-04-17
 
