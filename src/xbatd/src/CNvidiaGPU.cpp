@@ -58,7 +58,8 @@ int CNvidiaGPU::prepare() {
             return 1;
         }
         devices.push_back(device);
-        int number_of_links = 0;
+
+		int number_of_links = 0;
         std::vector<unsigned long long int> initial_nvlink_tx_throughput;
         std::vector<unsigned long long int> initial_nvlink_rx_throughput;
         for (int link = 0; link < NVML_NVLINK_MAX_LINKS; ++link) {
@@ -87,6 +88,15 @@ int CNvidiaGPU::prepare() {
         device_nvlinks.push_back(number_of_links);
         former_nvlink_tx.push_back(initial_nvlink_tx_throughput);
         former_nvlink_rx.push_back(initial_nvlink_rx_throughput);
+    }
+
+    for (unsigned int i = 0; i < deviceCount; i++) {
+        int number_of_links = device_nvlinks[i];
+        std::string out_txt = "Initial Link Throughput for Device " + std::to_string(i);
+        for (int link = 0; link < number_of_links; link++) {
+            out_txt += " TX: " + std::to_string(former_nvlink_tx[i][link]) + " RX: " + std::to_string(former_nvlink_rx[i][link]);
+        }
+        logger.log(CLogging::info, out_txt + " Interval: " + std::to_string(interval));
     }
     return 0;
 }
@@ -161,6 +171,8 @@ int CNvidiaGPU::collect() {
 
         // NvLink Throughput
         std::string result_info = "Device ID: " + std::to_string(i);
+        unsigned long long tx_former_sum = 0;
+        unsigned long long rx_former_sum = 0;
         for (int link = 0; link < device_nvlinks[i]; ++link) {
             nvmlFieldValue_t fields[2];
             fields[0].fieldId = NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_RX;
@@ -169,8 +181,10 @@ int CNvidiaGPU::collect() {
             fields[1].scopeId = link;
             auto result = nvmlDeviceGetFieldValues(device, 2, fields);
             if (result == NVML_SUCCESS) {
-                unsigned long long rx_throughput = (fields[0].value.ullVal - former_nvlink_rx[i][link]) / interval;
-                unsigned long long tx_throughput = (fields[1].value.ullVal - former_nvlink_tx[i][link]) / interval;
+                unsigned long long rx_throughput = (fields[0].value.ullVal - former_nvlink_rx[i][link]) / (interval / 1000);
+                unsigned long long tx_throughput = (fields[1].value.ullVal - former_nvlink_tx[i][link]) / (interval / 1000);
+                tx_former_sum = former_nvlink_tx[i][link] + tx_former_sum;
+                rx_former_sum = former_nvlink_rx[i][link] + rx_former_sum;
                 former_nvlink_rx[i][link] = fields[0].value.ullVal;
                 former_nvlink_tx[i][link] = fields[1].value.ullVal;
                 result_info += " Link: " + std::to_string(link) + " RX: " + std::to_string(rx_throughput) + " TX: " + std::to_string(tx_throughput);
@@ -178,7 +192,15 @@ int CNvidiaGPU::collect() {
                 logger.log(CLogging::error, "Failed to get throughput: - " + std::string(nvmlErrorString(result)));
             }
         }
-        logger.log(CLogging::info, result_info);
+        nvmlFieldValue_t fields[2];
+        fields[0].fieldId = NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_RX;
+        fields[0].scopeId = UINT_MAX;
+        fields[1].fieldId = NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_TX;
+        fields[1].scopeId = UINT_MAX;
+        auto result = nvmlDeviceGetFieldValues(device, 2, fields);
+        auto tx_sum = (fields[0].value.ullVal - tx_former_sum) / (interval / 1000);
+        auto rx_sum = (fields[1].value.ullVal - rx_former_sum) / (interval / 1000);
+        logger.log(CLogging::info, "Interval: " + std::to_string(interval / 1000) + " Sum TX: " + std::to_string(tx_sum) + " Sum RX: " + std::to_string(rx_sum) + " " + result_info);
     }
 
     if ((int_data.size() + double_data.size()) == 0)
