@@ -547,98 +547,63 @@ async def export_csv(jobId,
     if not group and not metric:
         if not level:
             # Temporarily set the level to job, if level is not given either
-            level = 'job'
-
-        job = mongodb.getOne("jobs", {"jobId": jobId})
-        if job is None:
-            raise httpErrors.NotFound()
-
-        capture_start = job["captureStart"] if "captureStart" in job else None
-        capture_end = job["captureEnd"] if "captureEnd" in job else None
-
-        capture_start = iso8601_to_datetime(capture_start) if isinstance(
-            capture_start, str) else capture_start
-        capture_end = iso8601_to_datetime(capture_end) if isinstance(
-            capture_end, str) else capture_end
+            level = "job"
 
         all_csv_content = []
-
         for group_key in METRICS:
             for metric_key in METRICS[group_key]:
-
                 result = await calculate_metrics(jobId, group_key, metric_key,
                                                  level, node, deciles)
                 if result is None or not result["traces"]:
                     continue
 
-                output = StringIO()
-                try:
-                    value_key = 'rawValues' if 'rawValues' in result["traces"][
-                        0] else 'values'
-                    if value_key not in result["traces"][0]:
-                        continue
-                    fieldnames = ['jobId', 'metric'] + [
-                        f'interval {i}'
-                        for i in range(len(result["traces"][0][value_key]))
-                    ]
-                    writer = csv.DictWriter(output, fieldnames=fieldnames)
-                    writer.writeheader()
-                    for item in result["traces"]:
-                        row_data = {
-                            'jobId': item['jobId'],
-                            'metric': item['rawName']
-                        }
-                        row_data.update({
-                            f'interval {i}': value
-                            for i, value in enumerate(item[value_key])
-                        })
-                        writer.writerow(row_data)
-                    csv_content = output.getvalue()
-                finally:
-                    output.close()
+                csv_content = generate_csv(result)
                 all_csv_content.append(csv_content)
 
-                if not all_csv_content:
-                    raise httpErrors.NotFound()
+        if not all_csv_content:
+            raise httpErrors.NotFound()
 
         final_csv_content = "\n".join(all_csv_content)
         filename = f"{jobId}_all_metrics_{level}.csv"
-        return Response(final_csv_content,
-                        mimetype="text/csv",
-                        headers={
-                            "Content-disposition":
-                            f"attachment; filename={filename}"
-                        })
+
     else:
         result = await calculate_metrics(jobId, group, metric, level, node,
                                          deciles)
         if result is None: raise httpErrors.NotFound()
-        output = StringIO()
-        try:
-            fieldnames = ['jobId', 'metric'] + [
-                f'interval {i}'
-                for i in range(len(result["traces"][0]['rawValues']))
-            ]
-            writer = csv.DictWriter(output, fieldnames=fieldnames)
-            writer.writeheader()
-            for item in result["traces"]:
-                row_data = {'jobId': item['jobId'], 'metric': item['rawName']}
-                row_data.update({
-                    f'interval {i}': value
-                    for i, value in enumerate(item['rawValues'])
-                })
-                writer.writerow(row_data)
-            csv_content = output.getvalue()
-        finally:
-            output.close()
 
+        final_csv_content = generate_csv(result)
         filename = f"{jobId}_{group}_{metric}_{level}.csv"
-        return Response(csv_content,
-                        mimetype="text/csv",
-                        headers={
-                            "Content-disposition":
-                            f"attachment; filename={filename}"
-                        })
+
+    return Response(
+        final_csv_content,
+        mimetype="text/csv",
+        headers={"Content-disposition": f"attachment; filename={filename}"})
+
+
+def generate_csv(result):
+    output = StringIO()
+    try:
+        value_key = 'rawValues' if 'rawValues' in result["traces"][
+            0] else 'values'
+        if value_key not in result["traces"][0]:
+            return ""
+        fieldnames = ['jobId', 'metric'] + [
+            f'interval {i}' for i in range(len(result["traces"][0][value_key]))
+        ]
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        for item in result["traces"]:
+            row_data = {'jobId': item['jobId'], 'metric': item['rawName']}
+            row_data.update({
+                f'interval {i}': value
+                for i, value in enumerate(item[value_key])
+            })
+            writer.writerow(row_data)
+        csv_content = output.getvalue()
+    finally:
+        output.close()
+
+    return csv_content
 
 
 def get_request_uri():
