@@ -567,6 +567,9 @@ async def export_csv(jobId,
         filename = f"{jobId}_all_metrics_{level}.csv"
 
     else:
+        if not level:
+            raise httpErrors.BadRequest(
+                "Level is required for single metric export")
         result = await calculate_metrics(jobId, group, metric, level, node,
                                          deciles)
         if result is None: raise httpErrors.NotFound()
