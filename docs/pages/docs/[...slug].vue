@@ -20,8 +20,8 @@
             </ContentDoc>
             <div class="mt-6">
                 <v-divider></v-divider>
-                <div class="d-flex justify-space-between mt-4">
-                    <div class="footer-nav">
+                <div class="d-flex justify-space-between flex-wrap">
+                    <div class="footer-nav mt-4">
                         <v-btn
                             prepend-icon="$arrowLeft"
                             variant="plain"
@@ -39,7 +39,7 @@
                             </div>
                         </v-btn>
                     </div>
-                    <div class="footer-nav">
+                    <div class="footer-nav mt-4">
                         <v-btn
                             append-icon="$arrowRight"
                             variant="plain"

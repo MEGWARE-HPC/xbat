@@ -23,8 +23,10 @@ provide("navigation", nav.value);
 </script>
 <style lang="scss">
 @use "~/assets/css/general.scss" as *;
+@use "~/assets/css/colors.scss" as *;
 
 :root {
     scroll-padding-top: 65px;
+    background-color: $background;
 }
 </style>
