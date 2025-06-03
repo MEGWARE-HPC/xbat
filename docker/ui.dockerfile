@@ -34,8 +34,8 @@ RUN rm -rf node_modules && \
     bun install --production
 
 # prune unnecessary files from node_modules like TypeScript sources, markdown files, etc.
-RUN curl -sf https://gobinaries.com/tj/node-prune | sh && \
-    node-prune
+# RUN curl -sf https://gobinaries.com/tj/node-prune | sh && \
+#     node-prune
 
 FROM node:${NODE_VERSION}-slim as distribution
 
