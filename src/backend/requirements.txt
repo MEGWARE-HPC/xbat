@@ -20,5 +20,5 @@ redis==5.3.0
 filelock==3.18.0
 grpcio==1.72.1
 grpcio-tools==1.72.1
-aiohttp==3.12.7
+aiohttp==3.12.9
 bcrypt==4.3.0

@@ -90,7 +90,7 @@ def serve(cancelled):
     while not cancelled.is_set():
         time.sleep(3)
 
-    all_rpcs_done_event = server.stop(30)
-    all_rpcs_done_event.wait(timeout=30)
+    all_rpcs_done_event = server.stop(0)
+    all_rpcs_done_event.wait(timeout=5)
 
     logger.debug("RPC server terminated")
