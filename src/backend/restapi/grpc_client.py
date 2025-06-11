@@ -19,7 +19,8 @@ class XbatCtldRpcClient:
                    ('grpc.http2.max_pings_without_data', 10),
                    ('grpc.http2.keepalive_permit_without_calls', True),
                    ('grpc.max_send_message_length', 50 * 1024 * 1024),
-                   ('grpc.max_receive_message_length', 50 * 1024 * 1024)]
+                   ('grpc.max_receive_message_length', 50 * 1024 * 1024),
+                   ('grpc.log_level', 'debug')]
         self.channel = grpc.insecure_channel(ADDRESS, options=options)
         self.stub = xbat_pb2_grpc.xbatctldStub(self.channel)
 
