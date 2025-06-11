@@ -12,11 +12,11 @@ ADDRESS = "localhost:50051" if app.config[
 class XbatCtldRpcClient:
 
     def __init__(self):
-        options = [('grpc.keepalive_time_ms', 30000),
-                   ('grpc.keepalive_timeout_ms', 10000),
-                   ('grpc.http2.min_ping_interval_without_data_ms', 15000),
-                   ('grpc.http2.max_pings_without_data', 0),
-                   ('grpc.keepalive_permit_without_calls', 1)]
+        options = [('grpc.keepalive_time_ms', 60000),
+                   ('grpc.keepalive_timeout_ms', 20000),
+                   ('grpc.http2.min_time_between_pings_ms', 30000),
+                   ('grpc.http2.max_pings_without_data', 5),
+                   ('grpc.http2.keepalive_permit_without_calls', True)]
         self.channel = grpc.insecure_channel(ADDRESS, options=options)
         self.stub = xbat_pb2_grpc.xbatctldStub(self.channel)
 
