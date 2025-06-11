@@ -16,7 +16,6 @@ slurm = SlurmConnector()
 
 from shared.grpc import xbat_pb2, xbat_pb2_grpc
 
-logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("xbatctld")
 
 
@@ -74,10 +73,10 @@ class XbatCtldServicer(xbat_pb2_grpc.xbatctldServicer):
 
 
 def serve(cancelled):
-    options = [('grpc.keepalive_time_ms', 60000),
-               ('grpc.keepalive_timeout_ms', 20000),
-               ('grpc.http2.min_time_between_pings_ms', 30000),
-               ('grpc.http2.max_pings_without_data', 5),
+    options = [('grpc.keepalive_time_ms', 120000),
+               ('grpc.keepalive_timeout_ms', 30000),
+               ('grpc.http2.min_time_between_pings_ms', 60000),
+               ('grpc.http2.max_pings_without_data', 10),
                ('grpc.http2.keepalive_permit_without_calls', True)]
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10),
                          options=options)
