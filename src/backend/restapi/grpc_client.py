@@ -4,6 +4,7 @@ from flask import current_app as app
 import google.protobuf.empty_pb2 as empty_pb2
 from google.protobuf.json_format import MessageToJson
 from shared.grpc import xbat_pb2, xbat_pb2_grpc
+import time
 
 ADDRESS = "localhost:50051" if app.config[
     "BUILD"] == "dev" else "xbat-ctld:50051"
@@ -23,6 +24,27 @@ class XbatCtldRpcClient:
     def close(self):
         self.channel.close()
 
+    def _retry_rpc(func):
+        max_retries = 3
+        initial_delay = 1
+
+        def wrapper(self, *args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return func(self, *args, **kwargs)
+                except grpc.RpcError as e:
+                    if e.code(
+                    ) == grpc.StatusCode.UNAVAILABLE and attempt < max_retries - 1:
+                        app.logger.warning(
+                            f"RPC call failed with {e}, retrying ({attempt + 1}/{max_retries})..."
+                        )
+                        time.sleep(initial_delay * (2**attempt))
+                    else:
+                        raise
+
+        return wrapper
+
+    @_retry_rpc
     def get_nodes(self):
         try:
             response = self.stub.GetNodes(empty_pb2.Empty())
@@ -32,6 +54,7 @@ class XbatCtldRpcClient:
             app.logger.error(f"Failed to get node data: {e}")
         return None
 
+    @_retry_rpc
     def get_jobs(self):
         try:
             response = self.stub.GetJobs(empty_pb2.Empty())
@@ -41,6 +64,7 @@ class XbatCtldRpcClient:
             app.logger.error(f"Failed to get job data: {e}")
         return None
 
+    @_retry_rpc
     def get_partitions(self):
         try:
             response = self.stub.GetPartitions(empty_pb2.Empty())
@@ -50,6 +74,7 @@ class XbatCtldRpcClient:
             app.logger.error(f"Failed to get partition data: {e}")
         return None
 
+    @_retry_rpc
     def submit_benchmark(self, data):
         try:
             new_benchmark = xbat_pb2.NewBenchmark(**data)
@@ -59,6 +84,7 @@ class XbatCtldRpcClient:
             app.logger.error(f"Failed to submit benchmark: {e}")
         return False
 
+    @_retry_rpc
     def get_user_info(self, user_name):
         try:
             user_request = xbat_pb2.UserName(userName=user_name)
@@ -68,6 +94,7 @@ class XbatCtldRpcClient:
             app.logger.error(f"Failed to get user info: {e}")
         return None
 
+    @_retry_rpc
     def cancel_jobs(self, job_ids):
         try:
             job_ids_request = xbat_pb2.JobIds(jobIds=job_ids)
@@ -77,6 +104,7 @@ class XbatCtldRpcClient:
             return False
         return True
 
+    @_retry_rpc
     def purge_questdb(self):
         try:
             self.stub.PurgeQuestDB(empty_pb2.Empty())

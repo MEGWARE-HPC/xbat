@@ -16,6 +16,7 @@ slurm = SlurmConnector()
 
 from shared.grpc import xbat_pb2, xbat_pb2_grpc
 
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("xbatctld")
 
 
