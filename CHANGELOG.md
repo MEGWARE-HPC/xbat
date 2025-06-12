@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 -   always overwrite valkey.conf on installation
 -   use chrt instead of nice by default for xbatd for more reliable scheduling
 -   temporarily downgrade LIKWID to v5.3.0 due to errors on some architectures with v5.4.1
+-   improved layout of docs on smaller screens
 
 ### Fixed
 
@@ -22,6 +23,7 @@ All notable changes to this project will be documented in this file.
 -   incorrect CSV headers on graph export
 -   different capitalization of username leading to creation of multiple accounts (#21)
 -   theme and fonts issues in editor (#13, #14)
+-   anonymization of benchmarks exports (#30)
 
 ## v1.0.0 - 2025-04-17
 

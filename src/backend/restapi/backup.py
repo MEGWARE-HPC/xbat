@@ -195,9 +195,10 @@ questapi = QuestDBAPI()
 
 def data_anonymise(collection_db, username):
     target_keys = [
-        'issuer', 'configuration.misc.owner', 'configuration.OUTPUT_DIRECTORY',
-        'configuration.LOG_DIRECTORY', 'jobscriptFile', 'jobInfo.command',
-        'jobInfo.standardError', 'jobInfo.standardOutput', 'jobInfo.userName',
+        'issuer', 'owner', 'configuration.misc.owner',
+        'configuration.OUTPUT_DIRECTORY', 'configuration.LOG_DIRECTORY',
+        'jobscriptFile', 'jobInfo.command', 'jobInfo.standardError',
+        'jobInfo.standardOutput', 'jobInfo.userName',
         'jobInfo.currentWorkingDirectory', 'standardOutput', 'user_name',
         'homedirectory', 'misc.owner', 'members', 'user_type', 'uidnumber',
         'gidnumber', 'last_login'
@@ -273,33 +274,43 @@ def replace_key_fields(data, target_keys, target_value, replaced_value='demo'):
 
     def replace_nested_key(data, keys, target_value, replaced_value):
 
-        if not keys or not isinstance(data, dict):
+        if not keys:
             return
 
         key = keys[0]
-        if key in data:
-            if len(keys) == 1:
-                if key == "members":
-                    data[key] = [replaced_value]
-                # Treat the user type of 'demo' as demo now.
-                elif key == 'user_type':
-                    data[key] = 'demo'
-                elif key == 'uidnumber':
-                    data[key] = "1001"
-                elif key == 'gidnumber':
-                    data[key] = "1001"
-                elif key == 'last_login':
-                    data[key] = ''
-                elif isinstance(data[key], str):
-                    data[key] = data[key].replace(target_value, replaced_value)
-                elif isinstance(data[key], list):
-                    data[key] = [
-                        v.replace(target_value, replaced_value) if isinstance(
-                            v, str) else v for v in data[key]
-                    ]
-            else:
-                replace_nested_key(data[key], keys[1:], target_value,
-                                   replaced_value)
+
+        if isinstance(data, dict):
+            if key in data:
+                if len(keys) == 1:
+                    if key == "members":
+                        data[key] = [replaced_value]
+                    # Treat the user type of 'demo' as demo now.
+                    elif key == 'user_type':
+                        data[key] = 'demo'
+                    elif key == 'owner':
+                        data[key] = 'demo'
+                    elif key == 'uidnumber':
+                        data[key] = "1001"
+                    elif key == 'gidnumber':
+                        data[key] = "1001"
+                    elif key == 'last_login':
+                        data[key] = ''
+                    elif isinstance(data[key], str):
+                        data[key] = data[key].replace(target_value,
+                                                      replaced_value)
+                    elif isinstance(data[key], list):
+                        data[key] = [
+                            v.replace(target_value, replaced_value)
+                            if isinstance(v, str) else v for v in data[key]
+                        ]
+                else:
+                    replace_nested_key(data[key], keys[1:], target_value,
+                                       replaced_value)
+        elif isinstance(data, list):
+            for item in data:
+                replace_nested_key(item, keys, target_value, replaced_value)
+        else:
+            return
 
     for target_key in target_keys:
         key_path = target_key.split('.')
