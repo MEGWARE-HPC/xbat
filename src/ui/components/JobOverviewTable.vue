@@ -16,7 +16,9 @@
             >
                 {{ getJobState(item.jobInfo.jobState).value }}
             </v-chip>
-            <span v-else class="font-italic">Unknown</span>
+            <v-chip v-else :color="getJobState(['unknown']).color" size="small"
+                >unknown</v-chip
+            >
         </template>
         <template v-slot:[`item.variables`]="{ item }">
             <JobVariableOverviewTable
