@@ -10,11 +10,13 @@
         </template>
         <template v-slot:[`item.jobInfo.jobState`]="{ item }">
             <v-chip
+                v-if="item.jobInfo && getJobState(item.jobInfo.jobState)"
                 :color="getJobState(item.jobInfo.jobState).color"
                 size="small"
             >
                 {{ getJobState(item.jobInfo.jobState).value }}
             </v-chip>
+            <span v-else class="font-italic">Unknown</span>
         </template>
         <template v-slot:[`item.variables`]="{ item }">
             <JobVariableOverviewTable
