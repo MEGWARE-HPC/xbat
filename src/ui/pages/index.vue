@@ -229,7 +229,7 @@
                         </div>
                     </template>
                     <template v-slot:[`item.name`]="{ item }">
-                        <div class="d-flex justify-space-between long-text">
+                        <div class="d-flex justify-space-between">
                             {{ item.name }}
                             <div class="name-edit">
                                 <InlineEdit
@@ -1174,14 +1174,10 @@ onBeforeRouteLeave(() => {
     }
 
     :deep(.v-data-table__td) {
-        max-width: 50px;
+        max-width: 200px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-
-        &.long-text {
-            max-width: 200px;
-        }
     }
 }
 </style>
