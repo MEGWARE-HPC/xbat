@@ -91,9 +91,7 @@
                         #append
                         v-if="Object.keys(currentJob.variables || {}).length"
                     >
-                        <JobVariableOverview
-                            :variables="currentJob.variables"
-                        >
+                        <JobVariableOverview :variables="currentJob.variables">
                         </JobVariableOverview>
                     </template>
                 </InfoColumn>
@@ -874,14 +872,45 @@ watch(
     async () => {
         if (process.server) return;
 
-        if (!jobRunning.value || refreshPaused.value) {
-            if (state.refreshHandler) {
+        console.log("state:", state);
+        console.log("refreshHandler:", state.refreshHandler);
+        console.log("jobState:", jobState.value.value);
+        console.log("refreshPaused:", refreshPaused.value);
+
+        if (
+            !jobRunning.value ||
+            refreshPaused.value ||
+            !jobState.value ||
+            [
+                "done",
+                "failed",
+                "canceled",
+                "cancelled",
+                "timeout",
+                "unknown"
+            ].includes(jobState.value.value)
+        ) {
+            console.log("option 01");
+            if (
+                state.refreshHandler ||
+                !jobState.value ||
+                [
+                    "done",
+                    "failed",
+                    "canceled",
+                    "cancelled",
+                    "timeout",
+                    "unknown"
+                ].includes(jobState.value.value)
+            ) {
+                console.log("option 11");
                 clearInterval(state.refreshHandler);
                 state.refreshHandler = null;
             }
             return;
         }
         if (!state.refreshHandler) {
+            console.log("option 21");
             state.refreshHandler = setInterval(async () => {
                 await refreshAll();
             }, 30000);
