@@ -24,6 +24,7 @@ All notable changes to this project will be documented in this file.
 -   different capitalization of username leading to creation of multiple accounts (#21)
 -   theme and fonts issues in editor (#13, #14)
 -   anonymization of benchmarks exports (#30)
+-   issue with JobOverviewTable loading (#28)
 -   table distortion when text exceeds length (#41)
 
 ## v1.0.0 - 2025-04-17
