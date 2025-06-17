@@ -868,49 +868,49 @@ const refreshAll = async () => {
 };
 
 watch(
+    [() => jobState, () => benchmark.value?.state],
+    ([newJobState, newBenchmarkState]) => {
+        console.log("benchmark", benchmark.value);
+        console.log("jobs", jobs.value);
+        console.log("benchmark.state", benchmark.value.state);
+        console.log("state:", state);
+        console.log("refreshHandler:", state.refreshHandler);
+        console.log("currentJob:", currentJob.value);
+        console.log("jobState:", jobState.value.value);
+        console.log("jobId:", jobId.value);
+        console.log("jobRunning:", jobRunning.value);
+        console.log("refreshPaused:", refreshPaused.value);
+        console.log("pausedRefresh:", pausedRefresh.value);
+        if (
+            ["done", "failed", "canceled", "cancelled", "timeout"].includes(
+                newJobState
+            ) ||
+            ["done", "failed", "canceled", "cancelled", "timeout"].includes(
+                newBenchmarkState
+            )
+        ) {
+            console.log("if");
+            clearInterval(state.refreshHandler);
+            state.refreshHandler = null;
+            jobRunning.value = false;
+        }
+    },
+    { immediate: true }
+);
+
+watch(
     [jobId, refreshPaused],
     async () => {
         if (process.server) return;
 
-        console.log("state:", state);
-        console.log("refreshHandler:", state.refreshHandler);
-        console.log("jobState:", jobState.value.value);
-        console.log("refreshPaused:", refreshPaused.value);
-
-        if (
-            !jobRunning.value ||
-            refreshPaused.value ||
-            !jobState.value ||
-            [
-                "done",
-                "failed",
-                "canceled",
-                "cancelled",
-                "timeout",
-                "unknown"
-            ].includes(jobState.value.value)
-        ) {
-            console.log("option 01");
-            if (
-                state.refreshHandler ||
-                !jobState.value ||
-                [
-                    "done",
-                    "failed",
-                    "canceled",
-                    "cancelled",
-                    "timeout",
-                    "unknown"
-                ].includes(jobState.value.value)
-            ) {
-                console.log("option 11");
+        if (!jobRunning.value || refreshPaused.value) {
+            if (state.refreshHandler) {
                 clearInterval(state.refreshHandler);
                 state.refreshHandler = null;
             }
             return;
         }
         if (!state.refreshHandler) {
-            console.log("option 21");
             state.refreshHandler = setInterval(async () => {
                 await refreshAll();
             }, 30000);
