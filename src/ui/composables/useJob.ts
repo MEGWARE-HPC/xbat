@@ -1,9 +1,13 @@
 import type { Job } from "@/repository/modules/jobs";
+import type { Benchmark } from "@/repository/modules/benchmarks";
 import { getJobState } from "~/utils/misc";
 
-export const useJob = (job: Ref<Job>) => {
+export const useJob = (job: Ref<Job>, benchmark: Ref<Benchmark>) => {
     const rawStates = computed(() => {
-        return job.value?.jobInfo?.jobState || ["PENDING"];
+        return (
+            job.value?.jobInfo?.jobState ||
+            benchmark.value?.state || ["PENDING"]
+        );
     });
 
     const jobState = computed((): { value: string; color: string } => {
