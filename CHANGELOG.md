@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 -   dedicated API CSV and JSON file endpoints for graph measurements (#9)
+-   extended API CSV endpoint to export multiple metrics at once (#20)
 
 ### Changed
 
