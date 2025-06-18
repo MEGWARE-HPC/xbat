@@ -20,9 +20,11 @@ def get_request_token():
 
 
 def old_sha1_check(password, old_hash):
-    """Verify an old password using SHA-1 (double hashing)."""
-    return old_hash == "*" + hashlib.sha1(
-        hashlib.sha1(password.encode("utf-8")).digest()).hexdigest().upper()
+    """Verify an old password using bcrypt."""
+    try:
+        return bcrypt.checkpw(password.encode('utf-8'), old_hash.encode('utf-8'))
+    except ValueError:
+        return False
 
 
 def encrypt_pw(password):
