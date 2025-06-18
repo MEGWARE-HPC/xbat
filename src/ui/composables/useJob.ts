@@ -4,10 +4,13 @@ import { getJobState } from "~/utils/misc";
 
 export const useJob = (job: Ref<Job>, benchmark: Ref<Benchmark>) => {
     const rawStates = computed(() => {
-        return (
-            job.value?.jobInfo?.jobState ||
-            benchmark.value?.state || ["PENDING"]
-        );
+        if (job.value?.jobInfo?.jobState) {
+            return job.value.jobInfo.jobState;
+        } else if (benchmark.value?.state) {
+            return [benchmark.value.state];
+        } else {
+            return ["PENDING"];
+        }
     });
 
     const jobState = computed((): { value: string; color: string } => {
