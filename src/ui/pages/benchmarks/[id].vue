@@ -745,7 +745,7 @@ const { jobItems, jobsById, jobIds } = useJobs({
     itemOrder: "asc"
 });
 
-const { jobState, jobId, jobRunning } = useJob(currentJob);
+const { jobState, jobId, jobRunning } = useJob(currentJob, benchmark);
 
 const {
     nodeInfo,
@@ -867,29 +867,21 @@ const refreshAll = async () => {
     });
 };
 
+const terminalStates = new Set([
+    "done",
+    "failed",
+    "canceled",
+    "cancelled",
+    "timeout"
+]);
+
 watch(
     [() => jobState, () => benchmark.value?.state],
     ([newJobState, newBenchmarkState]) => {
-        console.log("benchmark", benchmark.value);
-        console.log("jobs", jobs.value);
-        console.log("benchmark.state", benchmark.value.state);
-        console.log("state:", state);
-        console.log("refreshHandler:", state.refreshHandler);
-        console.log("currentJob:", currentJob.value);
-        console.log("jobState:", jobState.value.value);
-        console.log("jobId:", jobId.value);
-        console.log("jobRunning:", jobRunning.value);
-        console.log("refreshPaused:", refreshPaused.value);
-        console.log("pausedRefresh:", pausedRefresh.value);
         if (
-            ["done", "failed", "canceled", "cancelled", "timeout"].includes(
-                newJobState
-            ) ||
-            ["done", "failed", "canceled", "cancelled", "timeout"].includes(
-                newBenchmarkState
-            )
+            terminalStates.has(newJobState) ||
+            terminalStates.has(newBenchmarkState)
         ) {
-            console.log("if");
             clearInterval(state.refreshHandler);
             state.refreshHandler = null;
             jobRunning.value = false;
