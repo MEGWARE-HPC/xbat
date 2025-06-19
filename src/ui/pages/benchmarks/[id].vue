@@ -876,7 +876,7 @@ const terminalStates = new Set([
 ]);
 
 watch(
-    [() => jobState, () => benchmark.value?.state],
+    [() => jobState.value?.value, () => benchmark.value?.state],
     ([newJobState, newBenchmarkState]) => {
         if (
             terminalStates.has(newJobState) ||
