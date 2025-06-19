@@ -524,8 +524,11 @@ paths:
       parameters:
         - $ref: "#/components/parameters/JobId"
         - $ref: "#/components/parameters/GroupQuery"
+          required: true
         - $ref: "#/components/parameters/MetricQuery"
+          required: true
         - $ref: "#/components/parameters/LevelQuery"
+          required: true
         - $ref: "#/components/parameters/NodeQuery"
         - $ref: "#/components/parameters/DecilesQuery"
       tags:
@@ -548,8 +551,11 @@ paths:
       parameters:
         - $ref: "#/components/parameters/JobId"
         - $ref: "#/components/parameters/GroupQuery"
+          required: true
         - $ref: "#/components/parameters/MetricQuery"
+          required: true
         - $ref: "#/components/parameters/LevelQuery"
+          required: true
         - $ref: "#/components/parameters/NodeQuery"
         - $ref: "#/components/parameters/DecilesQuery"
       tags:
@@ -829,21 +835,18 @@ components:
       name: group
       description: Metric group
       in: query
-      required: true
       schema:
         type: string
     MetricQuery:
       name: metric
       description: Metric name
       in: query
-      required: true
       schema:
         type: string
     LevelQuery:
       name: level
       description: Aggregation level
       in: query
-      required: true
       schema:
         type: string
     NodeQuery:
