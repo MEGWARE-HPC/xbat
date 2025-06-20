@@ -12,20 +12,21 @@ Simplify HPC application benchmarking and optimization. Dive deep into applicati
 
 ---
 
-📘 **New to xbat?**  
+### 📘 New to xbat?
+
 Check out our [documentation](https://xbat.dev/docs/user/introduction) for [users](https://xbat.dev/docs/user/introduction), [administrators](https://xbat.dev/docs/admin/setup/installation), and [developers](https://xbat.dev/docs/developer/contribute), or try out the [interactive demo](https://xbat.dev/docs/demo) to see it in action.
 
 📌 **Want to know what’s coming next?**  
 Check out our [public roadmap](https://github.com/orgs/MEGWARE-HPC/projects/2) to see upcoming features and long-term plans for xbat.
 
-## Publications
+### Publications
 
 <!-- KEEP IN SYNC WITH about.md -->
 
 -   [**xbat: a continuous benchmarking tool for HPC software**](https://openhsu.ub.hsu-hh.de/entities/publication/16783) Nico Tippmann et al.
 -   **xbat – An Easy-to-Use and Universally Applicable Benchmarking Automation Tool for HPC Software within the Project hpc.bw (dtec.bw)** - Poster to be presented at ISC 2025 by Willi Leinen et al.
 
-## Acknowledgements
+### Acknowledgements
 
 <!-- KEEP IN SYNC WITH about.md -->
 
@@ -35,7 +36,7 @@ Special thanks to the members of the [dtec.bw](https://dtecbw.de/home) projects 
 
 We also thank [Microcard](https://www.microcard.eu/) for their support and continued usage within [openCARP](https://opencarp.org/) from the prototype phase of xbat, which played a crucial role in transforming xbat from a prototype into a fully realized solution.
 
-## Funding
+### Funding
 
 <!-- KEEP IN SYNC WITH about.md -->
 
