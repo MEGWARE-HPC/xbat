@@ -1,9 +1,8 @@
 <p align="center">
     <img src="src/ui/public/logo/xbat-logo.svg" alt="xbat logo" width="150" style="margin-left: auto; margin-right: auto; margin-bottom: -20px;"/>
-    <p align="center" style="font-size: 2.25rem; font-weight: bold">xbat - Extended Benchmarking Automation Tool</p>
+    <h2 align="center"> <strong>xbat – Extended Benchmarking Automation Tool</strong> </h2>
 </p>
 
----
 
 Simplify HPC application benchmarking and optimization. Dive deep into application performance with xbat - an easy to use, fully automated tool providing comprehensive metrics and insights for analysis and optimization.
 
@@ -11,15 +10,13 @@ Simplify HPC application benchmarking and optimization. Dive deep into applicati
     <img src="docs/public/img/landing_page.png" alt="xbat overview" width="600" style="margin-left: auto; margin-right: auto; border-radius: 5px"/>
 </p>
 
-Visit [xbat.dev](https://xbat.dev) for more information or try out our [demo](https://xbat.dev/docs/demo).
+---
 
-## Documentation
+📘 **New to xbat?**  
+Check out our [documentation](https://xbat.dev/docs/user/introduction) for [users](https://xbat.dev/docs/user/introduction), [administrators](https://xbat.dev/docs/admin/setup/installation), and [developers](https://xbat.dev/docs/developer/contribute), or try out the [interactive demo](https://xbat.dev/docs/demo) to see it in action.
 
-Detailed documentation is available for:
-
--   [**Users**](https://xbat.dev/docs/user/introduction)
--   [**Administrators**](https://xbat.dev/docs/admin/setup/installation)
--   [**Developers**](https://xbat.dev/docs/developer/contribute)
+📌 **Want to know what’s coming next?**  
+Check out our [public roadmap](https://github.com/orgs/MEGWARE-HPC/projects/2) to see upcoming features and long-term plans for xbat.
 
 ## Publications
 
