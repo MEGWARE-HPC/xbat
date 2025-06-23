@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
 -   temporarily downgrade LIKWID to v5.3.0 due to errors on some architectures with v5.4.1
 -   improved layout of docs on smaller screens
 -   default back to npm instead of bun for frontend and docs
+-   first variant of job configuration can now be deleted (#49)
 
 ### Fixed
 
