@@ -879,12 +879,16 @@ watch(
     [() => jobState.value?.value, () => benchmark.value?.state],
     ([newJobState, newBenchmarkState]) => {
         if (
-            terminalStates.has(newJobState) ||
+            terminalStates.has(newJobState) &&
             terminalStates.has(newBenchmarkState)
         ) {
             clearInterval(state.refreshHandler);
+            clearInterval(state.refreshHandler);
             state.refreshHandler = null;
-            jobRunning.value = false;
+            if (newJobState == "done") {
+                refreshAll();
+            }
+            return;
         }
     },
     { immediate: true }
