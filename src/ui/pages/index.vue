@@ -1172,5 +1172,11 @@ onBeforeRouteLeave(() => {
             }
         }
     }
+
+    :deep(.v-data-table__td) {
+        max-width: 200px;
+        white-space: normal;
+        word-break: break-all;
+    }
 }
 </style>
