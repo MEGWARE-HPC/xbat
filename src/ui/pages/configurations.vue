@@ -306,17 +306,16 @@
                                                         props: activatorProps
                                                     }"
                                                 >
-                                                    <!--  @click="
-                                                                removeVariant(i)
-                                                            " -->
                                                     <v-btn
                                                         size="x-small"
                                                         title="Remove Variant"
                                                         color="danger"
                                                         variant="plain"
                                                         v-show="
-                                                            state.variantTab ==
-                                                                i && i != 0
+                                                            state.variantTab ===
+                                                                i &&
+                                                            form.jobscript
+                                                                .length > 1
                                                         "
                                                         icon="$close"
                                                         v-bind="activatorProps"
@@ -783,10 +782,9 @@ const addConfig = (presetId = "") => {
 
 const addVariant = () => {
     let copy = deepClone(form.value.jobscript[state.variantTab]);
-    const prevTabCount = form.value.jobscript.length;
-    copy.variantName = `Variant ${prevTabCount + 1}`;
+    copy.variantName = `${copy.variantName} (copy)`;
     form.value.jobscript.push(copy);
-    state.variantTab = prevTabCount;
+    state.variantTab = form.value.jobscript.length - 1;
 };
 
 const resetForm = () => {
@@ -884,7 +882,7 @@ const executeAction = async (action, target) => {
 };
 
 const removeVariant = (i) => {
-    if (i == 0) return;
+    if (form.value.jobscript.length < 2) return;
     state.variantTab = form.value.jobscript.length - 2;
 
     form.value.jobscript.splice(i, 1);
