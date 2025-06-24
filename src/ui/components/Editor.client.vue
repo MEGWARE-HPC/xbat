@@ -139,7 +139,7 @@ const colors = [
 
 const styleElement = document.createElement("style");
 colors.forEach((color, index) => {
-    styleElement.innerHTML += `.csv-column-${index} { color: ${color}; }`;
+    styleElement.innerHTML += `.csv-column-${index} { color: ${color}; !important;}`;
 });
 document.head.appendChild(styleElement);
 
@@ -263,6 +263,12 @@ watch(
         if (props.constrainedJobscript)
             value.value = directives.value + "\n" + (v as Jobscript).script;
         else value.value = v;
+
+        // watch language change and apply rainbow colors for CSV
+        if (props.language === csvLangId && editorInstance) {
+            applyRainbowColors();
+            console.log("watch prop.model apply");
+        }
     },
     { immediate: true }
 );
@@ -308,7 +314,11 @@ const currentDecorationIds = ref<string[]>([]);
 const applyRainbowColors = () => {
     if (!editorInstance) return;
     const model = editorInstance.getModel();
-    if (!model) return;
+    if (!model || model.getValueLength() === 0) {
+        currentDecorationIds.value =
+            model?.deltaDecorations(currentDecorationIds.value, []) || [];
+        return;
+    }
 
     const decorations: monacoEditor.editor.IModelDeltaDecoration[] = [];
     const text = model.getValue();
@@ -355,39 +365,37 @@ const handleMount = (
     editorInstance = _editor;
     editorInstance.onDidContentSizeChange(updateHeight);
 
-    editorInstance.onDidChangeModel(() => {
-        if (!editorInstance) return;
-        const model = editorInstance.getModel();
-        if (props.language === csvLangId) {
-            applyRainbowColors();
-            console.log("editorInstance csv-language apply");
-            if (model) {
-                model.onDidChangeContent(() => {
-                    applyRainbowColors();
-                    console.log("editorInstance onDidChangeContent apply");
-                });
-            }
-        }
-    });
-
-    if (props.language === csvLangId) {
-        const model = editorInstance.getModel();
+    const handleCsv = () => {
         applyRainbowColors();
-        console.log("csv-language apply");
-
+        console.log("handle CSV");
+        const model = editorInstance.getModel();
         if (model) {
             model.onDidChangeContent(() => {
                 applyRainbowColors();
-                console.log("onDidChangeContent apply");
             });
         }
+    };
+
+    if (props.language === csvLangId) {
+        console.log("Check language = csv");
+        handleCsv();
     }
+
+    editorInstance.onDidChangeModel(() => {
+        if (!editorInstance) return;
+        const model = editorInstance.getModel();
+        if (model && model.getLanguageId() === csvLangId) {
+            handleCsv();
+            console.log("editorInstance csv apply");
+        }
+    });
 
     if (!props.constrainedJobscript) return;
 
     initConstrainedEditor(_editor, monaco);
     if (props.language === csvLangId) {
         applyRainbowColors();
+        console.log("initConstrainedEditor csv apply");
     }
 };
 </script>
