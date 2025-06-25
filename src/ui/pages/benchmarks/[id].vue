@@ -91,9 +91,7 @@
                         #append
                         v-if="Object.keys(currentJob.variables || {}).length"
                     >
-                        <JobVariableOverview
-                            :variables="currentJob.variables"
-                        >
+                        <JobVariableOverview :variables="currentJob.variables">
                         </JobVariableOverview>
                     </template>
                 </InfoColumn>
@@ -747,7 +745,7 @@ const { jobItems, jobsById, jobIds } = useJobs({
     itemOrder: "asc"
 });
 
-const { jobState, jobId, jobRunning } = useJob(currentJob);
+const { jobState, jobId, jobRunning } = useJob(currentJob, benchmark);
 
 const {
     nodeInfo,
@@ -868,6 +866,33 @@ const refreshAll = async () => {
         await fetchPower(jobId.value);
     });
 };
+
+const terminalStates = new Set([
+    "done",
+    "failed",
+    "canceled",
+    "cancelled",
+    "timeout"
+]);
+
+watch(
+    [() => jobState.value?.value, () => benchmark.value?.state],
+    ([newJobState, newBenchmarkState]) => {
+        if (
+            terminalStates.has(newJobState) &&
+            terminalStates.has(newBenchmarkState)
+        ) {
+            clearInterval(state.refreshHandler);
+            clearInterval(state.refreshHandler);
+            state.refreshHandler = null;
+            if (newJobState == "done") {
+                refreshAll();
+            }
+            return;
+        }
+    },
+    { immediate: true }
+);
 
 watch(
     [jobId, refreshPaused],
