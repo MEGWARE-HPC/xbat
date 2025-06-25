@@ -106,6 +106,38 @@ import { useElementHover } from "@vueuse/core";
 
 type MonacoEditor = typeof monacoEditor;
 
+// CSV language registration
+const csvLangId = "csv";
+monacoEditor.languages.register({ id: csvLangId });
+monacoEditor.languages.setMonarchTokensProvider(csvLangId, {
+    tokenizer: {
+        root: [
+            [/[^,\r\n]+/, { token: "identifier" }],
+            [/,/, "delimiter"],
+            [/$/, ""]
+        ]
+    }
+});
+// Rainbow Color list
+const colors = [
+    "#c00040",
+    "#00a000",
+    "#8000c0",
+    "#c09e18",
+    "#0080a0",
+    "#e000e0",
+    "#60a000",
+    "#0020f0",
+    "#e08000",
+    "#00c080"
+];
+
+const styleElement = document.createElement("style");
+colors.forEach((color, index) => {
+    styleElement.innerHTML += `.csv-column-${index} { color: ${color}; !important;}`;
+});
+document.head.appendChild(styleElement);
+
 const value = ref<string | Jobscript>("");
 
 let editorInstance: monacoEditor.editor.IStandaloneCodeEditor | null = null;
@@ -226,6 +258,11 @@ watch(
         if (props.constrainedJobscript)
             value.value = directives.value + "\n" + (v as Jobscript).script;
         else value.value = v;
+
+        // watch language change and apply rainbow colors for CSV
+        if (props.language === csvLangId && editorInstance) {
+            applyRainbowColors();
+        }
     },
     { immediate: true }
 );
@@ -266,12 +303,80 @@ const updateHeight = () => {
     containerRef.value.style.height = `${contentHeight}px`;
 };
 
+const currentDecorationIds = ref<string[]>([]);
+
+const applyRainbowColors = () => {
+    if (!editorInstance) return;
+    const model = editorInstance.getModel();
+    if (!model || model.getValueLength() === 0) {
+        currentDecorationIds.value =
+            model?.deltaDecorations(currentDecorationIds.value, []) || [];
+        return;
+    }
+
+    const decorations: monacoEditor.editor.IModelDeltaDecoration[] = [];
+    const text = model.getValue();
+    const lines = text.split("\n");
+
+    lines.forEach((line, lineNumber) => {
+        const columns = line.split(",");
+        let currentOffset = 1;
+        columns.forEach((column, columnIndex) => {
+            if (colors[columnIndex % colors.length]) {
+                decorations.push({
+                    range: new monacoEditor.Range(
+                        lineNumber + 1,
+                        currentOffset,
+                        lineNumber + 1,
+                        currentOffset + column.length
+                    ),
+                    options: {
+                        inlineClassName: `csv-column-${
+                            columnIndex % colors.length
+                        }`
+                    }
+                });
+            }
+            currentOffset += column.length + 1;
+        });
+    });
+
+    currentDecorationIds.value = model.deltaDecorations(
+        currentDecorationIds.value,
+        decorations
+    );
+};
+
 const handleMount = (
     _editor: monacoEditor.editor.IStandaloneCodeEditor,
     monaco: MonacoEditor
 ) => {
     editorInstance = _editor;
     editorInstance.onDidContentSizeChange(updateHeight);
+
+    const handleCsv = () => {
+        applyRainbowColors();
+        if (editorInstance) {
+            const model = editorInstance.getModel();
+            if (model) {
+                model.onDidChangeContent(() => {
+                    applyRainbowColors();
+                });
+            }
+        }
+    };
+
+    if (props.language === csvLangId) {
+        handleCsv();
+    }
+
+    editorInstance.onDidChangeModel(() => {
+        if (!editorInstance) return;
+        const model = editorInstance.getModel();
+        if (model && model.getLanguageId() === csvLangId) {
+            handleCsv();
+        }
+    });
 
     if (!props.constrainedJobscript) return;
 
@@ -329,6 +434,6 @@ const handleMount = (
     align-items: center;
 }
 .slurm-info > .v-btn {
-  transform: translate(10%, 0);
+    transform: translate(10%, 0);
 }
 </style>
