@@ -118,7 +118,7 @@ monacoEditor.languages.setMonarchTokensProvider(csvLangId, {
         ]
     }
 });
-// Color list
+// Rainbow Color list
 const colors = [
     "#c00040",
     "#00a000",
@@ -131,11 +131,6 @@ const colors = [
     "#e08000",
     "#00c080"
 ];
-
-// onMounted(() => {
-//     applyRainbowColors();
-//     console.log("onMounted apply");
-// });
 
 const styleElement = document.createElement("style");
 colors.forEach((color, index) => {
@@ -267,7 +262,6 @@ watch(
         // watch language change and apply rainbow colors for CSV
         if (props.language === csvLangId && editorInstance) {
             applyRainbowColors();
-            console.log("watch prop.model apply");
         }
     },
     { immediate: true }
@@ -347,15 +341,10 @@ const applyRainbowColors = () => {
         });
     });
 
-    // currentDecorationIds.value = editorInstance.deltaDecorations(
-    //     currentDecorationIds.value,
-    //     decorations
-    // );
     currentDecorationIds.value = model.deltaDecorations(
         currentDecorationIds.value,
         decorations
     );
-    // editorInstance.deltaDecorations([], decorations);
 };
 
 const handleMount = (
@@ -367,17 +356,17 @@ const handleMount = (
 
     const handleCsv = () => {
         applyRainbowColors();
-        console.log("handle CSV");
-        const model = editorInstance.getModel();
-        if (model) {
-            model.onDidChangeContent(() => {
-                applyRainbowColors();
-            });
+        if (editorInstance) {
+            const model = editorInstance.getModel();
+            if (model) {
+                model.onDidChangeContent(() => {
+                    applyRainbowColors();
+                });
+            }
         }
     };
 
     if (props.language === csvLangId) {
-        console.log("Check language = csv");
         handleCsv();
     }
 
@@ -386,17 +375,12 @@ const handleMount = (
         const model = editorInstance.getModel();
         if (model && model.getLanguageId() === csvLangId) {
             handleCsv();
-            console.log("editorInstance csv apply");
         }
     });
 
     if (!props.constrainedJobscript) return;
 
     initConstrainedEditor(_editor, monaco);
-    if (props.language === csvLangId) {
-        applyRainbowColors();
-        console.log("initConstrainedEditor csv apply");
-    }
 };
 </script>
 <style lang="scss" scoped>
