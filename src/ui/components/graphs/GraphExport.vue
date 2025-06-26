@@ -228,6 +228,7 @@
                     </div>
                     <ReactiveGraph
                         :graphId="exportGraphId"
+                        type="String"
                         ref="exportGraphRef"
                         :graph="modifiedGraph"
                         :style="'display: none'"
@@ -350,6 +351,7 @@ const modifiedGraph = computed(() => {
 
     g.layout.font.size = state.fontsize;
 
+    console.log("x-axis title:", state.xTitle, "y-axis title:", state.yTitle);
     g.layout.xaxis.title = state.xTitle;
     g.layout.yaxis.title = state.yTitle;
     g.layout.title = {
