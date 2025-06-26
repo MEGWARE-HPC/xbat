@@ -351,9 +351,9 @@ const modifiedGraph = computed(() => {
 
     g.layout.font.size = state.fontsize;
 
-    console.log("x-axis title:", state.xTitle, "y-axis title:", state.yTitle);
-    g.layout.xaxis.title = state.xTitle;
-    g.layout.yaxis.title = state.yTitle;
+    // Set x-axis and y-axis titles, also set the title for the graph
+    g.layout.xaxis.title = { text: state.xTitle || "x-axis" };
+    g.layout.yaxis.title = { text: state.yTitle || "Y-axis" };
     g.layout.title = {
         text: state.title,
         font: {
