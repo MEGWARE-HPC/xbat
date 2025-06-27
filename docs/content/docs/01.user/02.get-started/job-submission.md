@@ -17,7 +17,7 @@ Choose a name for your benchmark and select the configuration you want to use. B
 </img>
 
 ::Banner
-You can overwrite the job variables settings for the current configuration during submission. These changes will not persist and only apply to the current benchmark. See [here](https://localhost:3000/docs/user/get-started/job-configuration#variables) for more details on job variables.
+You can overwrite the job variables settings for the current configuration during submission. These changes will not persist and only apply to the current benchmark. See [here](/docs/user/get-started/job-configuration#variables) for more details on job variables.
 ::
 
 ::Headline
