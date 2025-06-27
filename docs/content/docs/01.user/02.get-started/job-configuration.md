@@ -9,7 +9,7 @@ description: Preparations to submit a job via UI
 
 ::
 
-Job configurations are powerful wrappers around your jobscript that provide you with extended control over your job as well as features like parameter subsitution.
+Job configurations are powerful wrappers around your jobscript that provide you with extended control over your job as well as features like parameter substitution.
 
 Visit the `CONFIGURATIONS` tab and click `NEW CONFIGURATION` to create an empty configuration. As your first step, a few general options must be specified:
 
@@ -24,7 +24,7 @@ Visit the `CONFIGURATIONS` tab and click `NEW CONFIGURATION` to create an empty 
 ::Banner{type="warning"}
 Make sure shared configurations do not contain sensitive information like passwords or API keys.
 
-Shared configurations only work with user-independant settings - other users do not have access to your home directory or environment variables.
+Shared configurations only work with user-independent settings - other users do not have access to your home directory or environment variables.
 ::
 
 Each configuration is assigned a unique ID that can be used to submit jobs via the [API](/docs/user/api) as part of a [Continuous Integration setup](/docs/user/ci).
