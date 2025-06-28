@@ -102,6 +102,30 @@ services:
             #- "#FRONTEND_NETWORK#:8812:8812"
             - "#FRONTEND_NETWORK#:9000:9000"
             - "#FRONTEND_NETWORK#:9003:9003"
+    xbat-clickhouse:
+        image: docker.io/clickhouse/clickhouse-server:25.6.2
+        restart: unless-stopped
+        container_name: xbat-clickhouse
+        user: "#XBAT_UID#:#XBAT_GID#"
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+            -  #VAR_LIB#/clickhouse:/var/lib/clickhouse
+            -  #VAR_LOG#/clickhouse:/var/log/clickhouse-server
+            - /etc/xbat/clickhouse/config/:/etc/clickhouse-server/config.d/
+            - /etc/xbat/clickhouse/users/:/etc/clickhouse-server/users.d/
+        cap_add:
+            - SYS_NICE
+            - IPC_LOCK
+        ulimits:
+            nofile:
+                soft: 262144
+                hard: 262144
+        expose:
+            - 8812
+        ports:
+            - "#FRONTEND_NETWORK#:8123:8123" # web UI and HTTP API
+            - "#FRONTEND_NETWORK#:9000:9000" # native protocol
+            - "#FRONTEND_NETWORK#:9005:9005" # postgreSQL-compatible protocol
     xbat-valkey:
         image: docker.io/valkey/valkey:7.2
         restart: unless-stopped
