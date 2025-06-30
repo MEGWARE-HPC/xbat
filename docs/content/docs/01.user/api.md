@@ -27,5 +27,5 @@ In order to use the API you must first authorize with your xbat credentials. You
 </img>
 
 ::Banner
-The API can also be used with `cURL`, check [here](/docs/user/ci#triggering-xbat-via-curl) for an example.
+The API can also be used with `cURL`, check [here](./ci#triggering-xbat-via-curl) for an example.
 ::
