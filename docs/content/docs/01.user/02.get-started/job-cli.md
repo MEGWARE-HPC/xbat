@@ -23,4 +23,4 @@ sbatch --constraint=xbat --exclusive --wait-all-nodes=1 my_job_script.sh
 xbat currently monitors the entire compute node regardless of the number of cores requested. The `--exclusive` parameter is required to ensure that the measurements are not distorted by other jobs running on the same node.
 ::
 
-xbat provides additional features like parameter studies, API support and collaboration when using job configurations via the UI. See here for more details on [job configurations](./job-configuration).
+xbat provides additional features like parameter studies, API support and collaboration when using job configurations via the UI. See here for more details on [job configurations](/docs/user/get-started/job-configuration).

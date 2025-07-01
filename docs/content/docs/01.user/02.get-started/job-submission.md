@@ -11,13 +11,13 @@ description: How to run a benchmark via UI
 
 To start a benchmark, visit the `BENCHMARKS` tab and click the `START BENCHMARK` button.
 
-Choose a name for your benchmark and select the configuration you want to use. By default, all your benchmarks are accessible only to you, but you may select a project to share the benchmark with. This means all users within this project will be able to see the benchmark and its results. See [Projects](../projects) for more information.
+Choose a name for your benchmark and select the configuration you want to use. By default, all your benchmarks are accessible only to you, but you may select a project to share the benchmark with. This means all users within this project will be able to see the benchmark and its results. See [Projects](/docs/user/projects) for more information.
 
 <img src="/img/benchmark_submission.png" alt="Benchmark Submission Dialog" class="img img-40" >
 </img>
 
 ::Banner
-You can overwrite the job variables settings for the current configuration during submission. These changes will not persist and only apply to the current benchmark. See [here](./job-configuration#variables) for more details on job variables.
+You can overwrite the job variables settings for the current configuration during submission. These changes will not persist and only apply to the current benchmark. See [here](/docs/user/get-started/job-configuration#variables) for more details on job variables.
 ::
 
 ::Headline

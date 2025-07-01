@@ -15,7 +15,7 @@ Visit the `CONFIGURATIONS` tab and click `NEW CONFIGURATION` to create an empty 
 
 -   **Configuration Name**: The name of the configuration (not the job).
 -   **Iterations**: Specifies how often your job should be executed when submitting this configuration. This is helpful for running a job multiple times for statistical analysis.
--   **Share with Project**: Select projects that should have access to this configuration. See [Projects](../projects) for more information.
+-   **Share with Project**: Select projects that should have access to this configuration. See [Projects](/docs/user/projects) for more information.
 -   **Measurement Interval**: Interval at which the job is monitored in seconds. The current minimum is 5 seconds.
 -   **Enable general monitoring**: Enables/disables monitoring for the configuration
 -   **Enable monitoring hardware performance counters**: Enables/disables monitoring via hardware performance counters for low level metrics.
@@ -27,7 +27,7 @@ Make sure shared configurations do not contain sensitive information like passwo
 Shared configurations only work with user-independent settings - other users do not have access to your home directory or environment variables.
 ::
 
-Each configuration is assigned a unique ID that can be used to submit jobs via the [API](../api) as part of a [Continuous Integration setup](../ci).
+Each configuration is assigned a unique ID that can be used to submit jobs via the [API](/docs/user/api) as part of a [Continuous Integration setup](/docs/user/ci).
 
 <img src="/img/configuration_settings.png" alt="Configuration Settings" class="img img-70">
 </img>

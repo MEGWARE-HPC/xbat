@@ -3,7 +3,7 @@ title: Continuous Integration
 description: Automating xbat for Continuous Benchmarking
 ---
 
-xbat can be used as an extension for Continuous Integration (CI) systems to automate benchmarking. This page provides an example of how to trigger a benchmark via `cURL` and integrate xbat into GitLab CI. Visit the [API documentation](./api) for more information on the REST API.
+xbat can be used as an extension for Continuous Integration (CI) systems to automate benchmarking. This page provides an example of how to trigger a benchmark via `cURL` and integrate xbat into GitLab CI. Visit the [API documentation](/docs/user/api) for more information on the REST API.
 
 ::Headline
 
