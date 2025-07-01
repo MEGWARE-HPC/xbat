@@ -642,8 +642,8 @@ def get_tablepath_dict(path):
     Get a dictionary mapping table names to their corresponding CSV file paths
 
     """
-    csv_files = path.glob("*.csv")
-    if not list(csv_files):
+    csv_files = list(path.glob("*.csv"))
+    if not csv_files:
         logger.error(f"No CSV files found in the directory:{path}")
     table_dict = {}
     for csv_file in csv_files:
