@@ -11,7 +11,7 @@ description: Public xbat demo
 
 You can try out xbat for yourself by visiting our demo instance at [demo.xbat.dev](https://demo.xbat.dev){:target="_blank"}. This read-only demo features a selection of interesting benchmarks, allowing you to explore the tool's features and capabilities without the need for installation.
 
-::ActionButton{icon=$arrowRight href=https://demo.xbat.dev}
+::ActionButton{icon=$arrowRight href=https://demo.xbat.dev target="_blank"}
 VISIT DEMO
 ::
 
