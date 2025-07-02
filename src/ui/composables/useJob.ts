@@ -4,20 +4,17 @@ import { getJobState } from "~/utils/misc";
 
 export const useJob = (job: Ref<Job>, benchmark: Ref<Benchmark>) => {
     const rawStates = computed(() => {
-        if (job.value?.jobInfo?.jobState) {
-            return job.value.jobInfo.jobState;
-        } else if (benchmark.value?.state) {
-            if (
-                benchmark.value.state == "running" ||
-                benchmark.value.state == "pending"
-            ) {
-                return [benchmark.value.state.toUpperCase()];
-            } else {
-                return [benchmark.value.state];
-            }
-        } else {
-            return ["PENDING"];
-        }
+        if (job.value?.jobInfo?.jobState) return job.value.jobInfo.jobState;
+
+        if (!benchmark.value?.state) return ["PENDING"];
+
+        if (
+            benchmark.value.state == "running" ||
+            benchmark.value.state == "pending"
+        )
+            return [benchmark.value.state.toUpperCase()];
+
+        return [benchmark.value.state];
     });
 
     const jobState = computed((): { value: string; color: string } => {

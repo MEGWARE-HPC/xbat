@@ -867,27 +867,20 @@ const refreshAll = async () => {
     });
 };
 
-const terminalStates = new Set([
-    "done",
-    "failed",
-    "canceled",
-    "cancelled",
-    "timeout"
-]);
+const terminalStates = ["done", "failed", "canceled", "cancelled", "timeout"];
 
 watch(
     [() => jobState.value?.value, () => benchmark.value?.state],
     ([newJobState, newBenchmarkState]) => {
         if (
-            terminalStates.has(newJobState) &&
-            terminalStates.has(newBenchmarkState)
+            terminalStates.includes(newJobState) &&
+            terminalStates.includes(newBenchmarkState)
         ) {
             clearInterval(state.refreshHandler);
             clearInterval(state.refreshHandler);
             state.refreshHandler = null;
-            if (newJobState == "done") {
-                refreshAll();
-            }
+            if (newJobState == "done") refreshAll();
+
             return;
         }
     },
