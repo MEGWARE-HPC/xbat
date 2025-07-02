@@ -10,3 +10,6 @@ services:
     xbat-questdb:
         deploy:
             replicas: 0
+    xbat-clickhouse:
+        deploy:
+            replicas: 0

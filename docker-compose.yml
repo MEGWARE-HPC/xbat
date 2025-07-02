@@ -100,7 +100,7 @@ services:
             - 8812
         ports:
             #- "#FRONTEND_NETWORK#:8812:8812"
-            - "#FRONTEND_NETWORK#:9000:9000"
+            - "#FRONTEND_NETWORK#:9001:9000" # temporary mapping to 9001 during migration to clickhouse
             - "#FRONTEND_NETWORK#:9003:9003"
     xbat-clickhouse:
         image: docker.io/clickhouse/clickhouse-server:25.6.2
