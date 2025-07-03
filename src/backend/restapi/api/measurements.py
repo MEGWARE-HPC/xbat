@@ -609,6 +609,17 @@ def generate_csv(result):
     return csv_content
 
 
+# Function placeholder for power consumption
+async def get_energy(jobId,
+                     group="",
+                     metric="",
+                     level="",
+                     node="",
+                     deciles=False):
+    result = "power consumption"
+    return result, 200
+
+
 def get_request_uri():
     uri = request.path
     if (request.query_string):
