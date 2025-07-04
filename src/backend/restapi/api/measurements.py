@@ -616,8 +616,16 @@ async def get_energy(jobId,
                      level="job",
                      node="",
                      deciles=False):
-    cpu_power = await calculate_metrics(jobId, group, metric, level, node,
-                                        deciles)
+    # energy_metrics = [
+    #     "CPU Power", "Core Power", "DRAM Power", "FPGA Power", "GPU Power",
+    #     "System Power"
+    # ]
+    cpu_power_json = await calculate_metrics(jobId, group, "CPU Power", level,
+                                             node, deciles)
+    interval_cpu = cpu_power_json["traces"][0]["interval"] / 3600 / 1000
+    cpu_power_value = cpu_power_json["traces"][0]["values"]
+    cpu_power = round(sum(cpu_power_value) * interval_cpu, 4)
+
     # result = "power consumption"
     return cpu_power, 200
 
