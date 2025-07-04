@@ -613,13 +613,12 @@ paths:
       operationId: backend.restapi.api.measurements.get_energy
       parameters:
         - $ref: "#/components/parameters/JobId"
-        - $ref: "#/components/parameters/MetricQuery"
       tags:
         - measurements
       summary: Power consumption
       responses:
         "200":
-          description: Successfully got power consumption results in JSON format
+          description: Successfully obtained the power consumption results in JSON format
           content:
             application/json:
               schema:

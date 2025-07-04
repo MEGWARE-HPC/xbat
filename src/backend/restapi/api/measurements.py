@@ -609,25 +609,32 @@ def generate_csv(result):
     return csv_content
 
 
-# Function placeholder for power consumption
-async def get_energy(jobId,
-                     group="energy",
-                     metric="",
-                     level="job",
-                     node="",
-                     deciles=False):
-    # energy_metrics = [
-    #     "CPU Power", "Core Power", "DRAM Power", "FPGA Power", "GPU Power",
-    #     "System Power"
-    # ]
-    cpu_power_json = await calculate_metrics(jobId, group, "CPU Power", level,
-                                             node, deciles)
-    interval_cpu = cpu_power_json["traces"][0]["interval"] / 3600 / 1000
-    cpu_power_value = cpu_power_json["traces"][0]["values"]
-    cpu_power = round(sum(cpu_power_value) * interval_cpu, 4)
+async def get_energy(jobId):
+    energy_metrics = [
+        "CPU Power", "Core Power", "DRAM Power", "FPGA Power", "GPU Power",
+        "System Power"
+    ]
+    result = {}
+    for energy_metric in energy_metrics:
+        key = energy_metric.split()[0].lower()
+        try:
+            metric_json = await calculate_metrics(jobId, "energy",
+                                                  energy_metric, "job", "",
+                                                  False)
+            if "traces" in metric_json and len(metric_json["traces"]) > 0:
+                interval = metric_json["traces"][0]["interval"] / 3600 / 1000
+                values = metric_json["traces"][0]["values"]
+                power_value = round(sum(values) * interval, 4)
+            else:
+                power_value = None
 
-    # result = "power consumption"
-    return cpu_power, 200
+        except Exception as e:
+            print(f"Error processing {energy_metric}: {e}")
+            power_value = None
+
+        result[key] = power_value
+
+    return result, 200
 
 
 def get_request_uri():
