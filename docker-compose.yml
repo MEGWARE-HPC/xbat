@@ -113,10 +113,6 @@ services:
             -  #VAR_LOG#/clickhouse:/var/log/clickhouse-server
             - /etc/xbat/clickhouse/config/:/etc/clickhouse-server/config.d/:ro
             - /etc/xbat/clickhouse/users/:/etc/clickhouse-server/users.d/:ro
-            - /usr/local/share/xbat/clickhouse/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
-        environment:
-            - CLICKHOUSE_USER=${CLICKHOUSE_USER}
-            - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
         cap_add:
             - SYS_NICE
             - IPC_LOCK

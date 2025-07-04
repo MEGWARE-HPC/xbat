@@ -1,0 +1,5 @@
+<clickhouse>
+    <default_database replace="replace">xbat</default_database>
+    <!-- TODO make configurable-->
+    <listen_host replace="replace">0.0.0.0</listen_host>
+</clickhouse>
