@@ -8,19 +8,32 @@ ENV_FILE="/etc/xbat/docker-compose.env"
 touch "$ENV_FILE"
 chmod 644 "$ENV_FILE"
 
-# Extract values from the [demo] section
-awk -F= '
-    /^\[demo\]/ {found=1; next} 
-    /^\[/ {found=0} 
-    found && /^[a-zA-Z]/ {
-        key=$1; value=$2;
-        gsub(/[ \t\r\n]+$/, "", key);  # Trim trailing spaces
-        gsub(/^[ \t\r\n]+/, "", key);  # Trim leading spaces
-        gsub(/[ \t\r\n]+$/, "", value);  # Trim trailing spaces
-        gsub(/^[ \t\r\n]+/, "", value);  # Trim leading spaces
-        print "DEMO_"toupper(key) "=" value;
-    }
-' "$CONFIG_FILE" > "$ENV_FILE"
+# Extract values of all sections
+current_section=""
+while IFS= read -r line || [[ -n "$line" ]]; do
+    # Strip leading/trailing whitespace
+    line="$(echo "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+
+    # Skip empty lines and comments
+    [[ -z "$line" || "$line" =~ ^# ]] && continue
+
+    # Match section headers
+    if [[ "$line" =~ ^\[(.*)\]$ ]]; then
+        current_section="${BASH_REMATCH[1]}"
+        current_section_upper=$(echo "$current_section" | tr '[:lower:]' '[:upper:]')
+        continue
+    fi
+
+    # Match key=value pairs
+    if [[ "$line" =~ ^([a-zA-Z0-9_]+)[[:space:]]*=[[:space:]]*(.*)$ ]]; then
+        key="${BASH_REMATCH[1]}"
+        value="${BASH_REMATCH[2]}"
+        key_upper=$(echo "$key" | tr '[:lower:]' '[:upper:]')
+        varname="${current_section_upper}_${key_upper}"
+
+        echo "${varname}=${value}" >> "$ENV_FILE"
+    fi
+done < "$CONFIG_FILE"
 
 # Reload systemd to pick up changes
 systemctl daemon-reexec
