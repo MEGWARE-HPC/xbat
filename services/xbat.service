@@ -15,7 +15,7 @@ LimitMEMLOCK=infinity
 WorkingDirectory=/usr/local/share/xbat
 
 # extract some environment variables from xbat.conf for docker-compose.yml
-ExecStartPre=/bin/bash /usr/local/share/xbat/docker-env.sh
+ExecStartPre=/bin/bash /usr/local/share/xbat/conf-to-env.sh && systemctl daemon-reexec
 EnvironmentFile=-/etc/xbat/docker-compose.env
 
 Environment=PIPE_POOLSIZE=4

@@ -11,6 +11,7 @@ IFS=$'\n\t'
 
 INSTALL_PATH="/usr/local/share/xbat"
 INSTALL_PATH_BIN="$INSTALL_PATH/bin"
+INSTALL_PATH_MIGRATIONS="$INSTALL_PATH/migrations"
 SERVICE_DEST_PATH="/etc/systemd/system"
 SERVICE_NAME="xbat.service"
 BUILD_PATH="build"
@@ -81,7 +82,7 @@ build_docker_images() {
 
 prepare_directories() {
     log_info "Preparing directories..."
-    mkdir -p -m 0700 "$INSTALL_PATH" "$INSTALL_PATH_BIN" "$CONF_DEST_PATH" "$RUN_PATH" "$LOG_BASE_PATH" "$CERT_DIR"
+    mkdir -p -m 0700 "$INSTALL_PATH" "$INSTALL_PATH_BIN" "$INSTALL_PATH_MIGRATIONS" "$CONF_DEST_PATH" "$RUN_PATH" "$LOG_BASE_PATH" "$CERT_DIR"
     mkdir -p -m 0750 "$LIB_BASE_PATH"
     chown -R "$XBAT_USER:$XBAT_USER" "$LOG_BASE_PATH" "$LIB_BASE_PATH"
     touch "$LOG_BASE_PATH/xbat.log"
@@ -110,7 +111,7 @@ prepare_scripts_and_configs() {
     log_info "Preparing scripts and configurations..."
     cp "${SCRIPT_SRC_PATH}/pipe"*.sh "$INSTALL_PATH"
     cp "${SCRIPT_SRC_PATH}/pgbouncer-setup.sh" "$INSTALL_PATH"
-    cp "${SCRIPT_SRC_PATH}/docker-env.sh" "$INSTALL_PATH"
+    cp "${SCRIPT_SRC_PATH}/conf-to-env.sh" "$INSTALL_PATH"
     cp -r "${SCRIPT_SRC_PATH}/clickhouse" "$INSTALL_PATH/"
     cp "$CONF_SRC_PATH/pgbouncer.ini.in" "$CONF_DEST_PATH/pgbouncer.ini.in"
     cp --no-clobber "$CONF_SRC_PATH/$CONF_FILE" "$CONF_DEST_PATH/$CONF_FILE"

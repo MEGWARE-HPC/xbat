@@ -1,12 +1,18 @@
 #!/bin/bash
-# Extracts values from /etc/xbat/xbat.conf and saves them as environment variables
+# Extracts values from /etc/xbat/xbat.conf and saves them as environment variables or prints to stdout
 
 CONFIG_FILE="/etc/xbat/xbat.conf"
 ENV_FILE="/etc/xbat/docker-compose.env"
+OUTPUT_MODE="file"
 
-# Ensure the environment file exists
-touch "$ENV_FILE"
-chmod 644 "$ENV_FILE"
+if [[ "${1:-}" == "--stdout" ]]; then
+    OUTPUT_MODE="stdout"
+else
+    # Ensure the environment file exists
+    touch "$ENV_FILE"
+    chmod 644 "$ENV_FILE"
+    : > "$ENV_FILE"  # clear previous content
+fi
 
 # Extract values of all sections
 current_section=""
@@ -31,9 +37,10 @@ while IFS= read -r line || [[ -n "$line" ]]; do
         key_upper=$(echo "$key" | tr '[:lower:]' '[:upper:]')
         varname="${current_section_upper}_${key_upper}"
 
-        echo "${varname}=${value}" >> "$ENV_FILE"
+        if [[ "$OUTPUT_MODE" == "stdout" ]]; then
+            echo "${varname}=${value}"
+        else
+            echo "${varname}=${value}" >> "$ENV_FILE"
+        fi
     fi
 done < "$CONFIG_FILE"
-
-# Reload systemd to pick up changes
-systemctl daemon-reexec

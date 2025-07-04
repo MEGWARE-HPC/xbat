@@ -22,12 +22,32 @@ if [[ ! -x "$GOOSE_BINARY" ]]; then
     fi
 fi
 
+source <(/usr/local/share/xbat/conf-to-env.sh --stdout)
+
+required_vars=(
+  CLICKHOUSE_USER
+  CLICKHOUSE_PASSWORD
+  CLICKHOUSE_HOST
+  CLICKHOUSE_DATABASE
+)
+
+missing=0
+for var in "${required_vars[@]}"; do
+  if [[ -z "${!var:-}" ]]; then
+    suffix="${var#CLICKHOUSE_}"
+    echo "Clickhouse '${suffix,,}' is not set or empty in /etc/xbat/xbat.conf" >&2
+    missing=1
+  fi
+done
+
+if [[ $missing -eq 1 ]]; then
+  exit 1
+fi
+
+CLICKHOUSE_PORT=9000
 GOOSE_DRIVER=clickhouse
 
-CLICKHOUSE_USER=default
-CLICKHOUSE_PASSWORD=changeme
-CLICKHOUSE_HOST=localhost
-CLICKHOUSE_PORT=9000
-CLICKHOUSE_DATABASE=xbat
-
 GOOSE_DBSTRING="clickhouse://$CLICKHOUSE_USER:$CLICKHOUSE_PASSWORD@$CLICKHOUSE_HOST:$CLICKHOUSE_PORT/$CLICKHOUSE_DATABASE"
+GOOSE_MIGRATIONS_DIR="/usr/local/share/xbat/migrations/"
+
+goose clickhouse -dir "${GOOSE_MIGRATIONS_DIR}" "${GOOSE_DBSTRING}" "$@"
