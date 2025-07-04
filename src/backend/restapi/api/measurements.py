@@ -611,13 +611,15 @@ def generate_csv(result):
 
 # Function placeholder for power consumption
 async def get_energy(jobId,
-                     group="",
+                     group="energy",
                      metric="",
-                     level="",
+                     level="job",
                      node="",
                      deciles=False):
-    result = "power consumption"
-    return result, 200
+    cpu_power = await calculate_metrics(jobId, group, metric, level, node,
+                                        deciles)
+    # result = "power consumption"
+    return cpu_power, 200
 
 
 def get_request_uri():
