@@ -30,6 +30,7 @@ All notable changes to this project will be documented in this file.
 -   anonymization of benchmarks exports (#30)
 -   issue with JobOverviewTable loading (#28)
 -   overview table distortion by long names (#41)
+-   some issues related to auto-refresh (#4, #42, #43)
 
 ## v1.0.0 - 2025-04-17
 
