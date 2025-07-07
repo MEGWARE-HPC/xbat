@@ -48,6 +48,6 @@ CLICKHOUSE_PORT=9000
 GOOSE_DRIVER=clickhouse
 
 GOOSE_DBSTRING="clickhouse://$CLICKHOUSE_USER:$CLICKHOUSE_PASSWORD@$CLICKHOUSE_HOST:$CLICKHOUSE_PORT/$CLICKHOUSE_DATABASE"
-GOOSE_MIGRATIONS_DIR="/usr/local/share/xbat/migrations/"
+GOOSE_MIGRATIONS_DIR="/usr/local/share/xbat/clickhouse/migrations/"
 
 goose clickhouse -dir "${GOOSE_MIGRATIONS_DIR}" "${GOOSE_DBSTRING}" "$@"
