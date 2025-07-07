@@ -609,7 +609,7 @@ def generate_csv(result):
     return csv_content
 
 
-async def get_energy(jobId):
+async def calculate_energy(jobId):
     energy_metrics = [
         "CPU Power", "Core Power", "DRAM Power", "FPGA Power", "GPU Power",
         "System Power"
@@ -618,21 +618,21 @@ async def get_energy(jobId):
     for energy_metric in energy_metrics:
         key = energy_metric.split()[0].lower()
         try:
-            metric_json = await calculate_metrics(jobId, "energy",
-                                                  energy_metric, "job", "",
-                                                  False)
-            if "traces" in metric_json and len(metric_json["traces"]) > 0:
-                interval = metric_json["traces"][0]["interval"] / 3600 / 1000
-                values = metric_json["traces"][0]["values"]
-                power_value = round(sum(values) * interval, 4)
+            power_json = await calculate_metrics(jobId, "energy",
+                                                 energy_metric, "job", "",
+                                                 False)
+            if "traces" in power_json and len(power_json["traces"]) > 0:
+                interval = power_json["traces"][0]["interval"] / 3600 / 1000
+                values = power_json["traces"][0]["values"]
+                energy_usage = round(sum(values) * interval, 4)
             else:
-                power_value = None
+                energy_usage = None
 
         except Exception as e:
-            print(f"Error processing {energy_metric}: {e}")
-            power_value = None
+            logger.error(f"Error processing {energy_metric}: {e}")
+            energy_usage = None
 
-        result[key] = power_value
+        result[key] = energy_usage
 
     return result, 200
 

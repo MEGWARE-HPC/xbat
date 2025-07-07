@@ -610,15 +610,15 @@ paths:
             - benchmarks_r
   /measurements/{jobId}/energy:
    get:
-      operationId: backend.restapi.api.measurements.get_energy
+      operationId: backend.restapi.api.measurements.calculate_energy
       parameters:
         - $ref: "#/components/parameters/JobId"
       tags:
         - measurements
-      summary: Power consumption
+      summary: Energy consumption
       responses:
         "200":
-          description: Successfully obtained the power consumption results in JSON format
+          description: Successfully calculated the energy consumption (kWh)
           content:
             application/json:
               schema:
