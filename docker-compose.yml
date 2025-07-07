@@ -121,7 +121,8 @@ services:
                 soft: 262144
                 hard: 262144
         expose:
-            - 8812
+            - 8123 # TODO remove once passed through nginx
+            - 9000
         ports:
             - "#FRONTEND_NETWORK#:8123:8123" # web UI and HTTP API
             - "#FRONTEND_NETWORK#:9000:9000" # native protocol

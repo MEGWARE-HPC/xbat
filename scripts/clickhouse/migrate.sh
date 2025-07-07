@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-INSTALL_DIR="/usr/local/share/xbat/bin"
-GOOSE_BINARY="$INSTALL_DIR/goose"
+INSTALL_DIR="/usr/local/share/xbat"
+GOOSE_BINARY="$INSTALL_DIR/bin/goose" # bin is automatically created by goose install script
 
 # fail if install directory doesn't exist
 if [[ ! -d "$INSTALL_DIR" ]]; then
@@ -47,7 +47,7 @@ fi
 CLICKHOUSE_PORT=9000
 GOOSE_DRIVER=clickhouse
 
-GOOSE_DBSTRING="clickhouse://$CLICKHOUSE_USER:$CLICKHOUSE_PASSWORD@$CLICKHOUSE_HOST:$CLICKHOUSE_PORT/$CLICKHOUSE_DATABASE"
+GOOSE_DBSTRING="clickhouse://${CLICKHOUSE_USER}:${CLICKHOUSE_PASSWORD}@${CLICKHOUSE_HOST}:${CLICKHOUSE_PORT}/${CLICKHOUSE_DATABASE}"
 GOOSE_MIGRATIONS_DIR="/usr/local/share/xbat/clickhouse/migrations/"
 
-goose clickhouse -dir "${GOOSE_MIGRATIONS_DIR}" "${GOOSE_DBSTRING}" "$@"
+"$GOOSE_BINARY" clickhouse -dir "$GOOSE_MIGRATIONS_DIR" "$GOOSE_DBSTRING" "$@"
