@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-INSTALL_DIR="/usr/local/share/xbat"
+INSTALL_DIR="/usr/local/share/xbat/clickhouse"
 GOOSE_BINARY="$INSTALL_DIR/bin/goose" # bin is automatically created by goose install script
 
 # fail if install directory doesn't exist
