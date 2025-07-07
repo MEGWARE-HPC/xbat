@@ -44,6 +44,13 @@ if [[ $missing -eq 1 ]]; then
   exit 1
 fi
 
+# Migration script is running outside of docker infrastructure and has no access to xbat-clickhouse host.
+# If the host is set to xbat-clickhouse, assume clickhouse is reachable via localhost. Host different from xbat-clickhouse
+# is expected to be a real host on a different server.
+if [[ "$CLICKHOUSE_HOST" == "xbat-clickhouse" ]]; then
+    CLICKHOUSE_HOST="localhost"
+fi
+
 CLICKHOUSE_PORT=9000
 GOOSE_DRIVER=clickhouse
 
