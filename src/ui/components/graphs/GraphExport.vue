@@ -228,8 +228,8 @@
                     </div>
                     <ReactiveGraph
                         :graphId="exportGraphId"
-                        type="String"
                         ref="exportGraphRef"
+                        :type="props.type"
                         :graph="modifiedGraph"
                         :style="'display: none'"
                     ></ReactiveGraph>
@@ -255,6 +255,10 @@ const props = defineProps({
         type: String,
         required: true
     },
+    type: {
+        type: String,
+        default: "default"
+    },
     noJson: {
         type: Boolean,
         default: false
@@ -267,8 +271,8 @@ const props = defineProps({
 
 const exportGraphId = nanoid(6);
 
-const storeGraph = $graphStore.useStoreGraph(props.graphId);
-const exportStoreGraph = $graphStore.useStoreGraph(exportGraphId);
+const storeGraph = $graphStore.useStoreGraph(props.graphId, props.type);
+const exportStoreGraph = $graphStore.useStoreGraph(exportGraphId, props.type);
 
 const state = reactive({
     tab: "image",
