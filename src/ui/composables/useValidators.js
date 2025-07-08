@@ -20,6 +20,9 @@ export default function useValidators() {
             return /^[^\0]+$/.test(v || "");
         },
         commaSeparatedList(v) {
+            return /^([a-zA-Z0-9_-]*)(,[a-zA-Z0-9_-]*)*$/.test(v || "");
+        },
+        slurmNodeList(v) {
             return /^([a-zA-Z0-9_\-\[\]]*)(,[a-zA-Z0-9_\-\[\]]*)*$/.test(
                 v || ""
             );
