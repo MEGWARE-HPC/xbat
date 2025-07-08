@@ -370,6 +370,7 @@ const handleMount = (
 <style lang="scss" scoped>
 @use "sass:list";
 @use "~/assets/css/colors.scss" as *;
+@use "~/assets/css/rainbow-colors.scss" as rainbow-colors;
 .actions {
     position: absolute;
     right: 15px;
@@ -424,21 +425,7 @@ const handleMount = (
 
 @for $i from 0 through 9 {
     :deep(.csv-column-#{$i}) {
-        color: list.nth(
-            (
-                #c00040,
-                #00a000,
-                #8000c0,
-                #c09e18,
-                #0080a0,
-                #e000e0,
-                #60a000,
-                #0020f0,
-                #e08000,
-                #00c080
-            ),
-            $i + 1
-        ) !important;
+        color: list.nth(rainbow-colors.$csv-rainbow, $i + 1) !important;
     }
 }
 </style>
