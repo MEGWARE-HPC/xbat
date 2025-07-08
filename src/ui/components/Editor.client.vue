@@ -103,6 +103,7 @@ import * as monacoEditor from "monaco-editor/esm/vs/editor/editor.api";
 import { download, copyToClipboard } from "~/utils/misc";
 import type { Jobscript } from "@/repository/modules/configurations";
 import { useElementHover } from "@vueuse/core";
+import { colors } from "~/utils/colors";
 
 type MonacoEditor = typeof monacoEditor;
 
@@ -118,25 +119,8 @@ monacoEditor.languages.setMonarchTokensProvider(csvLangId, {
         ]
     }
 });
-// Rainbow Color list
-const colors = [
-    "#c00040",
-    "#00a000",
-    "#8000c0",
-    "#c09e18",
-    "#0080a0",
-    "#e000e0",
-    "#60a000",
-    "#0020f0",
-    "#e08000",
-    "#00c080"
-];
 
-const styleElement = document.createElement("style");
-colors.forEach((color, index) => {
-    styleElement.innerHTML += `.csv-column-${index} { color: ${color}; !important;}`;
-});
-document.head.appendChild(styleElement);
+const csv_colors = colors.CSV_Rainbow;
 
 const value = ref<string | Jobscript>("");
 
@@ -322,7 +306,7 @@ const applyRainbowColors = () => {
         const columns = line.split(",");
         let currentOffset = 1;
         columns.forEach((column, columnIndex) => {
-            if (colors[columnIndex % colors.length]) {
+            if (csv_colors[columnIndex % csv_colors.length]) {
                 decorations.push({
                     range: new monacoEditor.Range(
                         lineNumber + 1,
@@ -332,7 +316,7 @@ const applyRainbowColors = () => {
                     ),
                     options: {
                         inlineClassName: `csv-column-${
-                            columnIndex % colors.length
+                            columnIndex % csv_colors.length
                         }`
                     }
                 });
@@ -384,6 +368,7 @@ const handleMount = (
 };
 </script>
 <style lang="scss" scoped>
+@use "sass:list";
 @use "~/assets/css/colors.scss" as *;
 .actions {
     position: absolute;
@@ -435,5 +420,25 @@ const handleMount = (
 }
 .slurm-info > .v-btn {
     transform: translate(10%, 0);
+}
+
+@for $i from 0 through 9 {
+    :deep(.csv-column-#{$i}) {
+        color: list.nth(
+            (
+                #c00040,
+                #00a000,
+                #8000c0,
+                #c09e18,
+                #0080a0,
+                #e000e0,
+                #60a000,
+                #0020f0,
+                #e08000,
+                #00c080
+            ),
+            $i + 1
+        ) !important;
+    }
 }
 </style>
