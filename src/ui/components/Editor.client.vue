@@ -103,7 +103,7 @@ import * as monacoEditor from "monaco-editor/esm/vs/editor/editor.api";
 import { download, copyToClipboard } from "~/utils/misc";
 import type { Jobscript } from "@/repository/modules/configurations";
 import { useElementHover } from "@vueuse/core";
-import { colors } from "~/utils/colors";
+import { CSV_Rainbow } from "~/utils/colors";
 
 type MonacoEditor = typeof monacoEditor;
 
@@ -120,7 +120,7 @@ monacoEditor.languages.setMonarchTokensProvider(csvLangId, {
     }
 });
 
-const csv_colors = colors.CSV_Rainbow;
+const csv_colors = CSV_Rainbow;
 
 const value = ref<string | Jobscript>("");
 
