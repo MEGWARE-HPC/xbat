@@ -37,7 +37,7 @@
                             "
                             @click.stop=""
                             :error-messages="
-                                props.value === duplicateValue
+                                duplicateState[idx]?.edit === props.value
                                     ? ['Duplicate Value']
                                     : []
                             "
@@ -76,7 +76,7 @@
                         class="ml-3 mr-3"
                         v-model="v.input"
                         :error-messages="
-                            duplicateAddValue[idx]
+                            duplicateState[idx]?.add
                                 ? ['Value already exists']
                                 : []
                         "
@@ -86,13 +86,13 @@
                             ><v-btn
                                 variant="plain"
                                 :color="
-                                    duplicateAddValue[idx]
+                                    duplicateState[idx]?.add
                                         ? 'danger'
                                         : 'primary-light'
                                 "
                                 icon="$plus"
                                 size="small"
-                                :disabled="!v.input || duplicateAddValue[idx]"
+                                :disabled="!v.input || duplicateState[idx]?.add"
                                 @click="addValue(idx, v.input)"
                             ></v-btn></template></v-text-field
                 ></template>
@@ -144,6 +144,10 @@ const emit = defineEmits(["update:modelValue"]);
 
 const variables: Ref<Variable[]> = ref([]);
 
+const duplicateState = ref<Record<number, { add?: boolean; edit?: string }>>(
+    {}
+);
+
 const propagateChanges = () => {
     if (deepEqual(variables.value, props.modelValue)) return;
 
@@ -158,18 +162,17 @@ watch(
         if (!Array.isArray(v)) {
             variables.value = [];
             return;
-        } else {
-            variables.value = deepClone(v).map((x: Variable) =>
-                Object.assign(x, x.input ? {} : { input: "" })
-            );
         }
+        variables.value = deepClone(v).map((x: Variable) =>
+            Object.assign(x, x.input ? {} : { input: "" })
+        );
     },
     { immediate: true, deep: true }
 );
 
 watch(
     () => variables.value,
-    (v) => {
+    () => {
         debounceVariableUpdate();
     },
     { deep: true }
@@ -181,36 +184,46 @@ const addVariable = () => {
 
 const removeVariable = (idx: number) => {
     variables.value.splice(idx, 1);
+    delete duplicateState.value[idx];
 };
 
 const addValue = (idx: number, value: string) => {
-    variables.value[idx].values.push(value);
-    variables.value[idx].selected.push(value);
-    variables.value[idx].input = "";
+    if (!value) return;
+    const v = variables.value[idx];
+
+    // Handling duplicate detection (on click)
+    const isDuplicate = v.values.includes(value);
+    if (!duplicateState.value[idx]) duplicateState.value[idx] = {};
+    duplicateState.value[idx].add = isDuplicate;
+
+    if (isDuplicate) return;
+
+    v.values.push(value);
+    v.selected.push(value);
+    v.input = "";
+    duplicateState.value[idx].add = false;
 };
 
-const duplicateValue = ref<string | null>();
-
 const updateValue = (idx: number, selectedIdx: number, value: string) => {
-    const oldVal = variables.value[idx].values[selectedIdx];
-    variables.value[idx].values[selectedIdx] = value;
+    const v = variables.value[idx];
+    const oldVal = v.values[selectedIdx];
 
-    if (
-        variables.value[idx].values.includes(value) &&
-        variables.value[idx].values.indexOf(value) !== selectedIdx
-    ) {
-        duplicateValue.value = value;
-    } else {
-        duplicateValue.value = null;
+    const alreadyExists =
+        v.values.includes(value) && v.values.indexOf(value) !== selectedIdx;
+
+    if (!duplicateState.value[idx]) duplicateState.value[idx] = {};
+    duplicateState.value[idx].edit = alreadyExists ? value : "";
+
+    if (alreadyExists) return;
+
+    v.values[selectedIdx] = value;
+
+    const selIdx = v.selected.indexOf(oldVal);
+    if (selIdx !== -1) {
+        v.selected.splice(selIdx, 1, value);
     }
 
-    if (variables.value[idx].selected.includes(oldVal)) {
-        variables.value[idx].selected.splice(
-            variables.value[idx].selected.indexOf(oldVal),
-            1,
-            value
-        );
-    }
+    duplicateState.value[idx].edit = "";
 };
 
 const removeValue = (idx: number, value: string) => {
@@ -228,21 +241,13 @@ const removeValue = (idx: number, value: string) => {
 const removeAllValues = (idx: number) => {
     variables.value[idx].values = [];
     variables.value[idx].selected = [];
+    delete duplicateState.value[idx];
 };
 
 const duplicateVariable = computed(() => {
-    const variableNames = variables.value.map((v) => v.key);
-
-    return Array.from(
-        variables.value,
-        (v) => v.key && variableNames.filter((vn) => vn === v.key).length > 1
-    );
-});
-
-const duplicateAddValue = computed(() => {
-    return Array.from(
-        variables.value,
-        (v) => v.input && v.values.includes(v.input)
+    const keys = variables.value.map((v) => v.key);
+    return variables.value.map((v) =>
+        v.key ? keys.filter((k) => k === v.key).length > 1 : false
     );
 });
 </script>
