@@ -17,6 +17,9 @@ All notable changes to this project will be documented in this file.
 -   improved layout of docs on smaller screens
 -   default back to npm instead of bun for frontend and docs
 -   first variant of job configuration can now be deleted (#49)
+-   made the DocsNavigation loop (#32)
+-   open external links in the document in new tabs
+-   removed the beta prefix since xbat is released
 
 ### Fixed
 
@@ -30,6 +33,7 @@ All notable changes to this project will be documented in this file.
 -   issue with JobOverviewTable loading (#28)
 -   overview table distortion by long names (#41)
 -   some issues related to auto-refresh (#4, #42, #43)
+-   broken links and content in the documentation
 
 ## v1.0.0 - 2025-04-17
 
