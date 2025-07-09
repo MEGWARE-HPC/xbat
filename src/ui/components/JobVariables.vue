@@ -244,6 +244,34 @@ const removeAllValues = (idx: number) => {
     delete duplicateState.value[idx];
 };
 
+watch(
+    () => variables.value.map((v) => v.input),
+    (inputs) => {
+        inputs.forEach((val, idx) => {
+            if (!duplicateState.value[idx]) duplicateState.value[idx] = {};
+            if (
+                duplicateState.value[idx].add &&
+                !variables.value[idx].values.includes(val)
+            ) {
+                duplicateState.value[idx].add = false;
+            }
+        });
+    }
+);
+
+watch(
+    () => variables.value.map((v) => [...v.values]),
+    (valueLists) => {
+        valueLists.forEach((values, idx) => {
+            const editVal = duplicateState.value[idx]?.edit;
+            if (editVal && values.filter((v) => v === editVal).length <= 1) {
+                duplicateState.value[idx].edit = "";
+            }
+        });
+    },
+    { deep: true }
+);
+
 const duplicateVariable = computed(() => {
     const keys = variables.value.map((v) => v.key);
     return variables.value.map((v) =>
