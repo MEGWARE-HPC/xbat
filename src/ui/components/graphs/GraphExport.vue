@@ -229,6 +229,7 @@
                     <ReactiveGraph
                         :graphId="exportGraphId"
                         ref="exportGraphRef"
+                        :type="props.type"
                         :graph="modifiedGraph"
                         :style="'display: none'"
                     ></ReactiveGraph>
@@ -254,6 +255,10 @@ const props = defineProps({
         type: String,
         required: true
     },
+    type: {
+        type: String,
+        default: "default"
+    },
     noJson: {
         type: Boolean,
         default: false
@@ -266,8 +271,8 @@ const props = defineProps({
 
 const exportGraphId = nanoid(6);
 
-const storeGraph = $graphStore.useStoreGraph(props.graphId);
-const exportStoreGraph = $graphStore.useStoreGraph(exportGraphId);
+const storeGraph = $graphStore.useStoreGraph(props.graphId, props.type);
+const exportStoreGraph = $graphStore.useStoreGraph(exportGraphId, props.type);
 
 const state = reactive({
     tab: "image",
@@ -350,8 +355,9 @@ const modifiedGraph = computed(() => {
 
     g.layout.font.size = state.fontsize;
 
-    g.layout.xaxis.title = state.xTitle;
-    g.layout.yaxis.title = state.yTitle;
+    // Set x-axis and y-axis titles, also set the title for the graph
+    g.layout.xaxis.title = { text: state.xTitle || "x-axis" };
+    g.layout.yaxis.title = { text: state.yTitle || "Y-axis" };
     g.layout.title = {
         text: state.title,
         font: {
