@@ -3,6 +3,7 @@ const {
     noSpecialChars,
     filePath,
     commaSeparatedList,
+    slurmNodeList,
     noSpaces,
     walltimeChars
 } = useValidators();
@@ -18,7 +19,9 @@ const validationMessages = {
     noSpecialChars: "Value must not contain special characters",
     filePath: "Invalid file path",
     commaSeparatedList:
-        "Invalid input - must be a comma-separated list without special characters"
+        "Invalid input - must be a comma-separated list without special characters",
+    slurmNodeList:
+        "The list must be specified as a comma-separated list of hosts, a range of hosts, or a filename"
 };
 
 export default function useFormValidation() {
@@ -38,6 +41,8 @@ export default function useFormValidation() {
         vFilePath: (v) => filePath(v) || validationMessages.filePath,
         vCommaSeparatedList: (v) =>
             commaSeparatedList(v) || validationMessages.commaSeparatedList,
+        vSlurmNodeList: (v) =>
+            slurmNodeList(v) || validationMessages.slurmNodeList,
         vNoSpaces: (v) => noSpaces(v) || validationMessages.noSpaces,
         validationMessages
     };
