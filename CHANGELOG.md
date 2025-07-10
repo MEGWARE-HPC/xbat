@@ -30,6 +30,7 @@ All notable changes to this project will be documented in this file.
 -   issue with JobOverviewTable loading (#28)
 -   overview table distortion by long names (#41)
 -   some issues related to auto-refresh (#4, #42, #43)
+-   job variables duplicate detection false alarms (#75)
 
 ## v1.0.0 - 2025-04-17
 
