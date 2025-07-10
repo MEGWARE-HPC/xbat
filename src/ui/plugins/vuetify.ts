@@ -83,9 +83,9 @@ import {
     mdiContentSaveMove,
     mdiDatabaseImportOutline,
     mdiCloudUpload,
-    mdiFileDocument,
     mdiRead,
-    mdiInformation
+    mdiInformation,
+    mdiFolderZip
 } from "@mdi/js";
 
 // TODO remove when out of lab stage
@@ -218,7 +218,6 @@ export default defineNuxtPlugin((app) => {
                 saveMove: mdiContentSaveMove,
                 dataImport: mdiDatabaseImportOutline,
                 cloudUpload: mdiCloudUpload,
-                uploadFileIcon: mdiFileDocument,
                 read: mdiRead,
                 info: mdiInformation
             },
@@ -283,7 +282,7 @@ export default defineNuxtPlugin((app) => {
                 density: "compact"
             },
             VFileUploadItem: {
-                fileIcon: mdiFileDocument
+                fileIcon: mdiFolderZip
             },
         }
     });

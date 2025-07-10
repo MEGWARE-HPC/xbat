@@ -455,6 +455,7 @@
                             divider-text="or choose locally"
                             icon="$cloudUpload"
                             title="Drag and Drop Here"
+                            show-size
                             clearable
                         >
                         </v-file-upload>
