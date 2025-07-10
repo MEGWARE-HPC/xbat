@@ -85,7 +85,8 @@ import {
     mdiCloudUpload,
     mdiRead,
     mdiInformation,
-    mdiFolderZip
+    mdiFolderZip,
+    mdiGestureTapButton
 } from "@mdi/js";
 
 // TODO remove when out of lab stage
@@ -219,7 +220,8 @@ export default defineNuxtPlugin((app) => {
                 dataImport: mdiDatabaseImportOutline,
                 cloudUpload: mdiCloudUpload,
                 read: mdiRead,
-                info: mdiInformation
+                info: mdiInformation,
+                gestureTap: mdiGestureTapButton
             },
             sets: {
                 mdi
