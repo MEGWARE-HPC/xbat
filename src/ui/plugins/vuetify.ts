@@ -218,7 +218,7 @@ export default defineNuxtPlugin((app) => {
                 saveMove: mdiContentSaveMove,
                 dataImport: mdiDatabaseImportOutline,
                 cloudUpload: mdiCloudUpload,
-                "mdi-file-document": mdiFileDocument,
+                uploadFileIcon: mdiFileDocument,
                 read: mdiRead,
                 info: mdiInformation
             },
@@ -281,7 +281,10 @@ export default defineNuxtPlugin((app) => {
             },
             VTreeview: {
                 density: "compact"
-            }
+            },
+            VFileUploadItem: {
+                fileIcon: mdiFileDocument
+            },
         }
     });
     app.vueApp.use(vuetify);
