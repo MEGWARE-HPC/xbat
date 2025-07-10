@@ -22,6 +22,11 @@ export default function useValidators() {
         commaSeparatedList(v) {
             return /^([a-zA-Z0-9_-]*)(,[a-zA-Z0-9_-]*)*$/.test(v || "");
         },
+        slurmNodeList(v) {
+            return /^([a-zA-Z0-9_\-\[\]]*)(,[a-zA-Z0-9_\-\[\]]*)*$/.test(
+                v || ""
+            );
+        },
         noSpaces(v) {
             return !/\s/g.test(v || "");
         }

@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file.
 -   improved layout of docs on smaller screens
 -   default back to npm instead of bun for frontend and docs
 -   first variant of job configuration can now be deleted (#49)
+-   support for slurm bracket notation in configuration nodelists (#89)
 -   improved display of long configuration name (#55)
 
 ### Fixed
@@ -30,6 +31,8 @@ All notable changes to this project will be documented in this file.
 -   anonymization of benchmarks exports (#30)
 -   issue with JobOverviewTable loading (#28)
 -   overview table distortion by long names (#41)
+-   some issues related to auto-refresh (#4, #42, #43)
+-   the display of x-axis and y-axis titles in graph export (#48)
 
 ## v1.0.0 - 2025-04-17
 
