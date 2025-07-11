@@ -38,25 +38,36 @@
                 mandatory
                 open-strategy="multiple"
             >
-                <template v-for="item of items.children">
+                <template v-for="item of items.children" :key="item._path">
                     <v-list-item
                         v-if="!item.children?.length"
+                        :key="`item-${item._path}`"
                         :title="item.title"
                         :value="item._path"
                         :to="item._path"
+                        :id="`item-${encodeURIComponent(item._path)}`"
                     ></v-list-item>
-                    <v-list-group v-else :value="item._path">
+
+                    <v-list-group
+                        v-else
+                        :key="`group-${item._path}`"
+                        :value="item._path"
+                    >
                         <template v-slot:activator="{ props }">
                             <v-list-item
                                 v-bind="props"
                                 :title="item.title"
+                                :id="`group-${encodeURIComponent(item._path)}`"
                             ></v-list-item>
                         </template>
+
                         <v-list-item
-                            v-for="entry of item.children"
+                            v-for="entry in item.children"
+                            :key="`entry-${entry._path}`"
                             :title="entry.title"
                             :value="entry._path"
                             :to="entry._path"
+                            :id="`entry-${encodeURIComponent(entry._path)}`"
                         ></v-list-item>
                     </v-list-group>
                 </template>
