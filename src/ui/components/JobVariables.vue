@@ -39,6 +39,9 @@
                                 editValue(idx, selectIdx, $event)
                             "
                             @click.stop=""
+                            @keydown.stop
+                            @keyup.stop
+                            @keypress.stop
                             :error-messages="
                                 duplicateState[idx]?.edit === props.value
                                     ? ['Duplicate Value']
@@ -81,7 +84,10 @@
                                 ? ['Value already exists']
                                 : []
                         "
-                        @keyup.enter="addNewValue(idx, v.input)"
+                        @keyup.enter.stop="addNewValue(idx, v.input)"
+                        @keydown.stop
+                        @keyup.stop
+                        @keypress.stop
                     >
                         <template #append-inner>
                             <v-btn
