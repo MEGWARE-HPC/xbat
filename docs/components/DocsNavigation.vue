@@ -7,7 +7,7 @@
         :temporary="windowWidth <= 992"
     >
         <template v-if="items">
-            <div class="mt-13">
+            <div class="doc-type-header">
                 <div class="doc-type-head text-medium-emphasis">
                     {{ $store.currentDocType }} Documentation
                 </div>
@@ -38,7 +38,7 @@
                 mandatory
                 open-strategy="multiple"
             >
-                <template v-for="item of items.children" :key="item._path">
+                <template v-for="item in items.children">
                     <v-list-item
                         v-if="!item.children?.length"
                         :key="`item-${item._path}`"
@@ -46,6 +46,10 @@
                         :value="item._path"
                         :to="item._path"
                         :id="`item-${encodeURIComponent(item._path)}`"
+                        :class="{ 'active-doc': route.path === item._path }"
+                        :aria-current="
+                            route.path === item._path ? 'page' : undefined
+                        "
                     ></v-list-item>
 
                     <v-list-group
@@ -68,6 +72,12 @@
                             :value="entry._path"
                             :to="entry._path"
                             :id="`entry-${encodeURIComponent(entry._path)}`"
+                            :class="{
+                                'active-doc': route.path === entry._path
+                            }"
+                            :aria-current="
+                                route.path === entry._path ? 'page' : undefined
+                            "
                         ></v-list-item>
                     </v-list-group>
                 </template>
@@ -81,7 +91,7 @@ import { useWindowSize } from "@vueuse/core";
 
 const route = useRoute();
 const { width: windowWidth } = useWindowSize();
-const docStartingRoutes: { [key: string]: string } = {
+const docStartingRoutes: Record<string, string> = {
     user: "/docs/user/introduction",
     admin: "/docs/admin/setup/installation",
     developer: "/docs/developer/contribute"
@@ -97,40 +107,33 @@ const props = defineProps({
 
 const selectedEntry = ref<string[] | null>(null);
 
-// only display docs of current category in navigation
 const items: Ref<NavItem | null> = computed(() => {
-    const categories = props.links?.[0]?.children || [];
-    const regex = new RegExp(`^/docs/([a-zA-Z]+)/.*$`);
-    const currentCategory = route.path.match(regex)?.[1];
-    const filteredCategories = categories.filter((category) =>
-        category._path.startsWith(`/docs/${currentCategory}`)
+    const categories =
+        Array.isArray(props.links) && props.links[0]?.children
+            ? props.links[0].children
+            : [];
+    const match = route.path.match(/^\/docs\/([a-zA-Z]+)\//);
+    const currentCategory = match?.[1];
+    const filtered = categories.filter((cat) =>
+        cat._path.startsWith(`/docs/${currentCategory}`)
     );
-    return filteredCategories.length ? filteredCategories[0] : null;
+    return filtered.length ? filtered[0] : null;
 });
 
 const docTypes = ["user", "admin", "developer"];
 
 const currentIndex = computed(() => {
-    return $store.currentDocType !== null
-        ? docTypes.indexOf($store.currentDocType)
-        : -1;
+    const index = docTypes.indexOf($store.currentDocType);
+    return index >= 0 ? index : 0;
 });
 
-const nextIndex = computed(() => {
-    return (currentIndex.value + 1) % docTypes.length;
-});
+const nextIndex = computed(() => (currentIndex.value + 1) % docTypes.length);
+const prevIndex = computed(
+    () => (currentIndex.value - 1 + docTypes.length) % docTypes.length
+);
 
-const prevIndex = computed(() => {
-    return (currentIndex.value - 1 + docTypes.length) % docTypes.length;
-});
-
-const nextDocType = computed(() => {
-    return docTypes[nextIndex.value];
-});
-
-const prevDocType = computed(() => {
-    return docTypes[prevIndex.value];
-});
+const nextDocType = computed(() => docTypes[nextIndex.value]);
+const prevDocType = computed(() => docTypes[prevIndex.value]);
 </script>
 <style scoped lang="scss">
 @use "~/assets/css/colors.scss" as *;
@@ -139,20 +142,14 @@ const prevDocType = computed(() => {
         font-size: 0.875rem;
     }
 }
-.doc-selection {
-    :deep(.v-list-item-title) {
-        font-size: 1rem;
-        background-color: unset;
-    }
-    :deep(.v-list-item__overlay) {
-        background-color: $background;
-    }
-}
 .active-doc {
     color: $primary-light;
     :deep(.v-list-item-title) {
         font-weight: 600;
     }
+}
+.doc-type-header {
+    margin-top: 52px; // replaces mt-13
 }
 .doc-type-head {
     font-size: 1.125rem;
