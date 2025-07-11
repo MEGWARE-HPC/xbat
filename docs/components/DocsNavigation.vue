@@ -64,7 +64,6 @@
         </template>
     </v-navigation-drawer>
 </template>
-
 <script setup lang="ts">
 import type { NavItem } from "@nuxt/content";
 import { useWindowSize } from "@vueuse/core";
@@ -98,25 +97,22 @@ const items: Ref<NavItem | null> = computed(() => {
     return filteredCategories.length ? filteredCategories[0] : null;
 });
 
-// Define the order of document types
 const docTypes = ["user", "admin", "developer"];
 
-// Find the current index of the selected document type
 const currentIndex = computed(() => {
-    return docTypes.indexOf($store.currentDocType);
+    return $store.currentDocType !== null
+        ? docTypes.indexOf($store.currentDocType)
+        : -1;
 });
 
-// Calculate the next document type in the loop
 const nextIndex = computed(() => {
     return (currentIndex.value + 1) % docTypes.length;
 });
 
-// Calculate the previous document type in the loop
 const prevIndex = computed(() => {
     return (currentIndex.value - 1 + docTypes.length) % docTypes.length;
 });
 
-// Get the next and previous document types based on index
 const nextDocType = computed(() => {
     return docTypes[nextIndex.value];
 });
