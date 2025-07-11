@@ -32,6 +32,7 @@ All notable changes to this project will be documented in this file.
 -   overview table distortion by long names (#41)
 -   some issues related to auto-refresh (#4, #42, #43)
 -   the display of x-axis and y-axis titles in graph export (#48)
+-   missing group/metric and trace identifier in CSV output (#98)
 
 ## v1.0.0 - 2025-04-17
 
