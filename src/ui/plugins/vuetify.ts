@@ -83,9 +83,10 @@ import {
     mdiContentSaveMove,
     mdiDatabaseImportOutline,
     mdiCloudUpload,
-    mdiFileDocument,
     mdiRead,
-    mdiInformation
+    mdiInformation,
+    mdiFolderZip,
+    mdiGestureTapButton
 } from "@mdi/js";
 
 // TODO remove when out of lab stage
@@ -218,9 +219,9 @@ export default defineNuxtPlugin((app) => {
                 saveMove: mdiContentSaveMove,
                 dataImport: mdiDatabaseImportOutline,
                 cloudUpload: mdiCloudUpload,
-                "mdi-file-document": mdiFileDocument,
                 read: mdiRead,
-                info: mdiInformation
+                info: mdiInformation,
+                gestureTap: mdiGestureTapButton
             },
             sets: {
                 mdi
@@ -281,7 +282,10 @@ export default defineNuxtPlugin((app) => {
             },
             VTreeview: {
                 density: "compact"
-            }
+            },
+            VFileUploadItem: {
+                fileIcon: mdiFolderZip
+            },
         }
     });
     app.vueApp.use(vuetify);
