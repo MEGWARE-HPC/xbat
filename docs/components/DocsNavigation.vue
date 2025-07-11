@@ -123,8 +123,12 @@ const items: Ref<NavItem | null> = computed(() => {
 const docTypes = ["user", "admin", "developer"];
 
 const currentIndex = computed(() => {
-    const index = docTypes.indexOf($store.currentDocType);
-    return index >= 0 ? index : 0;
+    const docType = $store.currentDocType;
+    if (typeof docType === "string") {
+        const index = docTypes.indexOf(docType);
+        return index >= 0 ? index : 0;
+    }
+    return 0;
 });
 
 const nextIndex = computed(() => (currentIndex.value + 1) % docTypes.length);
