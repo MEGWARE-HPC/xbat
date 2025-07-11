@@ -144,3 +144,16 @@ export const colors: { [key: string]: string[] } = {
         "#E48F72"
     ]
 };
+
+export const CSV_Rainbow = [
+    "#c00040",
+    "#00a000",
+    "#8000c0",
+    "#c09e18",
+    "#0080a0",
+    "#e000e0",
+    "#60a000",
+    "#0020f0",
+    "#e08000",
+    "#00c080"
+];
