@@ -575,6 +575,9 @@ paths:
               schema:
                 type: string
                 example: attachment; filename="<jobId>_<group>.json"
+      security:
+        - oauth2:
+            - benchmarks_r
   /measurements/{jobId}/csv:
    get:
       operationId: backend.restapi.api.measurements.export_csv
@@ -602,6 +605,27 @@ paths:
               schema:
                 type: string
                 example: attachment; filename="<jobId>_<group>.csv"
+      security:
+        - oauth2:
+            - benchmarks_r
+  /measurements/{jobId}/energy:
+   get:
+      operationId: backend.restapi.api.measurements.calculate_energy
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      tags:
+        - measurements
+      summary: Energy consumption
+      responses:
+        "200":
+          description: Successfully calculated the energy consumption (kWh)
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - benchmarks_r
   /metrics:
     get:
       operationId: backend.restapi.api.measurements.get_available_metrics
