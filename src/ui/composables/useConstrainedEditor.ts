@@ -63,6 +63,7 @@ export const useConstrainedEditor = (modelValue: Ref<Jobscript>, emit: any) => {
         vWalltime,
         vInteger,
         vCommaSeparatedList,
+        vSlurmNodeList,
         vFilePath,
         vNoSpaces,
         vWalltimeChars
@@ -118,8 +119,8 @@ export const useConstrainedEditor = (modelValue: Ref<Jobscript>, emit: any) => {
             submission: [vNoSpaces, vNotEmpty, vInteger]
         },
         nodelist: {
-            input: [vNoSpaces, vCommaSeparatedList],
-            submission: [vNoSpaces, vCommaSeparatedList]
+            input: [vNoSpaces, vSlurmNodeList],
+            submission: [vNoSpaces, vSlurmNodeList]
         },
         ntasks: {
             input: [vNoSpaces, vInteger],
