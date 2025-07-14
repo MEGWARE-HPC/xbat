@@ -28,6 +28,7 @@
 #include "helper.hpp"
 #include "nlohmann/json.hpp"
 #include "threadhelper.hpp"
+#include "external/clickhouse-cpp/clickhouse/client.h"
 
 #define WATCHDOGSLEEP 3
 #define QUEUE_TIMEOUT 3

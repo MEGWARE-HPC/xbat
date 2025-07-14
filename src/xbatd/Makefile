@@ -15,7 +15,7 @@ LIB_PATH?=/usr/local/share/xbatd/lib
 LIB64_PATH?=/usr/local/share/xbatd/lib64
 INCLUDE_PATH?=/usr/local/share/xbatd/include
 
-LDFLAGS = -pthread -I$(INCLUDE_PATH) -L$(LIB_PATH) -L$(LIB64_PATH) -llikwid -lcurl -lquestdb_client -lstdc++fs -I /usr/local/cuda-*/targets/x86_64-linux/include/ -lnvidia-ml -lcrypto -I /opt/rocm-*/include -L /opt/rocm-*/lib -lamd_smi
+LDFLAGS = -pthread -I$(INCLUDE_PATH) -L$(LIB_PATH) -L$(LIB64_PATH) -llikwid -lcurl -lquestdb_client -lstdc++fs -I /usr/local/cuda-*/targets/x86_64-linux/include/ -I src/external/clickhouse-cpp/contrib/absl  -lnvidia-ml -lcrypto -I /opt/rocm-*/include -L /opt/rocm-*/lib -lamd_smi
 BOOST = -lboost_log -lboost_log_setup -lboost_system -lboost_thread -DBOOST_LOG_DYN_LINK
 CXXFLAGS = -std=c++17 -O2 -Wall -Wextra -Wpedantic $(LDFLAGS) $(BOOST)
 
