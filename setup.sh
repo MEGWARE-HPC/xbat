@@ -110,6 +110,7 @@ prepare_scripts_and_configs() {
     cp "${SCRIPT_SRC_PATH}/pipe"*.sh "$INSTALL_PATH"
     cp "${SCRIPT_SRC_PATH}/pgbouncer-setup.sh" "$INSTALL_PATH"
     cp "${SCRIPT_SRC_PATH}/conf-to-env.sh" "$INSTALL_PATH"
+    cp "${SCRIPT_SRC_PATH}/create-xbatd-conf.sh" "$INSTALL_PATH"
     cp -r "${SCRIPT_SRC_PATH}/clickhouse" "$INSTALL_PATH/"
     cp "$CONF_SRC_PATH/pgbouncer.ini.in" "$CONF_DEST_PATH/pgbouncer.ini.in"
     cp --no-clobber "$CONF_SRC_PATH/$CONF_FILE" "$CONF_DEST_PATH/$CONF_FILE"
