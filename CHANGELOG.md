@@ -37,7 +37,7 @@ All notable changes to this project will be documented in this file.
 -   the display of x-axis and y-axis titles in graph export (#48)
 -   missing group/metric and trace identifier in CSV output (#98)
 -   broken links and content in the documentation (#85)
--   in-site navigation highlighting (#85)
+-   in-site navigation highlighting (#101)
 
 ## v1.0.0 - 2025-04-17
 
