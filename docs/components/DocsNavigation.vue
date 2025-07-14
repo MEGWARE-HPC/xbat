@@ -33,6 +33,7 @@
                 </div>
             </div>
             <v-list
+                v-model:selected="selectedEntry"
                 color="primary-light"
                 class="navigation mt-4"
                 mandatory
@@ -105,7 +106,15 @@ const props = defineProps({
     }
 });
 
-const selectedEntry = ref<string[] | null>(null);
+const selectedEntry = ref<string[]>([]);
+
+watch(
+    () => route.path,
+    (newPath) => {
+        selectedEntry.value = [newPath];
+    },
+    { immediate: true }
+);
 
 const items: Ref<NavItem | null> = computed(() => {
     const categories =
