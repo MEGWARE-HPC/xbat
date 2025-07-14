@@ -124,9 +124,8 @@ const docTypes = ["user", "admin", "developer"];
 
 const currentIndex = computed(() => {
     const docType = $store.currentDocType;
-    if (typeof docType === "string") {
-        const index = docTypes.indexOf(docType);
-        return index >= 0 ? index : 0;
+    if (docType && docTypes.includes(docType)) {
+        return docTypes.indexOf(docType);
     }
     return 0;
 });
