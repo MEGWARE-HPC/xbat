@@ -9,21 +9,29 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-# Prevent clickhouse-cpp from building unnecessary targets
-if(NOT DEFINED BUILD_BENCHMARK)
-  set(BUILD_BENCHMARK OFF CACHE BOOL "Disable benchmarks in clickhouse-cpp")
-endif()
-
-if(NOT DEFINED BUILD_TESTS)
-  set(BUILD_TESTS OFF CACHE BOOL "Disable tests in clickhouse-cpp")
-endif()
 
 # Add clickhouse-cpp submodule
 add_subdirectory(src/external/clickhouse-cpp)
 
-# Collect sources
-file(GLOB_RECURSE SOURCES
-  src/*.cpp
+# Explicit list of source files (avoids accidental inclusion of external dependencies)
+set(SOURCES
+  src/CAMDGPU.cpp
+  src/CCpuStat.cpp
+  src/CDataCollectionBase.cpp
+  src/CEnergyIpmi.cpp
+  src/CIOStat.cpp
+  src/CInterconnectEthernet.cpp
+  src/CInterconnectInfiniband.cpp
+  src/CLikwidPerfctr.cpp
+  src/CLogging.cpp
+  src/CMemUsage.cpp
+  src/CNvidiaGPU.cpp
+  src/CXilinx.cpp
+  src/CurlClient.cpp
+  src/helper.cpp
+  src/main.cpp
+  src/threadhelper.cpp
+  src/topology.cpp
 )
 
 # Add executable
@@ -39,21 +47,38 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   /opt/rocm-6.4.1/include
 )
 
-# Link libraries
+# Define library paths based on environment (RPM build vs local development)
+set(XBAT_LIB_DIR "/usr/local/share/xbatd/lib")
+set(XBAT_LIB64_DIR "/usr/local/share/xbatd/lib64")
+
+# Add library search paths
+link_directories(
+  ${XBAT_LIB_DIR}
+  ${XBAT_LIB64_DIR}
+  /opt/rocm/lib
+  /usr/lib64
+  /usr/local/lib
+)
+
+# Core libraries that are provided by the system (except for clickhouse-cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE
   clickhouse-cpp-lib
-  likwid
   curl
-  questdb_client
-  stdc++fs
-  nvidia-ml
   crypto
-  amd_smi
   pthread
+  stdc++fs
   Boost::log
   Boost::log_setup
   Boost::system
   Boost::thread
+)
+
+# Use full paths to libraries since they are copied to specific locations in RPM build
+target_link_libraries(${PROJECT_NAME} PRIVATE
+  ${XBAT_LIB_DIR}/libquestdb_client.so
+  ${XBAT_LIB64_DIR}/libnvidia-ml.so
+  ${XBAT_LIB_DIR}/libamd_smi.so
+  ${XBAT_LIB_DIR}/liblikwid.so
 )
 
 # Find Boost
