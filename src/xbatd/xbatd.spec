@@ -23,8 +23,6 @@ xbat daemon
 %setup
 
 %build
-make clean
-
 # directories already created during likwid installation
 %define BASE /usr/local/share/xbatd/
 %define LIB %{BASE}/lib
@@ -45,7 +43,16 @@ cp -r /c-questdb-client/build/libquestdb_client.* %{LIB}
 cp -r /usr/lib64/libnvidia-ml.* %{LIB64}
 ln -s %{LIB64}/libnvidia-ml.so.1 %{LIB64}/libnvidia-ml.so
 cp -r /opt/rocm/lib/libamd_smi.* %{LIB}
-make -e LIB_PATH=%{LIB} LIB64_PATH=%{LIB64} INCLUDE_PATH=%{INCLUDE} -j
+rm -rf build && mkdir build && cd build
+cmake .. \
+  -DCMAKE_CXX_FLAGS="-I/opt/rocm/include -I/usr/local/cuda/include" \
+  -DCMAKE_EXE_LINKER_FLAGS="-L/opt/rocm/lib -L/usr/lib64" \
+  -DBUILD_TESTS=OFF \
+  -DBUILD_BENCHMARK=OFF \
+  -DCMAKE_BUILD_TYPE=Release
+
+make -j$(nproc)
+#make -e LIB_PATH=%{LIB} LIB64_PATH=%{LIB64} INCLUDE_PATH=%{INCLUDE} -j
 
 %install 
 mkdir -p %{BUILD_SHARE} %{BUILD_BIN} %{SYSTEMD} %{LOG}

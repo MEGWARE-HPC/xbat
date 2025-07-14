@@ -25,10 +25,10 @@
 #include "CLogging.hpp"
 #include "CurlClient.hpp"
 #include "clipp.h"
+#include "external/clickhouse-cpp/clickhouse/client.h"
 #include "helper.hpp"
 #include "nlohmann/json.hpp"
 #include "threadhelper.hpp"
-#include "external/clickhouse-cpp/clickhouse/client.h"
 
 #define WATCHDOGSLEEP 3
 #define QUEUE_TIMEOUT 3
@@ -100,6 +100,13 @@ void writeToDb(CQueue &dataQueue, config_map &config) {
 
         std::string jobId = std::to_string(std::get<uint>(config["jobId"]));
         std::string hostname = std::get<std::string>(config["hostname"]);
+
+        clickhouse::Client client(clickhouse::ClientOptions()
+                          .SetHost(std::get<std::string>(config["clickhouse_host"]))
+                          .SetPort(std::get<uint>(config["clickhouse_port"]))
+                          .SetDefaultDatabase(std::get<std::string>(config["clickhouse_database"]))
+                          .SetUser(std::get<std::string>(config["clickhouse_user"]))
+                          .SetPassword(std::get<std::string>(config["clickhouse_password"])));
 
         int bufferSize = 0;
         while (!canceled) {
@@ -308,7 +315,12 @@ int main(int argc, char *argv[]) {
             {"questdb_port", pt.get<uint>("questdb.port")},
             {"questdb_database", pt.get<std::string>("questdb.database")},
             {"questdb_user", pt.get<std::string>("questdb.user")},
-            {"questdb_password", pt.get<std::string>("questdb.password")}};
+            {"questdb_password", pt.get<std::string>("questdb.password")},
+            {"clickhouse_host", pt.get<std::string>("clickhouse.host")},
+            {"clickhouse_port", pt.get<uint>("clickhouse.port")},
+            {"clickhouse_database", pt.get<std::string>("clickhouse.database")},
+            {"clickhouse_user", pt.get<std::string>("clickhouse.user")},
+            {"clickhouse_password", pt.get<std::string>("clickhouse.password")}};
 
     } catch (boost::property_tree::ptree_bad_path const &) {
         std::cerr << "Invalid configuration at " << confPath << "\n"
