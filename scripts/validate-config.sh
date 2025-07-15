@@ -1,14 +1,9 @@
 #!/bin/bash
 
-# xbat-validate-config - Comprehensive configuration validation script
 # Validates all required variables and warns about default/insecure values
 
 set -euo pipefail
 
-# Source the shared validation functions
-source "$(dirname "$0")/config-validation.sh"
-
-# Load configuration variables
 source <(/usr/local/share/xbat/conf-to-env.sh --stdout)
 
 # Color codes for output
@@ -17,6 +12,8 @@ YELLOW='\033[1;33m'
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+
+CONF_PATH="/etc/xbat/xbat.conf"
 
 # Counters
 errors=0
