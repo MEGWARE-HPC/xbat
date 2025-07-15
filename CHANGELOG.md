@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 -   dedicated API CSV and JSON file endpoints for graph measurements (#9)
 -   extended API CSV endpoint to export multiple metrics at once (#20)
+-   syntax highlighting support for CSV language in editor (#8)
 
 ### Changed
 
@@ -18,6 +19,7 @@ All notable changes to this project will be documented in this file.
 -   default back to npm instead of bun for frontend and docs
 -   first variant of job configuration can now be deleted (#49)
 -   support for slurm bracket notation in configuration nodelists (#89)
+-   improved file upload component (#93)
 -   made the DocsNavigation loop (#32)
 -   open external links in the document in new tabs (#85)
 -   removed the beta prefix since xbat is released

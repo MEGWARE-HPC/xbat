@@ -27,7 +27,7 @@
                     </v-btn>
                     <v-menu>
                         <template v-slot:activator="{ props }">
-                            <v-btn v-bind="props">
+                            <v-btn v-bind="props" prepend-icon="$gestureTap">
                                 Actions <v-icon icon="$chevronDown"></v-icon>
                             </v-btn>
                         </template>
@@ -455,6 +455,7 @@
                             divider-text="or choose locally"
                             icon="$cloudUpload"
                             title="Drag and Drop Here"
+                            show-size
                             clearable
                         >
                         </v-file-upload>
