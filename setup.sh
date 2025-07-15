@@ -241,22 +241,44 @@ validate_action(){
 }
 
 migrate_action() {
+    # Default to 'status' if no arguments provided
+    if [[ $# -eq 0 ]]; then
+        set -- "status"
+    fi
     /usr/local/share/xbat/clickhouse/migrate.sh "$@"
 }
 
 show_help() {
     echo "$0 (install|remove|validate|migrate)"
+    echo
+    echo "Actions:"
+    echo -e "\tinstall     Install XBAT with configuration options below"
+    echo -e "\tremove      Remove XBAT installation"
+    echo -e "\tvalidate    Validate configuration file"
+    echo -e "\tmigrate     Manage database migrations"
+    echo
+    echo "Install configuration options:"
     echo -e "\t[--help] Print this message"
-    echo -e "\t[--executor (docker|podman)] Container executor"
+    echo -e "\t[--executor (docker|podman)] Container executor (default: podman)"
     echo -e "\t[--home-mnt <path>] Mount home directory path"
-    echo -e "\t[--port <port>] Frontend port (default 7000)"
-    echo -e "\t[--frontend-network <ip>] Bind frontend network (default 0.0.0.0)"
+    echo -e "\t[--port <port>] Frontend port (default: 7000)"
+    echo -e "\t[--frontend-network <ip>] Bind frontend network (default: 0.0.0.0)"
     echo -e "\t[--no-db] Deploy without databases"
-    echo -e "\t[--questdb-address <address>] QuestDB address (only required when using --no-db)"
+    echo -e "\t[--questdb-address <address>] QuestDB address (required with --no-db)"
     echo -e "\t[--expose-questdb] Expose QuestDB PGWire port"
-    echo -e "\t[--workers <count>] Number of workers (default 8)"
-    echo -e "\t[--certificate-dir <dir>] Certificates directory (default /etc/xbat/certs)"
-    echo -e "\t[--user <user>] system user to run xbat (default xbat)"
+    echo -e "\t[--workers <count>] Number of workers (default: 8)"
+    echo -e "\t[--certificate-dir <dir>] Certificates directory (default: /etc/xbat/certs)"
+    echo -e "\t[--user <user>] System user to run xbat (default: xbat)"
+    echo
+    echo "Migration commands:"
+    echo -e "\t$0 migrate [status]     Check for pending database migrations (default)"
+    echo -e "\t$0 migrate up           Apply all pending migrations"
+    echo -e "\t$0 migrate down         Rollback last migration"
+    echo
+    echo "Examples:"
+    echo -e "\t$0 install --port 8080 --workers 4"
+    echo -e "\t$0 migrate status"
+    echo -e "\t$0 validate"
 }
 
 #########################################
