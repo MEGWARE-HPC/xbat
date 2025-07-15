@@ -245,7 +245,43 @@ migrate_action() {
     if [[ $# -eq 0 ]]; then
         set -- "status"
     fi
-    /usr/local/share/xbat/clickhouse/migrate.sh "$@"
+    
+    # Check if this is a status check (explicit or default)
+    if [[ "$1" == "status" ]]; then
+        # Run migration status and capture output
+        local migration_output
+        local migration_exit_code
+        
+        if migration_output=$(/usr/local/share/xbat/clickhouse/migrate.sh "$@" 2>&1); then
+            migration_exit_code=0
+        else
+            migration_exit_code=$?
+        fi
+        
+        # Display the migration output
+        echo "$migration_output"
+        
+        # Check if there are any pending migrations
+        if echo "$migration_output" | grep -q "Pending"; then
+            echo
+            log_info "⚠️  Pending database migrations detected!"
+            log_info "   Run the following command to upgrade the database:"
+            log_info "   sudo $0 migrate up"
+            echo
+            log_info "   Other migration commands:"
+            log_info "   sudo $0 migrate down      # Rollback last migration"
+            echo
+        elif [[ $migration_exit_code -eq 0 ]]; then
+            log_info "✓ Database is up to date - no pending migrations"
+        fi
+        
+        exit $migration_exit_code
+    else
+        # For non-status commands, just pass through to migrate script
+        /usr/local/share/xbat/clickhouse/migrate.sh "$@"
+    fi
+}
+
 }
 
 show_help() {
