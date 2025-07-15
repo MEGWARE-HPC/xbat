@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file.
 -   first variant of job configuration can now be deleted (#49)
 -   support for slurm bracket notation in configuration nodelists (#89)
 -   improved file upload component (#93)
+-   improved display of long configuration name (#55)
 
 ### Fixed
 
