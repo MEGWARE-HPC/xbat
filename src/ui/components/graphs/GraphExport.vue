@@ -13,7 +13,7 @@
                         language="json"
                     ></Editor
                 ></v-window-item>
-                <v-window-item value="csv" class="mt-2">
+                <v-window-item value="csv" class="mt-2" eager>
                     <div class="d-flex align-center justify-space-between">
                         <div class="font-italic">
                             {{ exportCSV.unit }}
@@ -28,6 +28,7 @@
                         </div>
                     </div>
                     <Editor
+                        :key="'csv-editor-' + state.tab"
                         readonly
                         :modelValue="exportCSV.value"
                         height="700"

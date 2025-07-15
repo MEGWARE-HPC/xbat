@@ -103,8 +103,24 @@ import * as monacoEditor from "monaco-editor/esm/vs/editor/editor.api";
 import { download, copyToClipboard } from "~/utils/misc";
 import type { Jobscript } from "@/repository/modules/configurations";
 import { useElementHover } from "@vueuse/core";
+import { CSV_Rainbow } from "~/utils/colors";
 
 type MonacoEditor = typeof monacoEditor;
+
+// CSV language registration
+const csvLangId = "csv";
+monacoEditor.languages.register({ id: csvLangId });
+monacoEditor.languages.setMonarchTokensProvider(csvLangId, {
+    tokenizer: {
+        root: [
+            [/[^,\r\n]+/, { token: "identifier" }],
+            [/,/, "delimiter"],
+            [/$/, ""]
+        ]
+    }
+});
+
+const csv_colors = CSV_Rainbow;
 
 const value = ref<string | Jobscript>("");
 
@@ -226,6 +242,11 @@ watch(
         if (props.constrainedJobscript)
             value.value = directives.value + "\n" + (v as Jobscript).script;
         else value.value = v;
+
+        // watch language change and apply rainbow colors for CSV
+        if (props.language === csvLangId && editorInstance) {
+            applyRainbowColors();
+        }
     },
     { immediate: true }
 );
@@ -266,6 +287,50 @@ const updateHeight = () => {
     containerRef.value.style.height = `${contentHeight}px`;
 };
 
+const currentDecorationIds = ref<string[]>([]);
+
+const applyRainbowColors = () => {
+    if (!editorInstance) return;
+    const model = editorInstance.getModel();
+    if (!model || model.getValueLength() === 0) {
+        currentDecorationIds.value =
+            model?.deltaDecorations(currentDecorationIds.value, []) || [];
+        return;
+    }
+
+    const decorations: monacoEditor.editor.IModelDeltaDecoration[] = [];
+    const text = model.getValue();
+    const lines = text.split("\n");
+
+    lines.forEach((line, lineNumber) => {
+        const columns = line.split(",");
+        let currentOffset = 1;
+        columns.forEach((column, columnIndex) => {
+            if (csv_colors[columnIndex % csv_colors.length]) {
+                decorations.push({
+                    range: new monacoEditor.Range(
+                        lineNumber + 1,
+                        currentOffset,
+                        lineNumber + 1,
+                        currentOffset + column.length
+                    ),
+                    options: {
+                        inlineClassName: `csv-column-${
+                            columnIndex % csv_colors.length
+                        }`
+                    }
+                });
+            }
+            currentOffset += column.length + 1;
+        });
+    });
+
+    currentDecorationIds.value = model.deltaDecorations(
+        currentDecorationIds.value,
+        decorations
+    );
+};
+
 const handleMount = (
     _editor: monacoEditor.editor.IStandaloneCodeEditor,
     monaco: MonacoEditor
@@ -273,13 +338,39 @@ const handleMount = (
     editorInstance = _editor;
     editorInstance.onDidContentSizeChange(updateHeight);
 
+    const handleCsv = () => {
+        applyRainbowColors();
+        if (editorInstance) {
+            const model = editorInstance.getModel();
+            if (model) {
+                model.onDidChangeContent(() => {
+                    applyRainbowColors();
+                });
+            }
+        }
+    };
+
+    if (props.language === csvLangId) {
+        handleCsv();
+    }
+
+    editorInstance.onDidChangeModel(() => {
+        if (!editorInstance) return;
+        const model = editorInstance.getModel();
+        if (model && model.getLanguageId() === csvLangId) {
+            handleCsv();
+        }
+    });
+
     if (!props.constrainedJobscript) return;
 
     initConstrainedEditor(_editor, monaco);
 };
 </script>
 <style lang="scss" scoped>
+@use "sass:list";
 @use "~/assets/css/colors.scss" as *;
+@use "~/assets/css/rainbow-colors.scss" as rainbow-colors;
 .actions {
     position: absolute;
     right: 15px;
@@ -329,6 +420,12 @@ const handleMount = (
     align-items: center;
 }
 .slurm-info > .v-btn {
-  transform: translate(10%, 0);
+    transform: translate(10%, 0);
+}
+
+@for $i from 0 through 9 {
+    :deep(.csv-column-#{$i}) {
+        color: list.nth(rainbow-colors.$csv-rainbow, $i + 1) !important;
+    }
 }
 </style>
