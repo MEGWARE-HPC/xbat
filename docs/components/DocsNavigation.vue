@@ -7,7 +7,7 @@
         :temporary="windowWidth <= 992"
     >
         <template v-if="items">
-            <div class="doc-type-header">
+            <div class="mt-13">
                 <div class="doc-type-head text-medium-emphasis">
                     {{ $store.currentDocType }} Documentation
                 </div>
@@ -159,9 +159,6 @@ const prevDocType = computed(() => docTypes[prevIndex.value]);
     :deep(.v-list-item-title) {
         font-weight: 600;
     }
-}
-.doc-type-header {
-    margin-top: 52px; // replaces mt-13
 }
 .doc-type-head {
     font-size: 1.125rem;
