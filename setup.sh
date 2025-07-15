@@ -282,8 +282,6 @@ migrate_action() {
     fi
 }
 
-}
-
 show_help() {
     echo "$0 (install|remove|validate|migrate)"
     echo
