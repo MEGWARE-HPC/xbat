@@ -83,9 +83,10 @@ import {
     mdiContentSaveMove,
     mdiDatabaseImportOutline,
     mdiCloudUpload,
-    mdiFileDocument,
     mdiRead,
     mdiInformation,
+    mdiFolderZip,
+    mdiGestureTapButton,
     mdiSortNumericAscending,
     mdiSortNumericDescending
 } from "@mdi/js";
@@ -220,9 +221,9 @@ export default defineNuxtPlugin((app) => {
                 saveMove: mdiContentSaveMove,
                 dataImport: mdiDatabaseImportOutline,
                 cloudUpload: mdiCloudUpload,
-                "mdi-file-document": mdiFileDocument,
                 read: mdiRead,
                 info: mdiInformation,
+                gestureTap: mdiGestureTapButton,
                 sortAsc: mdiSortNumericAscending,
                 sortDesc: mdiSortNumericDescending
             },
@@ -285,6 +286,9 @@ export default defineNuxtPlugin((app) => {
             },
             VTreeview: {
                 density: "compact"
+            },
+            VFileUploadItem: {
+                fileIcon: mdiFolderZip
             }
         }
     });

@@ -92,7 +92,7 @@
                             ></GraphStatistics>
                         </v-window-item>
                         <v-window-item value="export">
-                            <GraphExport :graph-id="graphId"></GraphExport>
+                            <GraphExport :graph-id="graphId" :type="props.roofline ? 'roofline' : 'default'"></GraphExport>
                         </v-window-item>
                     </v-tabs-window>
                 </v-card-text>
@@ -123,12 +123,14 @@ const { $graphStore } = useNuxtApp();
 
 const graphId = nanoid(6);
 
-const storeGraph = $graphStore.useStoreGraph(graphId);
-
 const props = withDefaults(defineProps<Props>(), {
     title: "Modify Graph",
     roofline: false
 });
+
+const storeGraph = props.roofline
+    ? $graphStore.useStoreGraph(graphId, "roofline")
+    : $graphStore.useStoreGraph(graphId, "default");
 
 const tab = ref("graph");
 const fullscreen = ref(false);
