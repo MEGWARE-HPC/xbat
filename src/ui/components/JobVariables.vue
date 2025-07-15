@@ -163,6 +163,15 @@ const duplicateState = ref<Record<number, { add?: boolean; edit?: string }>>(
     {}
 );
 
+const sortValues = (arr: string[]) => {
+    return arr
+        .slice()
+        .map(Number)
+        .filter((x) => !isNaN(x))
+        .sort((a, b) => a - b)
+        .map(String);
+};
+
 const getOrCreateDuplicateState = (idx: number) => {
     if (!duplicateState.value[idx]) duplicateState.value[idx] = {};
     return duplicateState.value[idx];
@@ -213,6 +222,10 @@ const addNewValue = (idx: number, value: string) => {
 
     v.values.push(value);
     v.selected.push(value);
+
+    v.values = sortValues(v.values);
+    v.selected = sortValues(v.selected);
+
     v.input = "";
     state.add = false;
 };
@@ -234,6 +247,9 @@ const editValue = (idx: number, valIdx: number, newValue: string) => {
     if (selIdx !== -1) {
         v.selected.splice(selIdx, 1, newValue);
     }
+
+    v.values = sortValues(v.values);
+    v.selected = sortValues(v.selected);
 
     state.edit = "";
 };
