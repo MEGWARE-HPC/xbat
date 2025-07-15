@@ -614,6 +614,34 @@ def generate_csv(result):
     return csv_content
 
 
+async def calculate_energy(jobId):
+    energy_metrics = [
+        "CPU Power", "Core Power", "DRAM Power", "FPGA Power", "GPU Power",
+        "System Power"
+    ]
+    result = {}
+    for energy_metric in energy_metrics:
+        key = energy_metric.split()[0].lower()
+        try:
+            power_json = await calculate_metrics(jobId, "energy",
+                                                 energy_metric, "job", "",
+                                                 False)
+            if "traces" in power_json and len(power_json["traces"]) > 0:
+                interval = power_json["traces"][0]["interval"] / 3600 / 1000
+                values = power_json["traces"][0]["values"]
+                energy_usage = round(sum(values) * interval, 4)
+            else:
+                energy_usage = None
+
+        except Exception as e:
+            logger.error(f"Error processing {energy_metric}: {e}")
+            energy_usage = None
+
+        result[key] = energy_usage
+
+    return result, 200
+
+
 def get_request_uri():
     uri = request.path
     if (request.query_string):
