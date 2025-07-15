@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 source <(/usr/local/share/xbat/conf-to-env.sh --stdout)
 
 # Check for optional --stdout flag
@@ -16,42 +17,6 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
-
-required_vars=(
-  RESTAPI_HOST
-  RESTAPI_PORT
-  RESTAPI_CLIENT_ID
-  RESTAPI_CLIENT_SECRET
-  CLICKHOUSE_HOST
-  CLICKHOUSE_PORT
-  CLICKHOUSE_DATABASE
-  CLICKHOUSE_DAEMON_USER
-  CLICKHOUSE_DAEMON_PASSWORD
-)
-
-missing=0
-for var in "${required_vars[@]}"; do
-  if [[ -z "${!var:-}" ]]; then
-    prefix="${var%%_*}"
-    suffix="${var#${prefix}_}"
-    case "$prefix" in
-      CLICKHOUSE)
-        echo "Clickhouse '${suffix,,}' is not set or empty in /etc/xbat/xbat.conf" >&2
-        ;;
-      RESTAPI)
-        echo "REST API '${suffix,,}' is not set or empty in /etc/xbat/xbat.conf" >&2
-        ;;
-      *)
-        echo "Unknown config '${var}' is not set or empty in /etc/xbat/xbat.conf" >&2
-        ;;
-    esac
-    missing=1
-  fi
-done
-
-if [[ $missing -eq 1 ]]; then
-  exit 1
-fi
 
 config_contents=$(cat <<EOF
 # Auto-generated configuration file for xbatd from /etc/xbat/xbat.conf

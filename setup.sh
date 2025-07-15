@@ -110,6 +110,8 @@ prepare_scripts_and_configs() {
     cp "${SCRIPT_SRC_PATH}/pipe"*.sh "$INSTALL_PATH"
     cp "${SCRIPT_SRC_PATH}/pgbouncer-setup.sh" "$INSTALL_PATH"
     cp "${SCRIPT_SRC_PATH}/conf-to-env.sh" "$INSTALL_PATH"
+    cp "${SCRIPT_SRC_PATH}/validate-config.sh" "$INSTALL_PATH"
+    cp "${SCRIPT_SRC_PATH}/clickhouse-setup.sh" "$INSTALL_PATH"
     cp "${SCRIPT_SRC_PATH}/create-xbatd-conf.sh" "$INSTALL_PATH"
     cp -r "${SCRIPT_SRC_PATH}/clickhouse" "$INSTALL_PATH/"
     cp "$CONF_SRC_PATH/pgbouncer.ini.in" "$CONF_DEST_PATH/pgbouncer.ini.in"
@@ -234,7 +236,7 @@ remove_action() {
 # }
 
 show_help() {
-    echo "$0 (install|remove)"
+    echo "$0 (install|remove|validate)"
     echo -e "\t[--help] Print this message"
     echo -e "\t[--executor (docker|podman)] Container executor"
     echo -e "\t[--home-mnt <path>] Mount home directory path"
@@ -291,5 +293,13 @@ ACTION="$1"
 case "$ACTION" in
     install) install_action;;
     remove) remove_action;;
+    validate) 
+        if [[ -f "$INSTALL_PATH/validate-config.sh" ]]; then
+            bash "$INSTALL_PATH/validate-config.sh"
+        else
+            log_error "Validation script not found at $INSTALL_PATH/validate-config.sh"
+            exit 1
+        fi
+        ;;
     *) log_error "Unknown action: $ACTION"; show_help; exit 1;;
 esac

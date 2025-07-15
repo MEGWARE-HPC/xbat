@@ -5,7 +5,7 @@
             <networks>
                 <ip>::/0</ip>
             </networks>
-            <password>test</password>
+            <password>#PASSWORD#</password>
             <access_management>0</access_management>
         </xbat>
         <xbatd>
@@ -13,7 +13,7 @@
             <networks>
                 <ip>::/0</ip>
             </networks>
-            <password>testd</password>
+            <password>#DAEMON_PASSWORD#</password>
             <access_management>0</access_management>
             <default_database>xbat</default_database>
             <databases>
