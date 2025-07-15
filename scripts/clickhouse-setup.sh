@@ -8,7 +8,7 @@ USER_OUT_FILE="/etc/xbat/clickhouse/users/users.xml"
 
 
 if [[ -f "$USER_IN_FILE" ]]; then
-    sed -e "s/#PASSWORD#/${CLICKHOUSE_DAEMON_PASSWORD}/g" \
+    sed -e "s/#PASSWORD#/${CLICKHOUSE_PASSWORD}/g" \
         -e "s/#DAEMON_PASSWORD#/${CLICKHOUSE_DAEMON_PASSWORD}/g" \
         "$USER_IN_FILE" > "$USER_OUT_FILE"
     
