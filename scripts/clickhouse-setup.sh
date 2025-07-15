@@ -32,14 +32,14 @@ check_pending_migrations() {
             echo >&2
             echo "Or check migration status with:" >&2
             echo "  sudo /usr/local/share/xbat/setup.sh migrate status" >&2
-            exit 1
+            return 1
         else
             echo "✓ Database is up to date - no pending migrations"
         fi
     else
         echo "Error: Could not check migration status (database may not be running)" >&2
         echo -e "Migration output:\n$migration_output" >&2
-        exit 1
+        return 1
     fi
 }
 
