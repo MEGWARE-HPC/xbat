@@ -231,12 +231,21 @@ remove_action() {
     log_info "Removal completed successfully."
 }
 
-# cleanup() {
-#     # log_info "Cleanup complete."
-# }
+validate_action(){
+    if [[ -f "$INSTALL_PATH/validate-config.sh" ]]; then
+        bash "$INSTALL_PATH/validate-config.sh"
+    else
+        log_error "Validation script not found at $INSTALL_PATH/validate-config.sh"
+        exit 1
+    fi
+}
+
+migrate_action() {
+    /usr/local/share/xbat/clickhouse/migrate.sh "$@"
+}
 
 show_help() {
-    echo "$0 (install|remove|validate)"
+    echo "$0 (install|remove|validate|migrate)"
     echo -e "\t[--help] Print this message"
     echo -e "\t[--executor (docker|podman)] Container executor"
     echo -e "\t[--home-mnt <path>] Mount home directory path"
@@ -255,23 +264,42 @@ show_help() {
 #########################################
 
 POSITIONAL_ARGS=()
+ACTION_FOUND=false
 
 while [[ $# -gt 0 ]]; do
-  case $1 in
-    --executor) EXECUTOR="$2"; shift; shift;;
-    --home-mnt) HOME_MNT="$2"; shift; shift;;
-    --no-db) NODB=true; shift;;
-    --expose-questdb) EXPOSE_QUESTDB=true; shift;;
-    --port) FRONTEND_PORT="$2"; shift; shift;;
-    --questdb-address) QUESTDB_ADDRESS="$2"; QUESTDB_ADDRESS_SET=true; shift; shift;;
-    --frontend-network) FRONTEND_NETWORK="$2"; shift; shift;;
-    --workers) WORKERS="$2"; shift; shift;;
-    --certificate-dir) CERT_DIR="$2"; shift; shift;;
-    --user) XBAT_USER="$2"; shift; shift;;
-    --help) HELP=true; shift;;
-    -*|--*) log_error "Unknown option $1"; exit 1;;
-    *) POSITIONAL_ARGS+=("$1"); shift;;
-  esac
+  # If we haven't found an action yet, check if current arg is an action
+  if [[ "$ACTION_FOUND" == false ]]; then
+    case $1 in
+      install|remove|validate|migrate)
+        ACTION_FOUND=true
+        POSITIONAL_ARGS+=("$1")
+        ACTION_TYPE="$1"
+        shift
+        # For non-install actions, pass remaining args directly without parsing
+        if [[ "$ACTION_TYPE" != "install" ]]; then
+          POSITIONAL_ARGS+=("$@")
+          break
+        fi
+        ;;
+      --executor) EXECUTOR="$2"; shift; shift;;
+      --home-mnt) HOME_MNT="$2"; shift; shift;;
+      --no-db) NODB=true; shift;;
+      --expose-questdb) EXPOSE_QUESTDB=true; shift;;
+      --port) FRONTEND_PORT="$2"; shift; shift;;
+      --questdb-address) QUESTDB_ADDRESS="$2"; QUESTDB_ADDRESS_SET=true; shift; shift;;
+      --frontend-network) FRONTEND_NETWORK="$2"; shift; shift;;
+      --workers) WORKERS="$2"; shift; shift;;
+      --certificate-dir) CERT_DIR="$2"; shift; shift;;
+      --user) XBAT_USER="$2"; shift; shift;;
+      --help) HELP=true; shift;;
+      -*|--*) log_error "Unknown option $1"; exit 1;;
+      *) POSITIONAL_ARGS+=("$1"); shift;;
+    esac
+  else
+    # Action already found, just collect remaining args
+    POSITIONAL_ARGS+=("$1")
+    shift
+  fi
 done
 
 set -- "${POSITIONAL_ARGS[@]}"
@@ -289,17 +317,13 @@ fi
 check_root
 
 ACTION="$1"
+shift  # Remove the action from the arguments so remaining args can be passed to the action function
 
 case "$ACTION" in
-    install) install_action;;
-    remove) remove_action;;
-    validate) 
-        if [[ -f "$INSTALL_PATH/validate-config.sh" ]]; then
-            bash "$INSTALL_PATH/validate-config.sh"
-        else
-            log_error "Validation script not found at $INSTALL_PATH/validate-config.sh"
-            exit 1
-        fi
-        ;;
+    install) install_action "$@";;
+    remove) remove_action "$@";;
+    migrate) migrate_action "$@";;
+    validate) validate_action "$@";;
     *) log_error "Unknown action: $ACTION"; show_help; exit 1;;
+    
 esac

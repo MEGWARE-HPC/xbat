@@ -24,6 +24,27 @@ fi
 
 source <(/usr/local/share/xbat/conf-to-env.sh --stdout)
 
+required_vars=(
+  CLICKHOUSE_USER
+  CLICKHOUSE_PASSWORD
+  CLICKHOUSE_HOST
+  CLICKHOUSE_DATABASE
+)
+
+missing=0
+for var in "${required_vars[@]}"; do
+  if [[ -z "${!var:-}" ]]; then
+    suffix="${var#CLICKHOUSE_}"
+    echo "Clickhouse '${suffix,,}' is not set or empty in /etc/xbat/xbat.conf" >&2
+    missing=1
+  fi
+done
+
+if [[ $missing -eq 1 ]]; then
+  exit 1
+fi
+
+
 # Migration script is running outside of docker infrastructure and has no access to xbat-clickhouse host.
 # If the host is set to xbat-clickhouse, assume clickhouse is reachable via localhost. Host different from xbat-clickhouse
 # is expected to be a real host on a different server.
