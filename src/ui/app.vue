@@ -29,7 +29,7 @@
             </v-card>
         </v-dialog>
         <div class="build-info text-medium-emphasis text-caption">
-            beta v{{ runtimeConfig.public.buildVersion }}
+            v{{ runtimeConfig.public.buildVersion }}
         </div>
         <ClientOnly>
             <VLayoutItem
