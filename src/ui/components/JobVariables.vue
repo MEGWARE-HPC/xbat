@@ -109,13 +109,24 @@
                 <template #append-item v-if="v.values.length">
                     <div class="d-flex justify-center mt-3">
                         <v-btn
+                            v-bind:title="'Toggle Sort Order'"
+                            :icon="
+                                sortOrder[idx] === 'desc'
+                                    ? '$sortDesc'
+                                    : '$sortAsc'
+                            "
+                            size="small"
+                            variant="plain"
+                            @click="toggleSortOrder(idx)"
+                        />
+                        <v-btn
+                            v-bind:title="'Clear All Values'"
+                            icon="$trashCan"
                             variant="plain"
                             color="danger"
                             size="small"
                             @click="removeAllValues(idx)"
-                        >
-                            clear all values
-                        </v-btn>
+                        />
                     </div>
                 </template>
             </v-select>
@@ -163,14 +174,7 @@ const duplicateState = ref<Record<number, { add?: boolean; edit?: string }>>(
     {}
 );
 
-const sortValues = (arr: string[]) => {
-    return arr
-        .slice()
-        .map(Number)
-        .filter((x) => !isNaN(x))
-        .sort((a, b) => a - b)
-        .map(String);
-};
+const sortOrder = ref<Record<number, "asc" | "desc">>({});
 
 const getOrCreateDuplicateState = (idx: number) => {
     if (!duplicateState.value[idx]) duplicateState.value[idx] = {};
@@ -208,6 +212,7 @@ const addVariable = () => {
 const removeVariable = (idx: number) => {
     variables.value.splice(idx, 1);
     delete duplicateState.value[idx];
+    delete sortOrder.value[idx];
 };
 
 const addNewValue = (idx: number, value: string) => {
@@ -228,6 +233,7 @@ const addNewValue = (idx: number, value: string) => {
 
     v.input = "";
     state.add = false;
+    applySorting(idx);
 };
 
 const editValue = (idx: number, valIdx: number, newValue: string) => {
@@ -252,6 +258,7 @@ const editValue = (idx: number, valIdx: number, newValue: string) => {
     v.selected = sortValues(v.selected);
 
     state.edit = "";
+    applySorting(idx);
 };
 
 const removeValue = (idx: number, value: string) => {
@@ -267,6 +274,28 @@ const removeAllValues = (idx: number) => {
     variables.value[idx].values = [];
     variables.value[idx].selected = [];
     delete duplicateState.value[idx];
+};
+
+const toggleSortOrder = (idx: number) => {
+    const current = sortOrder.value[idx] || "asc";
+    const next = current === "asc" ? "desc" : "asc";
+    sortOrder.value[idx] = next;
+    applySorting(idx);
+};
+
+const sortValues = (arr: string[], order: "asc" | "desc" = "asc") => {
+    return [...arr].sort((a, b) => {
+        const na = Number(a),
+            nb = Number(b);
+        return order === "asc" ? na - nb : nb - na;
+    });
+};
+
+const applySorting = (idx: number) => {
+    const order = sortOrder.value[idx] || "asc";
+    const v = variables.value[idx];
+    v.values = sortValues(v.values, order);
+    v.selected = sortValues(v.selected, order);
 };
 
 watch(

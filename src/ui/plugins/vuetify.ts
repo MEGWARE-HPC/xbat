@@ -85,7 +85,9 @@ import {
     mdiCloudUpload,
     mdiFileDocument,
     mdiRead,
-    mdiInformation
+    mdiInformation,
+    mdiSortNumericAscending,
+    mdiSortNumericDescending
 } from "@mdi/js";
 
 // TODO remove when out of lab stage
@@ -220,7 +222,9 @@ export default defineNuxtPlugin((app) => {
                 cloudUpload: mdiCloudUpload,
                 "mdi-file-document": mdiFileDocument,
                 read: mdiRead,
-                info: mdiInformation
+                info: mdiInformation,
+                sortAsc: mdiSortNumericAscending,
+                sortDesc: mdiSortNumericDescending
             },
             sets: {
                 mdi
