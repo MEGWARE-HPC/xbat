@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 -   dedicated API CSV and JSON file endpoints for graph measurements (#9)
 -   extended API CSV endpoint to export multiple metrics at once (#20)
+-   syntax highlighting support for CSV language in editor (#8)
 -   endpoint for energy consumption (#88)
 
 ### Changed
@@ -18,6 +19,8 @@ All notable changes to this project will be documented in this file.
 -   improved layout of docs on smaller screens
 -   default back to npm instead of bun for frontend and docs
 -   first variant of job configuration can now be deleted (#49)
+-   support for slurm bracket notation in configuration nodelists (#89)
+-   improved file upload component (#93)
 
 ### Fixed
 
@@ -32,6 +35,7 @@ All notable changes to this project will be documented in this file.
 -   overview table distortion by long names (#41)
 -   some issues related to auto-refresh (#4, #42, #43)
 -   the display of x-axis and y-axis titles in graph export (#48)
+-   missing group/metric and trace identifier in CSV output (#98)
 
 ## v1.0.0 - 2025-04-17
 

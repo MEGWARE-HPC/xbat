@@ -590,13 +590,18 @@ def generate_csv(result):
             0] else 'values'
         if value_key not in result["traces"][0]:
             return ""
-        fieldnames = ['jobId', 'metric'] + [
+        fieldnames = ['jobId', 'group', 'metric', 'trace'] + [
             f'interval {i}' for i in range(len(result["traces"][0][value_key]))
         ]
         writer = csv.DictWriter(output, fieldnames=fieldnames)
         writer.writeheader()
         for item in result["traces"]:
-            row_data = {'jobId': item['jobId'], 'metric': item['rawName']}
+            row_data = {
+                'jobId': item['jobId'],
+                'group': item['group'],
+                'metric': item['metric'],
+                'trace': item['name']
+            }
             row_data.update({
                 f'interval {i}': value
                 for i, value in enumerate(item[value_key])
