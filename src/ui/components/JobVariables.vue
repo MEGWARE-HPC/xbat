@@ -230,6 +230,10 @@ const addNewValue = (idx: number, value: string) => {
 
     if (v.values.includes(value)) {
         state.add = true;
+        if (!v.selected.includes(value)) {
+            v.selected.push(value);
+            v.selected = sortValues(v.selected, v.sortOrder);
+        }
         return;
     }
 
