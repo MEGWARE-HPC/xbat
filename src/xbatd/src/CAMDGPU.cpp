@@ -118,12 +118,10 @@ int CAMDGPU::prepare() {
 
 int CAMDGPU::collect() {
     int socket_count = this->sockets.size();
-    std::vector<CQueue::ILP<int64_t>> int_data;
-    std::vector<CQueue::ILP<double>> double_data;
     for (int i = 0; i < socket_count; i++) {
         int processor_count = this->processors[i].size();
         for (int j = 0; j < processor_count; j++) {
-            std::map<std::string, std::string> tags = {{"level", "device"}, {"device", std::to_string(i)}};
+            std::string deviceId = std::to_string(i);
 
             // TODO: Decide later if board info will be used
             // amdsmi_board_info_t board_info;
@@ -141,7 +139,7 @@ int CAMDGPU::collect() {
                 amdsmi_status_code_to_string(ret, &err_str);
                 logger.log(CLogging::error, "Failed to get temparature metrics for Socket: " + std::to_string(i) + " GPU: " + std::to_string(j) + " " + std::string(err_str));
             } else {
-                int_data.push_back(CQueue::ILP<int64_t>{"gpu_temp", tags, static_cast<int64_t>(gpu_temp), intervalEnd});
+                dataQueue->push(CQueue::DeviceMeasurement<int64_t>{"gpu_temp", "device", deviceId, static_cast<int64_t>(gpu_temp), intervalEnd});
             }
 
             amdsmi_engine_usage_t usage_info;
@@ -151,9 +149,9 @@ int CAMDGPU::collect() {
                 amdsmi_status_code_to_string(ret, &err_str);
                 logger.log(CLogging::error, "Failed to get GPU activity for Socket: " + std::to_string(i) + " GPU: " + std::to_string(j) + " " + std::string(err_str));
             } else {
-                double_data.insert(double_data.end(), {CQueue::ILP<double>{"gpu_util", tags, static_cast<double>(usage_info.gfx_activity), intervalEnd},
-                                                       CQueue::ILP<double>{"gpu_mem_util", tags, static_cast<double>(usage_info.umc_activity), intervalEnd},
-                                                       CQueue::ILP<double>{"gpu_mm_util", tags, static_cast<double>(usage_info.mm_activity), intervalEnd}});
+                dataQueue->push(CQueue::DeviceMeasurement<double>{"gpu_util", "device", deviceId, static_cast<double>(usage_info.gfx_activity), intervalEnd});
+                dataQueue->push(CQueue::DeviceMeasurement<double>{"gpu_mem_util", "device", deviceId, static_cast<double>(usage_info.umc_activity), intervalEnd});
+                dataQueue->push(CQueue::DeviceMeasurement<double>{"gpu_mm_util", "device", deviceId, static_cast<double>(usage_info.mm_activity), intervalEnd});
             }
 
             amdsmi_power_info_t power_info;
@@ -163,7 +161,7 @@ int CAMDGPU::collect() {
                 amdsmi_status_code_to_string(ret, &err_str);
                 logger.log(CLogging::error, "Failed to get power consumption for Socket: " + std::to_string(i) + " GPU: " + std::to_string(j) + " " + std::string(err_str));
             } else {
-                double_data.push_back(CQueue::ILP<double>{"gpu_power", tags, static_cast<double>(power_info.average_socket_power), intervalEnd});
+                dataQueue->push(CQueue::DeviceMeasurement<double>{"gpu_power", "device", deviceId, static_cast<double>(power_info.average_socket_power), intervalEnd});
             }
 
             for (auto const &[name, type] : clockTypes) {
@@ -175,8 +173,8 @@ int CAMDGPU::collect() {
                     amdsmi_status_code_to_string(ret, &err_str);
                     logger.log(CLogging::error, "Failed to get clock info for Socket: " + std::to_string(i) + " GPU: " + std::to_string(j) + " " + std::string(err_str));
                 } else {
-                    int_data.insert(int_data.end(), {CQueue::ILP<int64_t>{name, tags, static_cast<int64_t>(clk_info.clk), intervalEnd}});
-                    // CQueue::ILP<int64_t>{name + "_max", tags, static_cast<int64_t>(clk_info.max_clk), intervalEnd}
+                    dataQueue->push(CQueue::DeviceMeasurement<int64_t>{name, "device", deviceId, static_cast<int64_t>(clk_info.clk), intervalEnd});
+                    // dataQueue->push(CQueue::DeviceMeasurement<int64_t>{name + "_max", "device", deviceId, static_cast<int64_t>(clk_info.max_clk), intervalEnd});
                 }
             }
 
@@ -187,17 +185,12 @@ int CAMDGPU::collect() {
                 amdsmi_status_code_to_string(ret, &err_str);
                 logger.log(CLogging::error, "Failed to get VRAM usage for Socket: " + std::to_string(i) + " GPU: " + std::to_string(j) + " " + std::string(err_str));
             } else {
-                int_data.insert(int_data.end(), {CQueue::ILP<int64_t>{"gpu_mem_fb_free", tags, static_cast<int64_t>(vram_info.vram_total), intervalEnd},
-                                                 CQueue::ILP<int64_t>{"gpu_mem_fb_used", tags, static_cast<int64_t>(vram_info.vram_used), intervalEnd}});
-                double_data.push_back(CQueue::ILP<double>{"gpu_mem_fb_usage", tags, (static_cast<double>(vram_info.vram_used) / vram_info.vram_total) * 100, intervalEnd});
+                dataQueue->push(CQueue::DeviceMeasurement<int64_t>{"gpu_mem_fb_free", "device", deviceId, static_cast<int64_t>(vram_info.vram_total), intervalEnd});
+                dataQueue->push(CQueue::DeviceMeasurement<int64_t>{"gpu_mem_fb_used", "device", deviceId, static_cast<int64_t>(vram_info.vram_used), intervalEnd});
+                dataQueue->push(CQueue::DeviceMeasurement<double>{"gpu_mem_fb_usage", "device", deviceId, (static_cast<double>(vram_info.vram_used) / vram_info.vram_total) * 100, intervalEnd});
             }
         }
     }
-    if ((int_data.size() + double_data.size()) == 0)
-        return 1;
-
-    dataQueue->pushMultiple<int64_t>(int_data);
-    dataQueue->pushMultiple<double>(double_data);
     return 0;
 }
 

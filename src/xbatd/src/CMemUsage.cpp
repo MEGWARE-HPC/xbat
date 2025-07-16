@@ -106,40 +106,27 @@ int CMemUsage::readProc() {
         values[key] = std::stoll(Helper::trimWhitespaces(value)) * factor;
     }
 
-    std::map<std::string, std::string> tags = {{"level", "node"}};
-    std::vector<CQueue::ILP<double>> usage = {
-        {"mem_usage",
-         tags,
-         ((values["MemTotal"] - values["MemAvailable"]) / (double)values["MemTotal"]) * 100,
-         intervalEnd},
-        {"mem_swap_usage",
-         tags,
-         ((values["SwapTotal"] - values["SwapFree"]) / (double)values["SwapTotal"]) * 100,
-         intervalEnd},
-    };
+    // Push double measurements (percentages)
+    dataQueue->push(CQueue::BasicMeasurement<double>{"mem_usage", "node", 
+                                                     ((values["MemTotal"] - values["MemAvailable"]) / (double)values["MemTotal"]) * 100,
+                                                     intervalEnd});
+    dataQueue->push(CQueue::BasicMeasurement<double>{"mem_swap_usage", "node",
+                                                     ((values["SwapTotal"] - values["SwapFree"]) / (double)values["SwapTotal"]) * 100,
+                                                     intervalEnd});
 
-    dataQueue->pushMultiple<double>(usage);
-
-    std::vector<CQueue::ILP<int64_t>> used = {
-        {"mem_used",
-         tags,
-         values["MemTotal"] - values["MemAvailable"],
-         intervalEnd},
-        {"mem_swap_used",
-         tags,
-         values["SwapTotal"] - values["SwapFree"],
-         intervalEnd},
-        {"mem_buffers",
-         tags,
-         values["MemBuffers"],
-         intervalEnd},
-        {"mem_cached",
-         tags,
-         values["MemCached"],
-         intervalEnd},
-    };
-
-    dataQueue->pushMultiple<int64_t>(used);
+    // Push int measurements (bytes)
+    dataQueue->push(CQueue::BasicMeasurement<int64_t>{"mem_used", "node",
+                                                      values["MemTotal"] - values["MemAvailable"],
+                                                      intervalEnd});
+    dataQueue->push(CQueue::BasicMeasurement<int64_t>{"mem_swap_used", "node",
+                                                      values["SwapTotal"] - values["SwapFree"],
+                                                      intervalEnd});
+    dataQueue->push(CQueue::BasicMeasurement<int64_t>{"mem_buffers", "node",
+                                                      values["Buffers"],
+                                                      intervalEnd});
+    dataQueue->push(CQueue::BasicMeasurement<int64_t>{"mem_cached", "node",
+                                                      values["Cached"],
+                                                      intervalEnd});
 
     return 0;
 }

@@ -27,6 +27,7 @@ set(SOURCES
   src/CMemUsage.cpp
   src/CNvidiaGPU.cpp
   src/CXilinx.cpp
+  src/ClickHouseWriter.cpp
   src/CurlClient.cpp
   src/helper.cpp
   src/main.cpp
@@ -46,6 +47,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   /usr/local/cuda-12.2/targets/x86_64-linux/include
   /opt/rocm-6.4.1/include
 )
+
+# TODO find better way of suppressing warnings for clickhouse-cpp submodule
+set_source_files_properties(src/ClickHouseWriter.cpp PROPERTIES COMPILE_FLAGS "-w")
 
 # Define library paths based on environment (RPM build vs local development)
 set(XBAT_LIB_DIR "/usr/local/share/xbatd/lib")
@@ -83,9 +87,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 # Find Boost
 find_package(Boost REQUIRED COMPONENTS log log_setup system thread)
-
-# Compiler warnings
-target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
 
 # Install target (optional)
 install(TARGETS ${PROJECT_NAME} DESTINATION /usr/local/bin)
