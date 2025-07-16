@@ -111,7 +111,7 @@
                                 "
                                 size="small"
                                 variant="plain"
-                                @click="toggleSort(idx)"
+                                @click="toggleSortOrder(idx)"
                             />
                         </template>
                     </v-text-field>
@@ -144,9 +144,8 @@
                 @click="addVariable"
                 prepend-icon="$plus"
                 size="small"
+                >Add variable</v-btn
             >
-                Add variable
-            </v-btn>
         </div>
     </div>
 </template>
@@ -175,7 +174,7 @@ const duplicateState = ref<Record<number, { add?: boolean; edit?: string }>>(
     {}
 );
 
-const getOrCreateDuplicateState = (idx: number) => {
+const getDuplicateState = (idx: number) => {
     if (!duplicateState.value[idx]) duplicateState.value[idx] = {};
     return duplicateState.value[idx];
 };
@@ -227,7 +226,7 @@ const removeVariable = (idx: number) => {
 const addNewValue = (idx: number, value: string) => {
     if (!value) return;
     const v = variables.value[idx];
-    const state = getOrCreateDuplicateState(idx);
+    const state = getDuplicateState(idx);
 
     if (v.values.includes(value)) {
         state.add = true;
@@ -247,7 +246,7 @@ const addNewValue = (idx: number, value: string) => {
 const editValue = (idx: number, valIdx: number, newValue: string) => {
     const v = variables.value[idx];
     const oldValue = v.values[valIdx];
-    const state = getOrCreateDuplicateState(idx);
+    const state = getDuplicateState(idx);
 
     const existsElsewhere =
         v.values.includes(newValue) && v.values.indexOf(newValue) !== valIdx;
@@ -283,7 +282,7 @@ const removeAllValues = (idx: number) => {
     delete duplicateState.value[idx];
 };
 
-const toggleSort = (idx: number) => {
+const toggleSortOrder = (idx: number) => {
     const v = variables.value[idx];
     v.sortOrder = v.sortOrder === "asc" ? "desc" : "asc";
     v.values = sortValues(v.values, v.sortOrder);
@@ -302,7 +301,7 @@ watch(
     () => variables.value.map((v) => v.input),
     (inputs) => {
         inputs.forEach((val, idx) => {
-            const state = getOrCreateDuplicateState(idx);
+            const state = getDuplicateState(idx);
             if (state.add && !variables.value[idx].values.includes(val)) {
                 state.add = false;
             }
