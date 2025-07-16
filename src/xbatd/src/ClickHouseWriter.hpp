@@ -2,8 +2,8 @@
  * @file ClickHouseWriter.hpp
  * @brief ClickHouse database writer for schema-aware measurement data
  *
- * Handles all ClickHouse operations including client setup, batching,
- * and inserting measurements from the schema-aware queue.
+ * Handles all ClickHouse operations using SQL text format for async inserts.
+ * Async insert settings are configured at user level in users.xml.
  ***********************************************/
 
 #pragma once
@@ -12,106 +12,27 @@
 #include <vector>
 #include <map>
 #include <variant>
+#include <sstream>
+#include <type_traits>
+#include <chrono>
 
 #include "CQueue.hpp"
+#include "definitions.hpp"
 #include "external/clickhouse-cpp/clickhouse/client.h"
 
 /**
  * @brief ClickHouse database writer class
  * 
  * Provides functionality to write measurement data from schema-aware queues
- * to ClickHouse database with proper batching and error handling.
+ * to ClickHouse database using SQL text format for async inserts.
  */
 class ClickHouseWriter {
 public:
     /**
-     * @brief Configuration map type for database connection
-     */
-    using config_map = std::map<std::string, std::variant<std::string, uint, bool>>;
-
-    /**
-     * @brief Insert basic measurements (int64_t) into ClickHouse
-     * 
-     * @param client ClickHouse client connection
-     * @param measurements Vector of basic int measurements
-     * @param jobId Job identifier
-     * @param hostname Node hostname
-     */
-    static void insertBasicInt(clickhouse::Client &client, 
-                              const std::vector<CQueue::BasicMeasurement<int64_t>> &measurements,
-                              uint32_t jobId, 
-                              const std::string &hostname);
-
-    /**
-     * @brief Insert basic measurements (double) into ClickHouse
-     * 
-     * @param client ClickHouse client connection
-     * @param measurements Vector of basic double measurements
-     * @param jobId Job identifier
-     * @param hostname Node hostname
-     */
-    static void insertBasicDouble(clickhouse::Client &client, 
-                                 const std::vector<CQueue::BasicMeasurement<double>> &measurements,
-                                 uint32_t jobId, 
-                                 const std::string &hostname);
-
-    /**
-     * @brief Insert device measurements (int64_t) into ClickHouse
-     * 
-     * @param client ClickHouse client connection
-     * @param measurements Vector of device int measurements
-     * @param jobId Job identifier
-     * @param hostname Node hostname
-     */
-    static void insertDeviceInt(clickhouse::Client &client, 
-                               const std::vector<CQueue::DeviceMeasurement<int64_t>> &measurements,
-                               uint32_t jobId, 
-                               const std::string &hostname);
-
-    /**
-     * @brief Insert device measurements (double) into ClickHouse
-     * 
-     * @param client ClickHouse client connection
-     * @param measurements Vector of device double measurements
-     * @param jobId Job identifier
-     * @param hostname Node hostname
-     */
-    static void insertDeviceDouble(clickhouse::Client &client, 
-                                  const std::vector<CQueue::DeviceMeasurement<double>> &measurements,
-                                  uint32_t jobId, 
-                                  const std::string &hostname);
-
-    /**
-     * @brief Insert topology measurements (int64_t) into ClickHouse
-     * 
-     * @param client ClickHouse client connection
-     * @param measurements Vector of topology int measurements
-     * @param jobId Job identifier
-     * @param hostname Node hostname
-     */
-    static void insertTopologyInt(clickhouse::Client &client, 
-                                 const std::vector<CQueue::TopologyMeasurement<int64_t>> &measurements,
-                                 uint32_t jobId, 
-                                 const std::string &hostname);
-
-    /**
-     * @brief Insert topology measurements (double) into ClickHouse
-     * 
-     * @param client ClickHouse client connection
-     * @param measurements Vector of topology double measurements
-     * @param jobId Job identifier
-     * @param hostname Node hostname
-     */
-    static void insertTopologyDouble(clickhouse::Client &client, 
-                                    const std::vector<CQueue::TopologyMeasurement<double>> &measurements,
-                                    uint32_t jobId, 
-                                    const std::string &hostname);
-
-    /**
      * @brief Main database writer function
      * 
-     * Continuously reads measurement data from the schema queue and inserts it into ClickHouse tables.
-     * Uses batch inserts for performance optimization.
+     * Continuously reads measurement data from the schema queue every 10 seconds 
+     * and inserts it immediately into ClickHouse tables using SQL text format.
      * 
      * @param dataQueue Schema-aware queue with results
      * @param config Configuration map containing database connection parameters
@@ -119,6 +40,91 @@ public:
     static void writeToDb(CQueue &dataQueue, config_map &config);
 
 private:
-    static constexpr int BUFFER_SIZE = 1000;  ///< Batch size for database operations
-    static constexpr int QUEUE_TIMEOUT = 3;  ///< Timeout for queue operations in seconds
+    /**
+     * @brief Templated function to insert any measurement type using SQL text format.
+     * 
+     * Async insertion require SQL text format and are not compatible with ClickHouse's block/column approach.
+     * 
+     * @param client ClickHouse client connection
+     * @param measurements Vector of measurements of any type
+     * @param jobId Job identifier
+     * @param hostname Node hostname
+     */
+    template<typename T>
+    static void insertMeasurements(clickhouse::Client &client,
+                                  const std::vector<T> &measurements,
+                                  uint32_t jobId,
+                                  const std::string &hostname) {
+        if (measurements.empty()) return;
+        
+        // Group by table name
+        std::map<std::string, std::vector<std::string>> table_values;
+        
+        for (const auto &m : measurements) {
+            auto duration = m.ts.time_since_epoch();
+            auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+            
+            std::ostringstream value;
+            value << "(";
+            
+            // Common fields for all measurement types
+            value << jobId << ",'" << hostname << "','" << m.level << "'";
+            
+            // Type-specific fields
+            if constexpr (std::is_same_v<T, CQueue::BasicMeasurement<int64_t>> || 
+                          std::is_same_v<T, CQueue::BasicMeasurement<double>>) {
+                // Basic measurements: (job_id, node, level, value, ts)
+                value << "," << m.value << "," << millis;
+            } else if constexpr (std::is_same_v<T, CQueue::DeviceMeasurement<int64_t>> || 
+                                 std::is_same_v<T, CQueue::DeviceMeasurement<double>>) {
+                // Device measurements: (job_id, node, level, device, value, ts)
+                value << ",'" << m.device << "'," << m.value << "," << millis;
+            } else if constexpr (std::is_same_v<T, CQueue::TopologyMeasurement<int64_t>> || 
+                                 std::is_same_v<T, CQueue::TopologyMeasurement<double>>) {
+                // Topology measurements: (job_id, node, level, thread, core, numa, socket, value, ts)
+                value << "," << m.thread << "," << m.core << "," << m.numa << "," << m.socket 
+                      << "," << m.value << "," << millis;
+            }
+            
+            value << ")";
+            table_values[m.measurement].push_back(value.str());
+        }
+        
+        // Execute inserts for each table
+        for (const auto &[tableName, values] : table_values) {
+            std::ostringstream query;
+            query << "INSERT INTO " << tableName << " VALUES ";
+            for (size_t i = 0; i < values.size(); ++i) {
+                if (i > 0) query << ",";
+                query << values[i];
+            }
+            
+            executeQueryWithRetry(client, query.str());
+        }
+    }
+    /**
+     * @brief Execute SQL query with retry logic
+     * 
+     * @param client ClickHouse client connection
+     * @param query SQL query to execute
+     * @param maxRetries Maximum number of retries
+     */
+    static void executeQueryWithRetry(clickhouse::Client &client,
+                                     const std::string &query,
+                                     int maxRetries = 3);
+
+    /**
+     * @brief Send all measurement data to ClickHouse using templated insert
+     * 
+     * @param client ClickHouse client connection
+     * @param data Schema entries with all measurement types
+     * @param jobId Job identifier
+     * @param hostname Node hostname
+     */
+    static void sendData(clickhouse::Client &client, 
+                        const CQueue::SchemaEntries &data,
+                        uint32_t jobId, 
+                        const std::string &hostname);
+
+    static constexpr int QUEUE_POLL_INTERVAL = 10;  ///< Poll queue every 10 seconds
 };

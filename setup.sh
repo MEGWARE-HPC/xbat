@@ -323,10 +323,9 @@ POSITIONAL_ARGS=()
 ACTION_FOUND=false
 
 while [[ $# -gt 0 ]]; do
-  # If we haven't found an action yet, check if current arg is an action
-  if [[ "$ACTION_FOUND" == false ]]; then
-    case $1 in
-      install|remove|validate|migrate)
+  case $1 in
+    install|remove|validate|migrate)
+      if [[ "$ACTION_FOUND" == false ]]; then
         ACTION_FOUND=true
         POSITIONAL_ARGS+=("$1")
         ACTION_TYPE="$1"
@@ -336,26 +335,26 @@ while [[ $# -gt 0 ]]; do
           POSITIONAL_ARGS+=("$@")
           break
         fi
-        ;;
-      --executor) EXECUTOR="$2"; shift; shift;;
-      --home-mnt) HOME_MNT="$2"; shift; shift;;
-      --no-db) NODB=true; shift;;
-      --expose-questdb) EXPOSE_QUESTDB=true; shift;;
-      --port) FRONTEND_PORT="$2"; shift; shift;;
-      --questdb-address) QUESTDB_ADDRESS="$2"; QUESTDB_ADDRESS_SET=true; shift; shift;;
-      --frontend-network) FRONTEND_NETWORK="$2"; shift; shift;;
-      --workers) WORKERS="$2"; shift; shift;;
-      --certificate-dir) CERT_DIR="$2"; shift; shift;;
-      --user) XBAT_USER="$2"; shift; shift;;
-      --help) HELP=true; shift;;
-      -*|--*) log_error "Unknown option $1"; exit 1;;
-      *) POSITIONAL_ARGS+=("$1"); shift;;
-    esac
-  else
-    # Action already found, just collect remaining args
-    POSITIONAL_ARGS+=("$1")
-    shift
-  fi
+      else
+        # Action already found, collect as positional arg
+        POSITIONAL_ARGS+=("$1")
+        shift
+      fi
+      ;;
+    --executor) EXECUTOR="$2"; shift; shift;;
+    --home-mnt) HOME_MNT="$2"; shift; shift;;
+    --no-db) NODB=true; shift;;
+    --expose-questdb) EXPOSE_QUESTDB=true; shift;;
+    --port) FRONTEND_PORT="$2"; shift; shift;;
+    --questdb-address) QUESTDB_ADDRESS="$2"; QUESTDB_ADDRESS_SET=true; shift; shift;;
+    --frontend-network) FRONTEND_NETWORK="$2"; shift; shift;;
+    --workers) WORKERS="$2"; shift; shift;;
+    --certificate-dir) CERT_DIR="$2"; shift; shift;;
+    --user) XBAT_USER="$2"; shift; shift;;
+    --help) HELP=true; shift;;
+    -*|--*) log_error "Unknown option $1"; exit 1;;
+    *) POSITIONAL_ARGS+=("$1"); shift;;
+  esac
 done
 
 set -- "${POSITIONAL_ARGS[@]}"

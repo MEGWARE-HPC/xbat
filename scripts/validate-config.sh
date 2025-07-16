@@ -281,23 +281,27 @@ validate_clickhouse_section() {
 
     check_section_exists "clickhouse" || return 1
 
+    check_required_var "CLICKHOUSE_HOST" && print_success "host is set"
+    check_required_var "CLICKHOUSE_EXTERNAL_HOST" && print_success "external_host is set"
+    check_required_var "CLICKHOUSE_PORT" && print_success "port is set"
+    check_required_var "CLICKHOUSE_DAEMON_PORT" && print_success "daemon_port is set"
+    check_required_var "CLICKHOUSE_DATABASE" && print_success "database is set"
+    check_required_var "CLICKHOUSE_USER" && print_success "user is set"
     check_required_var "CLICKHOUSE_PASSWORD" && print_success "password is set"
     check_required_var "CLICKHOUSE_DAEMON_PASSWORD" && print_success "daemon_password is set"
-    check_required_var "CLICKHOUSE_HOST" && print_success "host is set"
-    check_required_var "CLICKHOUSE_PORT" && print_success "port is set"
-    check_required_var "CLICKHOUSE_USER" && print_success "user is set"
     check_required_var "CLICKHOUSE_DAEMON_USER" && print_success "daemon_user is set"
-    check_required_var "CLICKHOUSE_DATABASE" && print_success "database is set"
     
     # Check for default values that need to be changed
     check_default_value "CLICKHOUSE_PASSWORD" "changeme" "uses default password 'changeme'"
     check_default_value "CLICKHOUSE_DAEMON_PASSWORD" "changeme" "uses default daemon password 'changeme'"
+    check_default_value "CLICKHOUSE_EXTERNAL_HOST" "changeme" "must be changed to a valid external hostname or IP that is accessible for the xbatd"
 
     check_infrastructure_value "CLICKHOUSE_HOST" "xbat-clickhouse" "has been changed from docker-compose default - only change this value if you are deploying with --no-db"
     check_infrastructure_value "CLICKHOUSE_PORT" "9005" "has been changed from docker-compose default port - only change this value if you are deploying with --no-db"
     check_infrastructure_value "CLICKHOUSE_USER" "xbat" "has been changed from default user name"
     check_infrastructure_value "CLICKHOUSE_DAEMON_USER" "xbatd" "has been changed from default daemon user name"
     check_infrastructure_value "CLICKHOUSE_DATABASE" "xbat" "has been changed from default database name"
+    check_infrastructure_value "CLICKHOUSE_DAEMON_PORT" "9000" "has been changed from default daemon port (9000)"
 }
 
 validate_pgbouncer_section() {

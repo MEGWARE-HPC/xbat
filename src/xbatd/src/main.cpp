@@ -229,6 +229,8 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    std::cout << "Using configuration file: " << configString << std::endl;
+
     config_map config;
     try {
         std::istringstream isConfig(configString);
