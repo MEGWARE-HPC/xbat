@@ -93,6 +93,7 @@
                     >
                         <template #append-inner>
                             <v-btn
+                                v-bind:title="'Add a value'"
                                 variant="plain"
                                 :color="
                                     duplicateState[idx]?.add
@@ -182,10 +183,19 @@
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
-                    <v-btn text color="primary" @click="confirmArrayValues"
+                    <v-btn
+                        variant="plain"
+                        size="small"
+                        @click="arrayDialog.open = false"
+                        >Cancel</v-btn
+                    >
+                    <v-btn
+                        variant="plain"
+                        size="small"
+                        color="primary-light"
+                        @click="confirmArrayValues"
                         >Confirm</v-btn
                     >
-                    <v-btn text @click="arrayDialog.open = false">Cancel</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
