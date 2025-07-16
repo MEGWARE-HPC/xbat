@@ -81,7 +81,9 @@
                         v-model="v.input"
                         :error-messages="
                             duplicateState[idx]?.add
-                                ? ['Value already exists']
+                                ? [
+                                      `Value '${duplicateState[idx].add}' already exists`
+                                  ]
                                 : []
                         "
                         @keyup.enter.stop="addNewValue(idx, v.input)"
@@ -99,7 +101,9 @@
                                 "
                                 icon="$plus"
                                 size="small"
-                                :disabled="!v.input || duplicateState[idx]?.add"
+                                :disabled="
+                                    !v.input || !!duplicateState[idx]?.add
+                                "
                                 @click="addNewValue(idx, v.input)"
                             />
                             <v-btn
@@ -170,9 +174,9 @@ const emit = defineEmits(["update:modelValue"]);
 
 const variables = ref<ExtendedVariable[]>([]);
 
-const duplicateState = ref<Record<number, { add?: boolean; edit?: string }>>(
-    {}
-);
+const duplicateState = ref<
+    Record<number, { add?: string | false; edit?: string }>
+>({});
 
 const getDuplicateState = (idx: number) => {
     if (!duplicateState.value[idx]) duplicateState.value[idx] = {};
@@ -229,7 +233,7 @@ const addNewValue = (idx: number, value: string) => {
     const state = getDuplicateState(idx);
 
     if (v.values.includes(value)) {
-        state.add = true;
+        state.add = value;
         if (!v.selected.includes(value)) {
             v.selected.push(value);
             v.selected = sortValues(v.selected, v.sortOrder);
