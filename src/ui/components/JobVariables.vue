@@ -107,6 +107,15 @@
                                 @click="addNewValue(idx, v.input)"
                             />
                             <v-btn
+                                v-bind:title="'Add multiple values'"
+                                icon="$addArray"
+                                color="primary-light"
+                                size="small"
+                                variant="plain"
+                                class="ml-2"
+                                @click="openArrayDialog(idx)"
+                            />
+                            <v-btn
                                 v-bind:title="'Toggle Sort Order'"
                                 :icon="
                                     v.sortOrder === 'desc'
@@ -151,6 +160,35 @@
                 >Add variable</v-btn
             >
         </div>
+        <v-dialog v-model="arrayDialog.open" persistent width="400">
+            <v-card>
+                <v-card-title>Add Value Range</v-card-title>
+                <v-card-text>
+                    <v-text-field
+                        label="Start"
+                        v-model.number="arrayDialog.start"
+                        type="number"
+                    />
+                    <v-text-field
+                        label="End"
+                        v-model.number="arrayDialog.end"
+                        type="number"
+                    />
+                    <v-text-field
+                        label="Step"
+                        v-model.number="arrayDialog.step"
+                        type="number"
+                    />
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn text color="primary" @click="confirmArrayValues"
+                        >Confirm</v-btn
+                    >
+                    <v-btn text @click="arrayDialog.open = false">Cancel</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </div>
 </template>
 <script lang="ts" setup>
@@ -177,6 +215,14 @@ const variables = ref<ExtendedVariable[]>([]);
 const duplicateState = ref<
     Record<number, { add?: string | false; edit?: string }>
 >({});
+
+const arrayDialog = ref({
+    open: false,
+    index: -1,
+    start: 0,
+    end: 0,
+    step: 1
+});
 
 const getDuplicateState = (idx: number) => {
     if (!duplicateState.value[idx]) duplicateState.value[idx] = {};
@@ -288,6 +334,37 @@ const removeAllValues = (idx: number) => {
     variables.value[idx].values = [];
     variables.value[idx].selected = [];
     delete duplicateState.value[idx];
+};
+
+const openArrayDialog = (idx: number) => {
+    arrayDialog.value = {
+        open: true,
+        index: idx,
+        start: 0,
+        end: 0,
+        step: 1
+    };
+};
+
+const confirmArrayValues = () => {
+    const { start, end, step, index } = arrayDialog.value;
+    if (step === 0 || index < 0) return;
+    const v = variables.value[index];
+
+    const valuesToAdd: string[] = [];
+    for (let i = start; step > 0 ? i <= end : i >= end; i += step) {
+        const strVal = String(i);
+        if (!v.values.includes(strVal)) {
+            valuesToAdd.push(strVal);
+        }
+    }
+
+    v.values.push(...valuesToAdd);
+    v.selected.push(...valuesToAdd);
+    v.values = sortValues(v.values, v.sortOrder ?? "asc");
+    v.selected = sortValues(v.selected, v.sortOrder ?? "asc");
+
+    arrayDialog.value.open = false;
 };
 
 const toggleSortOrder = (idx: number) => {

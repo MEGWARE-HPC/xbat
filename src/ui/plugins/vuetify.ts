@@ -88,7 +88,8 @@ import {
     mdiFolderZip,
     mdiGestureTapButton,
     mdiSortNumericAscending,
-    mdiSortNumericDescending
+    mdiSortNumericDescending,
+    mdiFormatListGroupPlus
 } from "@mdi/js";
 
 // TODO remove when out of lab stage
@@ -225,7 +226,8 @@ export default defineNuxtPlugin((app) => {
                 info: mdiInformation,
                 gestureTap: mdiGestureTapButton,
                 sortAsc: mdiSortNumericAscending,
-                sortDesc: mdiSortNumericDescending
+                sortDesc: mdiSortNumericDescending,
+                addArray: mdiFormatListGroupPlus
             },
             sets: {
                 mdi
