@@ -99,19 +99,17 @@ private:
                 query << values[i];
             }
             
-            executeQueryWithRetry(client, query.str());
+            executeQuery(client, query.str());
         }
     }
     /**
-     * @brief Execute SQL query with retry logic
+     * @brief Execute SQL query without retry (non-blocking)
      * 
      * @param client ClickHouse client connection
      * @param query SQL query to execute
-     * @param maxRetries Maximum number of retries
      */
-    static void executeQueryWithRetry(clickhouse::Client &client,
-                                     const std::string &query,
-                                     int maxRetries = 3);
+    static void executeQuery(clickhouse::Client &client,
+                            const std::string &query);
 
     /**
      * @brief Send all measurement data to ClickHouse using templated insert

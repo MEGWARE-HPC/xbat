@@ -91,8 +91,11 @@ CREATE TABLE IF NOT EXISTS likwid_branch_mis_rate AS template_topology_float;
 CREATE TABLE IF NOT EXISTS likwid_branch_mis_ratio AS template_topology_float;
 
 CREATE TABLE IF NOT EXISTS likwid_clk AS template_topology_float;
+CREATE TABLE IF NOT EXISTS likwid_clk_uncore AS template_topology_float;
 
 CREATE TABLE IF NOT EXISTS likwid_cpi AS template_topology_float;
+
+CREATE TABLE IF NOT EXISTS likwid_cpu_temp AS template_topology_float;
 
 CREATE TABLE IF NOT EXISTS likwid_cycles_wo_exec AS template_topology_float;
 CREATE TABLE IF NOT EXISTS likwid_cycles_wo_exec_l1d AS template_topology_float;
@@ -123,6 +126,7 @@ CREATE TABLE IF NOT EXISTS likwid_scalar_dp AS template_topology_float;
 CREATE TABLE IF NOT EXISTS likwid_packed_sp AS template_topology_float;
 CREATE TABLE IF NOT EXISTS likwid_packed_dp AS template_topology_float;
 
+CREATE TABLE IF NOT EXISTS cpu_usage AS template_topology_float;
 CREATE TABLE IF NOT EXISTS cpu_user AS template_topology_float;
 CREATE TABLE IF NOT EXISTS cpu_system AS template_topology_float;
 CREATE TABLE IF NOT EXISTS cpu_iowait AS template_topology_float;
@@ -162,6 +166,15 @@ CREATE TABLE IF NOT EXISTS likwid_l1i_req_ratio AS template_topology_float;
 CREATE TABLE IF NOT EXISTS likwid_l1i_stall_rate AS template_topology_float;
 
 CREATE TABLE IF NOT EXISTS likwid_l1i_miss_ratio AS template_topology_float;
+
+CREATE TABLE IF NOT EXISTS likwid_l3_l_bw AS template_topology_float;
+CREATE TABLE IF NOT EXISTS likwid_l3_l_vol AS template_topology_float;
+CREATE TABLE IF NOT EXISTS likwid_l3_e_bw AS template_topology_float;
+CREATE TABLE IF NOT EXISTS likwid_l3d_e_vol_bw AS template_topology_float;
+CREATE TABLE IF NOT EXISTS likwid_l3_mem_e_bw AS template_topology_float;
+CREATE TABLE IF NOT EXISTS likwid_l3_mem_e_vol AS template_topology_float;
+CREATE TABLE IF NOT EXISTS likwid_l3_bw AS template_topology_float;
+CREATE TABLE IF NOT EXISTS likwid_l3_vol AS template_topology_float;
 
 -- Memory
 
@@ -291,6 +304,7 @@ DROP TABLE IF EXISTS xbat.cpu_nice;
 DROP TABLE IF EXISTS xbat.cpu_system;
 DROP TABLE IF EXISTS xbat.cpu_user;
 DROP TABLE IF EXISTS xbat.cpu_virtual;
+DROP TABLE IF EXISTS xbat.cpu_usage;
 DROP TABLE IF EXISTS xbat.disk_areq_sz;
 DROP TABLE IF EXISTS xbat.disk_await;
 DROP TABLE IF EXISTS xbat.disk_d_req_s;
@@ -340,8 +354,10 @@ DROP TABLE IF EXISTS xbat.likwid_branch_mis_rate;
 DROP TABLE IF EXISTS xbat.likwid_branch_mis_ratio;
 DROP TABLE IF EXISTS xbat.likwid_branch_rate;
 DROP TABLE IF EXISTS xbat.likwid_clk;
+DROP TABLE IF EXISTS xbat.likwid_clk_uncore;
 DROP TABLE IF EXISTS xbat.likwid_core_power;
 DROP TABLE IF EXISTS xbat.likwid_cpi;
+DROP TABLE IF EXISTS xbat.likwid_cpu_temp;
 DROP TABLE IF EXISTS xbat.likwid_cpu_power;
 DROP TABLE IF EXISTS xbat.likwid_cycle_stalls;
 DROP TABLE IF EXISTS xbat.likwid_cycle_stalls_l1d_mis;
@@ -390,6 +406,14 @@ DROP TABLE IF EXISTS xbat.likwid_l3_l_vol;
 DROP TABLE IF EXISTS xbat.likwid_l3_mis_rate;
 DROP TABLE IF EXISTS xbat.likwid_l3_mis_ratio;
 DROP TABLE IF EXISTS xbat.likwid_l3_req_rate;
+DROP TABLE IF EXISTS xbat.likwid_l3_vol;
+DROP TABLE IF EXISTS xbat.likwid_l3_l_bw;
+DROP TABLE IF EXISTS xbat.likwid_l3_l_vol;
+DROP TABLE IF EXISTS xbat.likwid_l3_e_bw;
+DROP TABLE IF EXISTS xbat.likwid_l3d_e_vol_bw;
+DROP TABLE IF EXISTS xbat.likwid_l3_mem_e_bw;
+DROP TABLE IF EXISTS xbat.likwid_l3_mem_e_vol;
+DROP TABLE IF EXISTS xbat.likwid_l3_bw;
 DROP TABLE IF EXISTS xbat.likwid_l3_vol;
 DROP TABLE IF EXISTS xbat.likwid_l_s_ratio;
 DROP TABLE IF EXISTS xbat.likwid_mem_bw;
