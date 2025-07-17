@@ -35,7 +35,7 @@
                                     :color="
                                         state.selected.includes(item.value)
                                             ? 'primary-light'
-                                            : 'default'
+                                            : 'info'
                                     "
                                 >
                                     {{
