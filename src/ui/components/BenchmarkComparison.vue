@@ -30,14 +30,16 @@
                         <v-list-item v-bind="props" :title="item.raw.title">
                             <template #prepend>
                                 <v-icon
-                                    :color="
-                                        props.isSelected ? 'primary' : 'grey'
-                                    "
                                     class="mr-2"
                                     size="small"
+                                    :color="
+                                        state.selected.includes(item.value)
+                                            ? 'primary-light'
+                                            : 'default'
+                                    "
                                 >
                                     {{
-                                        props.isSelected
+                                        state.selected.includes(item.value)
                                             ? "$checkboxMark"
                                             : "$checkboxBlank"
                                     }}
