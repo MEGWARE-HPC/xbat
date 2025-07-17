@@ -29,13 +29,6 @@
                     <template v-slot:item="{ props, item }">
                         <v-list-item v-bind="props" :title="item.raw.title">
                             <v-list-item-subtitle v-html="item.raw.subtitle" />
-                            <template #prepend>
-                                <v-checkbox-btn
-                                    v-model="state.selected"
-                                    :value="item.raw.value"
-                                    class="mr-2"
-                                />
-                            </template>
                             <template #append>
                                 <div class="d-flex align-center gap-10">
                                     <JobVariableOverview
