@@ -15,6 +15,7 @@
                     multiple
                     clearable
                     :items="jobItems"
+                    item-value="value"
                     persistent-hint
                     class="mb-2"
                     :hint="
@@ -27,17 +28,16 @@
                 >
                     <template v-slot:item="{ props, item }">
                         <v-list-item v-bind="props" :title="item.raw.title">
-                            <v-list-item-subtitle v-html="item.raw.subtitle">
-                            </v-list-item-subtitle>
-                            <template #prepend
-                                ><v-checkbox-btn
+                            <v-list-item-subtitle v-html="item.raw.subtitle" />
+                            <template #prepend>
+                                <v-checkbox-btn
                                     v-model="state.selected"
                                     :value="item.raw.value"
                                     class="mr-2"
-                                ></v-checkbox-btn>
+                                />
                             </template>
-                            <template #append
-                                ><div class="d-flex align-center gap-10">
+                            <template #append>
+                                <div class="d-flex align-center gap-10">
                                     <JobVariableOverview
                                         :variables="item.raw.variables"
                                         v-if="
@@ -49,7 +49,7 @@
                                             icon="$currency"
                                             size="x-small"
                                             variant="text"
-                                        ></v-btn>
+                                        />
                                     </JobVariableOverview>
                                     <v-chip
                                         class="ml-2"
@@ -58,8 +58,8 @@
                                         :color="item.raw.stateColor"
                                         >{{ item.raw.state }}
                                     </v-chip>
-                                </div></template
-                            >
+                                </div>
+                            </template>
                         </v-list-item>
                     </template>
                 </v-autocomplete>
@@ -70,7 +70,7 @@
                         title="Synchronize X-Axis of Graphs"
                         density="compact"
                         v-if="state.graphCount > 1"
-                    ></v-switch>
+                    />
                     <GraphGroup :synchronize="state.synchronizeGraphs">
                         <template v-slot:default="{ relayout, relayoutData }">
                             <GraphWrapper
@@ -84,7 +84,7 @@
                                 :relayout-data="relayoutData"
                                 comparison-mode
                                 flat
-                            ></GraphWrapper>
+                            />
                         </template>
                     </GraphGroup>
                     <div class="d-flex justify-center">
