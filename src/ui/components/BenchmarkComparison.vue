@@ -28,6 +28,21 @@
                 >
                     <template v-slot:item="{ props, item }">
                         <v-list-item v-bind="props" :title="item.raw.title">
+                            <template #prepend>
+                                <v-icon
+                                    :color="
+                                        props.isSelected ? 'primary' : 'grey'
+                                    "
+                                    class="mr-2"
+                                    size="small"
+                                >
+                                    {{
+                                        props.isSelected
+                                            ? "$checkboxMark"
+                                            : "$checkboxBlank"
+                                    }}
+                                </v-icon>
+                            </template>
                             <v-list-item-subtitle v-html="item.raw.subtitle" />
                             <template #append>
                                 <div class="d-flex align-center gap-10">
