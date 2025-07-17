@@ -161,25 +161,49 @@
                 >Add variable</v-btn
             >
         </div>
-        <v-dialog v-model="arrayDialog.open" persistent width="400">
+        <v-dialog v-model="arrayDialog.open" max-width="400px">
             <v-card>
                 <v-card-title>Add Value Range</v-card-title>
                 <v-card-text>
-                    <v-text-field
-                        label="Start"
-                        v-model.number="arrayDialog.start"
-                        type="number"
-                    />
-                    <v-text-field
-                        label="End"
-                        v-model.number="arrayDialog.end"
-                        type="number"
-                    />
-                    <v-text-field
-                        label="Step"
-                        v-model.number="arrayDialog.step"
-                        type="number"
-                    />
+                    <div v-if="!arrayDialog.manual">
+                        <v-text-field
+                            v-model.number="arrayDialog.start"
+                            label="Start"
+                            type="number"
+                        />
+                        <v-text-field
+                            v-model.number="arrayDialog.end"
+                            label="End"
+                            type="number"
+                        />
+                        <v-text-field
+                            v-model.number="arrayDialog.step"
+                            label="Step"
+                            type="number"
+                        />
+                    </div>
+                    <div v-else>
+                        <v-text-field
+                            v-model="arrayDialog.manualInput"
+                            label="Manual Input (e.g. 1,2,4,8)"
+                            hint="Comma-separated values"
+                            persistent-hint
+                        />
+                    </div>
+                    <div class="d-flex justify-end mt-2">
+                        <v-btn
+                            variant="text"
+                            size="small"
+                            @click="arrayDialog.manual = !arrayDialog.manual"
+                        >
+                            Switch to
+                            {{
+                                arrayDialog.manual
+                                    ? "Range Mode"
+                                    : "Manual Mode"
+                            }}
+                        </v-btn>
+                    </div>
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
@@ -231,7 +255,9 @@ const arrayDialog = ref({
     index: -1,
     start: 0,
     end: 0,
-    step: 1
+    step: 1,
+    manual: false,
+    manualInput: ""
 });
 
 const getDuplicateState = (idx: number) => {
@@ -352,20 +378,35 @@ const openArrayDialog = (idx: number) => {
         index: idx,
         start: 0,
         end: 0,
-        step: 1
+        step: 1,
+        manual: false,
+        manualInput: ""
     };
 };
 
 const confirmArrayValues = () => {
-    const { start, end, step, index } = arrayDialog.value;
+    const { index, start, end, step, manual, manualInput } = arrayDialog.value;
     if (step === 0 || index < 0) return;
     const v = variables.value[index];
 
     const valuesToAdd: string[] = [];
-    for (let i = start; step > 0 ? i <= end : i >= end; i += step) {
-        const strVal = String(i);
-        if (!v.values.includes(strVal)) {
-            valuesToAdd.push(strVal);
+    if (manual) {
+        manualInput
+            .split(",")
+            .map((s) => s.trim())
+            .filter((s) => s !== "")
+            .forEach((val) => {
+                if (!v.values.includes(val)) {
+                    valuesToAdd.push(val);
+                }
+            });
+    } else {
+        if (step === 0) return;
+        for (let i = start; step > 0 ? i <= end : i >= end; i += step) {
+            const strVal = String(i);
+            if (!v.values.includes(strVal)) {
+                valuesToAdd.push(strVal);
+            }
         }
     }
 
