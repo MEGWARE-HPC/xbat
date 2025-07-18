@@ -51,11 +51,11 @@
                             <template #append>
                                 <div class="d-flex align-center gap-10">
                                     <JobVariableOverview
-                                        :variables="item.raw.variables"
                                         v-if="
                                             Object.keys(item.raw.variables)
                                                 .length
                                         "
+                                        :variables="item.raw.variables"
                                     >
                                         <v-btn
                                             icon="$currency"
@@ -77,11 +77,11 @@
                 </v-autocomplete>
                 <div v-if="state.selected.length">
                     <v-switch
+                        v-if="state.graphCount > 1"
                         label="Synchronize Graphs"
                         v-model="state.synchronizeGraphs"
                         title="Synchronize X-Axis of Graphs"
                         density="compact"
-                        v-if="state.graphCount > 1"
                     />
                     <GraphGroup :synchronize="state.synchronizeGraphs">
                         <template v-slot:default="{ relayout, relayoutData }">
