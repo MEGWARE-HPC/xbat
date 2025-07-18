@@ -7,6 +7,21 @@
         <v-card>
             <v-card-title>Compare</v-card-title>
             <v-card-text>
+                <v-alert
+                    v-if="
+                        state.missing.length ||
+                        (state.noData && state.selected.length === 1)
+                    "
+                    type="warning"
+                    density="compact"
+                    variant="tonal"
+                    class="mb-1 text-caption"
+                    >Could not account for the following job(s):
+                    <template v-if="state.missing.length">{{
+                        state.missing.join(", ")
+                    }}</template>
+                    <template v-else>{{ state.selected[0] }}</template>
+                </v-alert>
                 <v-autocomplete
                     v-model="state.selected"
                     label="Jobs"
@@ -15,41 +30,44 @@
                     multiple
                     clearable
                     :items="jobItems"
+                    item-value="value"
                     persistent-hint
                     class="mb-2"
-                    :hint="
-                        state.missing.length
-                            ? `Could not account for the following job(s): ${state.missing.join(
-                                  ','
-                              )}`
-                            : ''
-                    "
                 >
                     <template v-slot:item="{ props, item }">
                         <v-list-item v-bind="props" :title="item.raw.title">
-                            <v-list-item-subtitle v-html="item.raw.subtitle">
-                            </v-list-item-subtitle>
-                            <template #prepend
-                                ><v-checkbox-btn
-                                    v-model="state.selected"
-                                    :value="item.raw.value"
+                            <template #prepend>
+                                <v-icon
                                     class="mr-2"
-                                ></v-checkbox-btn>
+                                    size="small"
+                                    :color="
+                                        state.selected.includes(item.value)
+                                            ? 'primary-light'
+                                            : 'info'
+                                    "
+                                >
+                                    {{
+                                        state.selected.includes(item.value)
+                                            ? "$checkboxMark"
+                                            : "$checkboxBlank"
+                                    }}
+                                </v-icon>
                             </template>
-                            <template #append
-                                ><div class="d-flex align-center gap-10">
+                            <v-list-item-subtitle v-html="item.raw.subtitle" />
+                            <template #append>
+                                <div class="d-flex align-center gap-10">
                                     <JobVariableOverview
-                                        :variables="item.raw.variables"
                                         v-if="
                                             Object.keys(item.raw.variables)
                                                 .length
                                         "
+                                        :variables="item.raw.variables"
                                     >
                                         <v-btn
                                             icon="$currency"
                                             size="x-small"
                                             variant="text"
-                                        ></v-btn>
+                                        />
                                     </JobVariableOverview>
                                     <v-chip
                                         class="ml-2"
@@ -58,19 +76,19 @@
                                         :color="item.raw.stateColor"
                                         >{{ item.raw.state }}
                                     </v-chip>
-                                </div></template
-                            >
+                                </div>
+                            </template>
                         </v-list-item>
                     </template>
                 </v-autocomplete>
                 <div v-if="state.selected.length">
                     <v-switch
+                        v-if="state.graphCount > 1"
                         label="Synchronize Graphs"
                         v-model="state.synchronizeGraphs"
                         title="Synchronize X-Axis of Graphs"
                         density="compact"
-                        v-if="state.graphCount > 1"
-                    ></v-switch>
+                    />
                     <GraphGroup :synchronize="state.synchronizeGraphs">
                         <template v-slot:default="{ relayout, relayoutData }">
                             <GraphWrapper
@@ -84,7 +102,7 @@
                                 :relayout-data="relayoutData"
                                 comparison-mode
                                 flat
-                            ></GraphWrapper>
+                            />
                         </template>
                     </GraphGroup>
                     <div class="d-flex justify-center">
