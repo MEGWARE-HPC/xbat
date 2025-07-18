@@ -8,13 +8,19 @@
             <v-card-title>Compare</v-card-title>
             <v-card-text>
                 <v-alert
-                    v-if="state.missing.length"
+                    v-if="
+                        state.missing.length ||
+                        (state.noData && state.selected.length === 1)
+                    "
                     type="warning"
                     density="compact"
                     variant="tonal"
                     class="mb-1 text-caption"
                     >Could not account for the following job(s):
-                    {{ state.missing.join(", ") }}
+                    <template v-if="state.missing.length">{{
+                        state.missing.join(", ")
+                    }}</template>
+                    <template v-else>{{ state.selected[0] }}</template>
                 </v-alert>
                 <v-autocomplete
                     v-model="state.selected"
