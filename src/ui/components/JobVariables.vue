@@ -426,11 +426,12 @@ const toggleSortOrder = (idx: number) => {
 };
 
 const sortValues = (arr: string[], order: "asc" | "desc" = "asc") => {
-    return [...arr].sort((a, b) => {
-        const na = Number(a),
-            nb = Number(b);
-        return order === "asc" ? na - nb : nb - na;
+    const collator = new Intl.Collator(undefined, {
+        numeric: true,
+        sensitivity: "base"
     });
+    const sorted = [...arr].sort((a, b) => collator.compare(a, b));
+    return order === "asc" ? sorted : sorted.reverse();
 };
 
 watch(
