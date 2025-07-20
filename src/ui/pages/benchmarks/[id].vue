@@ -1,135 +1,19 @@
 <template>
     <div>
-        <v-navigation-drawer
-            permanent
-            :rail="infoCollapsed"
-            location="right"
-            width="350"
-            id="info-drawer"
-        >
-            <template v-slot:append>
-                <div class="d-flex justify-center mt-2">
-                    <v-btn
-                        @click="setInfoDrawer(!infoCollapsed)"
-                        variant="text"
-                        size="small"
-                        style="margin-top: 12px"
-                    >
-                        <v-icon
-                            :icon="
-                                infoCollapsed
-                                    ? '$chevronDoubleLeft'
-                                    : '$chevronDoubleRight'
-                            "
-                        ></v-icon>
-                    </v-btn>
-                </div>
-            </template>
-            <div class="system-info-wrapper" v-show="!infoCollapsed">
-                <InfoColumn
-                    title="benchmark"
-                    :items="sidebarBenchmarkItems"
-                    @update="updateInfo('benchmark', $event)"
-                >
-                    <v-chip
-                        :color="stateColors[benchmark.state] || 'info'"
-                        size="small"
-                        >{{ benchmark.state }}</v-chip
-                    >
-                </InfoColumn>
-                <InfoColumn
-                    title="job"
-                    :items="sidebarJobItems"
-                    @update="updateInfo('job', $event)"
-                >
-                    <div>
-                        <v-chip :color="jobState.color" size="small">
-                            {{ jobState.value }}
-                        </v-chip>
-                        <v-tooltip location="top" v-if="jobRunning">
-                            <template v-slot:activator="{ props }">
-                                <v-chip
-                                    :color="
-                                        refreshPaused ? 'info' : 'secondary'
-                                    "
-                                    size="small"
-                                    class="ml-1"
-                                    v-bind="props"
-                                    @click="
-                                        jobRunning
-                                            ? refreshPaused
-                                                ? pausedRefresh.splice(
-                                                      pausedRefresh.indexOf(
-                                                          jobId
-                                                      ),
-                                                      1
-                                                  )
-                                                : pausedRefresh.push(jobId)
-                                            : null
-                                    "
-                                >
-                                    <v-icon icon="$refresh"></v-icon>
-                                    <v-icon
-                                        v-if="refreshPaused"
-                                        icon="$play"
-                                    ></v-icon>
-                                    <v-icon v-else icon="$pause"></v-icon>
-                                </v-chip>
-                            </template>
-                            <span v-if="refreshPaused"
-                                >Automatic refresh is paused for this job. Click
-                                to resume.</span
-                            >
-                            <span v-else
-                                >Job is still running - output and values are
-                                refreshed automatically every 30 seconds.<br />
-                                Click to pause refresh for this job.
-                            </span>
-                        </v-tooltip>
-                    </div>
-                    <template
-                        #append
-                        v-if="Object.keys(currentJob.variables || {}).length"
-                    >
-                        <JobVariableOverview :variables="currentJob.variables">
-                        </JobVariableOverview>
-                    </template>
-                </InfoColumn>
-                <InfoColumn
-                    title="hardware"
-                    class="mt-3"
-                    :items="sidebarHardwareItems"
-                >
-                    <v-select
-                        style="width: 150px; margin-left: 10px"
-                        :items="participatingNodes?.[jobId] || []"
-                        label="Node"
-                        v-model="nodeInfoSelectedNode"
-                        hide-details
-                        no-data-text="No nodes found for this job"
-                    ></v-select>
-                    <template #append>
-                        <div
-                            class="d-flex justify-center mt-3"
-                            v-if="topologies?.[jobId]?.[nodeInfoSelectedNode]"
-                        >
-                            <v-btn
-                                @click="state.showCpuTopologyDialog = true"
-                                variant="text"
-                                color="light"
-                                prepend-icon="$memory"
-                                >View CPU Topology</v-btn
-                            >
-                        </div>
-                    </template>
-                </InfoColumn>
-
-                <InfoColumn
-                    title="software"
-                    :items="sidebarSoftwareItems"
-                ></InfoColumn>
-            </div>
-        </v-navigation-drawer>
+        <BenchmarkSidebar
+            :benchmark="benchmark"
+            :jobs="jobs"
+            :jobId="jobId"
+            @update:refreshPaused="
+                jobRunning
+                    ? refreshPaused
+                        ? pausedRefresh.splice(pausedRefresh.indexOf(jobId), 1)
+                        : pausedRefresh.push(jobId)
+                    : null
+            "
+            :refreshPaused="refreshPaused"
+            @refresh="refreshData"
+        ></BenchmarkSidebar>
         <v-container fluid>
             <!-- TODO using v-main here causes hydration mismatch -->
             <div :style="{ 'margin-right': infoCollapsed ? '56px' : '350px' }">
@@ -374,29 +258,7 @@
                 </div>
             </div>
         </v-container>
-        <v-dialog v-model="state.showCpuTopologyDialog" max-width="1000">
-            <v-card>
-                <v-card-title> CPU Topology (by LIKWID) </v-card-title>
-                <v-card-text>
-                    <Editor
-                        :readonly="true"
-                        :model-value="
-                            topologies?.[jobId]?.[nodeInfoSelectedNode] || ''
-                        "
-                        :line-numbers="false"
-                        no-wrap
-                    ></Editor>
-                </v-card-text>
-                <v-card-actions>
-                    <v-spacer></v-spacer>
-                    <v-btn
-                        variant="plain"
-                        @click="state.showCpuTopologyDialog = false"
-                        >close</v-btn
-                    ></v-card-actions
-                >
-            </v-card>
-        </v-dialog>
+
         <v-dialog v-model="state.showRooflineDialog" id="dialog-roofline">
             <v-card>
                 <v-card-title>Roofline Model</v-card-title>
@@ -521,8 +383,7 @@
 </template>
 <script setup>
 import { range } from "~/utils/misc";
-import { stateColors } from "~/utils/colors";
-const { $api, $store, $graphStore, $snackbar } = useNuxtApp();
+const { $api, $store, $graphStore } = useNuxtApp();
 
 definePageMeta({
     validate: async (route) => {
@@ -555,10 +416,8 @@ const state = reactive({
     showOutput: false,
     nodesWithMeasurements: {},
     showCompareDialog: false,
-    showCpuTopologyDialog: false,
     showRooflineDialog: false,
     showSettingsDialog: false,
-    infoCollapsed: false,
     outputTab: "Slurm",
     selectedJob: null,
     loading: false,
@@ -749,39 +608,10 @@ const { jobState, jobId, jobRunning } = useJob(currentJob, benchmark);
 
 const {
     nodeInfo,
-    participatingNodes,
-    nodeInfoSelectedNode,
-    topologies,
-    nodeBenchmarks
 } = useNodes({
     jobs,
     currentJob
 });
-
-const { powerConsumption, fetch: fetchPower } = usePower();
-
-const {
-    benchmarkItems: sidebarBenchmarkItems,
-    jobItems: sidebarJobItems,
-    hardwareItems: sidebarHardwareItems,
-    softwareItems: sidebarSoftwareItems
-} = useSidebarInfo({
-    benchmark,
-    job: currentJob,
-    nodeInfo: toRef(
-        () => nodeInfo.value?.[jobId.value]?.[nodeInfoSelectedNode.value]
-    ),
-    powerConsumption
-});
-
-const setInfoDrawer = (v) => {
-    infoCollapsed.value = v;
-    nextTick(() => {
-        // delay resize event to wait for sidebar animation to finish
-        // otherwise graph scales incorrectly
-        setTimeout(() => window.dispatchEvent(new Event("resize")), 500);
-    });
-};
 
 const setArrangement = (columns) => {
     displayColumns.value = columns;
@@ -795,25 +625,6 @@ const showRoofline = () => {
     nextTick(() => {
         window.dispatchEvent(new Event("resize"));
     });
-};
-
-const updateInfo = async (type, { key, value, title }) => {
-    if ($store.demo) {
-        $snackbar.show($store.demoMessage);
-        return;
-    }
-
-    if (type === "benchmark") {
-        await $api.benchmarks.patch(runNr.value, { [key]: value });
-    } else if (type === "job") {
-        await $api.jobs.patch(state.selectedJob, {
-            [key]: value
-        });
-    }
-
-    await refreshData();
-
-    $snackbar.show(`Updated ${title}`);
 };
 
 // reset selection and visited jobs
@@ -833,7 +644,7 @@ watch(
     () => state.selectedJob,
     (v) => {
         if (!state.visitedJobs.includes(v) && v) {
-            fetchPower(v);
+            console.log("TODO add power back in");
             state.visitedJobs.push(v);
         }
     },
@@ -863,7 +674,6 @@ const refreshAll = async () => {
         // bustCache event triggers reload of graphs, load power data afterwards to prevent busting data of power queries
         // bust cache only for currently viewed job as others may already have finished
         $graphStore.bustCache([jobId.value]);
-        await fetchPower(jobId.value);
     });
 };
 
@@ -917,14 +727,4 @@ onBeforeRouteLeave((to, from, next) => {
 </script>
 
 <style lang="scss" scoped>
-.variables-tooltip {
-    :deep(&.v-tooltip) {
-        background: red !important;
-    }
-}
-
-.system-info-wrapper {
-    margin-top: 10px;
-    padding: 0 20px;
-}
 </style>

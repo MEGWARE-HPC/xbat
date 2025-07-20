@@ -157,7 +157,7 @@ export const useSidebarInfo = ({
             });
         }
 
-        if (job.value.jobId in powerConsumption.value) {
+        if (job.value.jobId in (powerConsumption.value || {})) {
             Object.entries(
                 powerConsumption.value[job.value.jobId] || {}
             ).forEach(([key, value]) => {
