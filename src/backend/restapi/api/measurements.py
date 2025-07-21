@@ -761,9 +761,12 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
         })
 
     if len(jobIds) == 1:
+        response = aggregated[jobIds[0]]
+        missing = [] if response["metrics"] else [jobIds[0]]
+        response["missing"] = missing
         if cacheable:
-            valkey.set(valkey_key, aggregated[jobIds[0]])
-        return aggregated[jobIds[0]], 200
+            valkey.set(valkey_key, response)
+        return response, 200
 
     if not intersect:
         if cacheable:
