@@ -784,7 +784,10 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
     ]
 
     if not len(aggregated_metrics):
-        raise httpErrors.BadRequest()
+        response = {"metrics": {}, "nodes": [], "missing": skipped_jobs}
+        if cacheable:
+            valkey.set(valkey_key, response)
+        return response, 200
 
     # check that metrics are available in all jobs
     groups = set.intersection(*map(set, [x.keys()
