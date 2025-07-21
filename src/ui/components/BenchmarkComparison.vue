@@ -25,7 +25,6 @@
                     clearable
                     :items="jobItems"
                     item-value="value"
-                    persistent-hint
                     class="mb-2"
                 >
                     <template v-slot:item="{ props, item }">
@@ -190,15 +189,20 @@ watch(
     [() => state.selected, () => props.modelValue],
 
     async ([v, m]) => {
-        if (!v.length || !m) return;
+        if (!v.length) {
+            metrics.value = {};
+            state.missing = [];
+            state.noData = false;
+            return;
+        }
+
+        if (!m) return;
 
         const res = await $api.metrics.get(v, true);
         metrics.value = res.metrics;
         state.noData = !Object.keys(res.metrics).length;
         state.missing = res.missing || [];
     },
-    {
-        immediate: true
-    }
+    { immediate: true }
 );
 </script>
