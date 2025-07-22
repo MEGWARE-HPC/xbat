@@ -156,11 +156,13 @@
 <script lang="ts" setup>
 import type { Benchmark } from "@/repository/modules/benchmarks";
 import type { Job } from "@/repository/modules/jobs";
+import type { EnergyMeasurement } from "@/repository/modules/measurements";
 
 const props = defineProps<{
     benchmark: Benchmark;
     jobs: Job[];
     jobId: number;
+    energy?: Record<string, EnergyMeasurement>;
     refreshPaused: boolean;
 }>();
 
@@ -179,15 +181,11 @@ const currentJob = computed(() => {
     return props.jobs.find((job) => job.jobId === props.jobId) || ({} as Job);
 });
 
-const {
-    nodeInfo,
-    participatingNodes,
-    nodeInfoSelectedNode,
-    topologies,
-} = useNodes({
-    jobs: toRef(() => props.jobs),
-    currentJob
-});
+const { nodeInfo, participatingNodes, nodeInfoSelectedNode, topologies } =
+    useNodes({
+        jobs: toRef(() => props.jobs),
+        currentJob
+    });
 
 const currentNodeInfo = computed(() => {
     return nodeInfo.value?.[jobId.value]?.[nodeInfoSelectedNode.value] || {};
@@ -202,7 +200,7 @@ const {
     benchmark: toRef(() => props.benchmark),
     job: currentJob,
     nodeInfo: currentNodeInfo,
-    powerConsumption: toRef(() => {})
+    energy: toRef(() => props.energy?.[props.jobId] || null)
 });
 
 const { $api, $store, $snackbar } = useNuxtApp();

@@ -1,7 +1,7 @@
 import FetchFactory from "../factory";
 import type { GraphQuery, GraphRawData } from "~/types/graph";
 
-type EnergyMeasurements = {
+export type EnergyMeasurement = {
     cpu: number | null;
     core: number | null;
     dram: number | null;
@@ -22,9 +22,9 @@ class MeasurementModule extends FetchFactory {
     }
 
     async getEnergy(jobId: number) {
-        return this.call<EnergyMeasurements>(
+        return this.call<EnergyMeasurement>(
             "GET",
-            `${this.RESOURCE}/energy/${jobId}/energy`,
+            `${this.RESOURCE}/${jobId}/energy`,
             undefined // body
         );
     }

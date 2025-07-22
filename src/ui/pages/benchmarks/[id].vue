@@ -4,6 +4,7 @@
             :benchmark="benchmark"
             :jobs="jobs"
             :jobId="jobId"
+            :energy="energy"
             @update:refreshPaused="
                 jobRunning
                     ? refreshPaused
@@ -415,6 +416,13 @@ const showRoofline = () => {
     });
 };
 
+const energy = ref({});
+
+const fetchEnergy = async (jobId) => {
+    const energyData = await $api.measurements.getEnergy(jobId);
+    energy.value[jobId] = energyData;
+};
+
 // reset selection and visited jobs
 watch(
     jobItems,
@@ -432,7 +440,7 @@ watch(
     () => state.selectedJob,
     (v) => {
         if (!state.visitedJobs.includes(v) && v) {
-            console.log("TODO add power back in");
+            fetchEnergy(v);
             state.visitedJobs.push(v);
         }
     },
@@ -452,18 +460,14 @@ watch(
 const benchmarkOutputRef = ref(null);
 
 const refreshAll = async () => {
-    let handlers = [refreshData(), refreshMetrics()];
+    let handlers = [refreshData(), refreshMetrics(), fetchEnergy(jobId.value)];
 
     if (benchmarkOutputRef.value)
         handlers.push(benchmarkOutputRef.value.refresh());
 
     await Promise.all(handlers);
 
-    nextTick(async () => {
-        // bustCache event triggers reload of graphs, load power data afterwards to prevent busting data of power queries
-        // bust cache only for currently viewed job as others may already have finished
-        $graphStore.bustCache([jobId.value]);
-    });
+    $graphStore.bustCache([jobId.value]);
 };
 
 const terminalStates = ["done", "failed", "canceled", "cancelled", "timeout"];

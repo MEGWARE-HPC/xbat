@@ -1,6 +1,7 @@
 import type { Benchmark } from "@/repository/modules/benchmarks";
 import type { Job } from "@/repository/modules/jobs";
 import type { SystemInfo } from "@/repository/modules/nodes";
+import type { EnergyMeasurement } from "@/repository/modules/measurements";
 
 import { deepClone } from "~/utils/misc";
 import { replaceTrademark } from "~/utils/string";
@@ -64,16 +65,25 @@ const softwareEntries: SidebarEntry[] = [
     // { name: "bios.BIOS Revision", title: "BIOS Revision" }
 ];
 
+const EnergyLabels: Record<string, string> = {
+    cpu: "CPU",
+    core: "Core",
+    dram: "DRAM",
+    fpga: "FPGA",
+    gpu: "GPU",
+    system: "System"
+};
+
 export const useSidebarInfo = ({
     benchmark,
     job,
     nodeInfo,
-    powerConsumption
+    energy
 }: {
     benchmark: Ref<Benchmark>;
     job: Ref<Job>;
     nodeInfo: Ref<SystemInfo>;
-    powerConsumption: Ref<{ [key: number]: { [key: string]: number } }>;
+    energy: Ref<EnergyMeasurement | null>;
 }) => {
     const benchmarkItems = computed(() => {
         const benchmarkInfo = {
@@ -157,16 +167,16 @@ export const useSidebarInfo = ({
             });
         }
 
-        if (job.value.jobId in (powerConsumption.value || {})) {
-            Object.entries(
-                powerConsumption.value[job.value.jobId] || {}
-            ).forEach(([key, value]) => {
-                items.push({
-                    title: key,
-                    key: key,
-                    value: `${value} kWh`
+        if (energy.value) {
+            Object.entries(energy.value)
+                .filter(([_, value]) => value !== null)
+                .forEach(([key, value]) => {
+                    items.push({
+                        title: `${EnergyLabels[key]} Energy`,
+                        key: key,
+                        value: `${value} kWh`
+                    });
                 });
-            });
         }
 
         return items;
