@@ -129,68 +129,11 @@
                 </div>
 
                 <div v-if="state.showOutput">
-                    <v-tabs
-                        v-model="state.outputTab"
-                        style="margin-bottom: 20px"
-                        color="primary-light"
-                    >
-                        <v-tab
-                            v-for="v of [
-                                ...outputTabs.map((x) => x.title),
-                                'Job Script'
-                            ]"
-                            :key="v"
-                        >
-                            {{ v }}
-                        </v-tab>
-                    </v-tabs>
-                    <v-tabs-window v-model="state.outputTab">
-                        <template v-for="outputTab of outputTabs">
-                            <v-tabs-window-item>
-                                <div
-                                    class="text-medium-emphasis text-caption mb-3 ml-6"
-                                    v-if="currentJob.jobInfo?.[outputTab.value]"
-                                >
-                                    <div class="d-flex">
-                                        <v-icon
-                                            icon="$file"
-                                            size="small"
-                                        ></v-icon>
-                                        File available at
-                                        <span class="font-italic ml-1">{{
-                                            currentJob.jobInfo[outputTab.value]
-                                        }}</span>
-                                    </div>
-                                </div>
-                                <Editor
-                                    :model-value="
-                                        outputs?.[jobId]?.[outputTab.value] !==
-                                        null
-                                            ? outputs?.[jobId]?.[
-                                                  outputTab.value
-                                              ]
-                                            : '# No output available (yet)'
-                                    "
-                                    readonly
-                                    height="750"
-                                    :filename="`${jobId}_${outputTab.value}.txt`"
-                                    :loading="outputLoading"
-                                    language="plaintext"
-                                ></Editor>
-                            </v-tabs-window-item>
-                        </template>
-                        <v-tabs-window-item>
-                            <Editor
-                                :readonly="true"
-                                :modelValue="
-                                    currentJob?.userJobscriptFile ||
-                                    '# Job script not available (yet)'
-                                "
-                                :filename="`${jobId}_jobscript.sh`"
-                                height="750"
-                            ></Editor>
-                        </v-tabs-window-item>
-                    </v-tabs-window>
+                    <BenchmarkOutput
+                        ref="benchmarkOutputRef"
+                        :job="currentJob"
+                        :visible="state.showOutput"
+                    ></BenchmarkOutput>
                 </div>
                 <div v-show="!state.showOutput">
                     <div v-if="invalidBenchmark">
@@ -258,7 +201,6 @@
                 </div>
             </div>
         </v-container>
-
         <v-dialog v-model="state.showRooflineDialog" id="dialog-roofline">
             <v-card>
                 <v-card-title>Roofline Model</v-card-title>
@@ -501,52 +443,6 @@ const { data: jobMetrics, refresh: refreshMetrics } = await useAsyncData(
     { watch: [() => state.selectedJob] }
 );
 
-const useJobOutputs = ({ jobId, outputShown }) => {
-    const outputs = ref({});
-    const pending = ref(false);
-    const defaultTabs = [{ title: "StdOut & StdErr", value: "standardOutput" }];
-
-    // determine tabs based on whether stdout and stderr are combined
-    const outputTabs = computed(() => {
-        if (!jobId.value || !outputs.value[jobId.value]) return defaultTabs;
-
-        const output = outputs.value[jobId.value];
-
-        if (output.standardOutput !== null)
-            if (output.standardError !== null)
-                return [
-                    { title: "StdOut", value: "standardOutput" },
-                    { title: "StdErr", value: "standardError" }
-                ];
-
-        return defaultTabs;
-    });
-
-    const refresh = async () => {
-        if (!jobId.value) return;
-        pending.value = true;
-        const output = await $api.jobs.getOutput(jobId.value);
-        outputs.value[jobId.value] = output || {};
-        pending.value = false;
-    };
-
-    watch([jobId, outputShown], async ([id, shown]) => {
-        if (!shown || id in outputs.value) return;
-        await refresh();
-    });
-
-    return { outputs, pending, refresh, outputTabs };
-};
-
-const {
-    outputs,
-    pending: outputLoading,
-    refresh: refreshOutput,
-    outputTabs
-} = useJobOutputs({
-    jobId: toRef(() => state.selectedJob),
-    outputShown: toRef(() => state.showOutput)
-});
 
 watch(
     jobMetrics,
@@ -606,9 +502,7 @@ const { jobItems, jobsById, jobIds } = useJobs({
 
 const { jobState, jobId, jobRunning } = useJob(currentJob, benchmark);
 
-const {
-    nodeInfo,
-} = useNodes({
+const { nodeInfo } = useNodes({
     jobs,
     currentJob
 });
@@ -661,12 +555,13 @@ watch(
     { immediate: true }
 );
 
+const benchmarkOutputRef = ref(null);
+
 const refreshAll = async () => {
     let handlers = [refreshData(), refreshMetrics()];
 
-    // only fetch output if visited before (and therefore available in outputs)
-    // if not visitied it will be fetched automatically on visit
-    if (jobId.value in outputs.value) handlers.push(refreshOutput());
+    if (benchmarkOutputRef.value)
+        handlers.push(benchmarkOutputRef.value.refresh());
 
     await Promise.all(handlers);
 
@@ -726,5 +621,4 @@ onBeforeRouteLeave((to, from, next) => {
 });
 </script>
 
-<style lang="scss" scoped>
-</style>
+<style lang="scss" scoped></style>

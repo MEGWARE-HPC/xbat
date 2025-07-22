@@ -184,7 +184,6 @@ const {
     participatingNodes,
     nodeInfoSelectedNode,
     topologies,
-    nodeBenchmarks
 } = useNodes({
     jobs: toRef(() => props.jobs),
     currentJob
