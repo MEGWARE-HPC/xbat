@@ -514,5 +514,3 @@ onBeforeRouteLeave((to, from, next) => {
     next();
 });
 </script>
-
-<style lang="scss" scoped></style>
