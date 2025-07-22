@@ -349,7 +349,6 @@ watch(
 
         metricsCache.value[state.selectedJob] = v;
         metrics.value[state.selectedJob] = v.metrics;
-        state.nodesWithMeasurements[state.selectedJob] = v.nodes;
         state.noData = !Object.keys(v.metrics).length || !v.nodes.length;
 
         // set default graphs if not in refresh mode
