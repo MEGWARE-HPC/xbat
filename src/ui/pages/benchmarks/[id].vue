@@ -118,14 +118,15 @@
                         :disabled="invalidBenchmark"
                         >Roofline
                     </v-btn>
-
-                    <v-btn
-                        variant="text"
-                        append-icon="$cog"
-                        :disabled="invalidBenchmark"
-                        @click="state.showSettingsDialog = true"
-                        >Settings
-                    </v-btn>
+                    <BenchmarkSettings>
+                        <v-btn
+                            variant="text"
+                            append-icon="$cog"
+                            :disabled="invalidBenchmark"
+                            @click="state.showSettingsDialog = true"
+                            >Settings
+                        </v-btn>
+                    </BenchmarkSettings>
                 </div>
 
                 <div v-if="state.showOutput">
@@ -220,93 +221,6 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
-        <!-- TODO move to separate component -->
-        <v-dialog v-model="state.showSettingsDialog" eager :max-width="600">
-            <v-card>
-                <v-card-title>Settings</v-card-title>
-                <v-card-text>
-                    <div>
-                        <v-switch
-                            label="Rangeslider on Graph"
-                            :model-value="graphPreferences.rangeslider"
-                            @update:model-value="
-                                graphPreferences.rangeslider = $event;
-                                $graphStore.setPreference(
-                                    'rangeslider',
-                                    $event
-                                );
-                            "
-                        ></v-switch>
-                        <v-switch
-                            label="Show X-Axis Title"
-                            :model-value="graphPreferences.xTitle"
-                            @update:model-value="
-                                $graphStore.setPreference('xTitle', $event)
-                            "
-                        ></v-switch>
-                        <div class="d-flex">
-                            <v-switch
-                                :model-value="
-                                    graphPreferences.hideInactive !== 'none'
-                                "
-                                @update:model-value="
-                                    $graphStore.setPreference(
-                                        'hideInactive',
-                                        $event ? 'disabled' : 'none'
-                                    )
-                                "
-                            >
-                                <template #label>
-                                    Hide inactive
-                                    <v-tooltip
-                                        text="Activate this option to automatically hide traces exclusively reporting zero-values"
-                                        location="right"
-                                    >
-                                        <template v-slot:activator="{ props }">
-                                            <v-icon
-                                                v-bind="props"
-                                                icon="$information"
-                                                class="ml-3"
-                                            ></v-icon>
-                                        </template>
-                                    </v-tooltip>
-                                </template>
-                            </v-switch>
-                            <v-select
-                                class="ml-5"
-                                :model-value="
-                                    graphPreferences.hideInactive == 'none'
-                                        ? 'disabled'
-                                        : graphPreferences.hideInactive
-                                "
-                                @update:model-value="
-                                    graphPreferences.hideInactive = $event;
-                                    $graphStore.setPreference(
-                                        'hideInactive',
-                                        $event
-                                    );
-                                "
-                                style="max-width: 200px"
-                                :disabled="
-                                    graphPreferences.hideInactive == 'none'
-                                "
-                                :items="hideInactiveOptions"
-                                item-props
-                                hide-details
-                            ></v-select>
-                        </div>
-                    </div>
-                </v-card-text>
-                <v-card-actions>
-                    <v-spacer></v-spacer>
-                    <v-btn
-                        variant="text"
-                        @click="state.showSettingsDialog = false"
-                        >close</v-btn
-                    >
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
         <ClientOnly>
             <BenchmarkComparison
                 :modelValue="state.showCompareDialog"
@@ -338,31 +252,13 @@ definePageMeta({
 
 const MAX_PLOTS_PER_PAGE = 4;
 
-const hideInactiveOptions = [
-    {
-        title: "disable traces",
-        subtitle:
-            "inactive traces are disabled but shown in the legend and statistics",
-        value: "disabled"
-    },
-    {
-        title: "hide traces",
-        subtitle: "inactive traces are hidden completely",
-        value: "hidden"
-    }
-];
-
 const state = reactive({
     runNr: 0,
     synchronizeGraphs: true,
     showOutput: false,
-    nodesWithMeasurements: {},
     showCompareDialog: false,
     showRooflineDialog: false,
-    showSettingsDialog: false,
-    outputTab: "Slurm",
     selectedJob: null,
-    loading: false,
     noData: false,
     visitedJobs: [],
     refreshHandler: null
@@ -442,7 +338,6 @@ const { data: jobMetrics, refresh: refreshMetrics } = await useAsyncData(
     },
     { watch: [() => state.selectedJob] }
 );
-
 
 watch(
     jobMetrics,
