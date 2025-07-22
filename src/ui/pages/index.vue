@@ -1,6 +1,5 @@
 <template>
     <v-container fluid>
-        <!-- {{ jobsByRunNr }} -->
         <v-card max-width="95%" class="mx-auto pa-2 mt-5">
             <v-card-title>
                 <div class="d-flex align-center gap-20">
@@ -200,6 +199,8 @@
                     v-model:sortBy="tableSortBy"
                     :loading="pending"
                     class="overview-table"
+                    :items-per-page="overviewItemsPerPage"
+                    @update:itemsPerPage="overviewItemsPerPage = $event"
                 >
                     <template v-slot:[`item.startTime`]="{ item }">
                         <ClientOnly>
@@ -748,7 +749,7 @@
 
 <script setup>
 import { useRouter, onBeforeRouteLeave } from "vue-router";
-import { sanitizeDate, calculateRunTime } from "~/utils/date";
+import { sanitizeDate } from "~/utils/date";
 import { encodeBraceNotation } from "~/utils/braceNotation";
 
 const shareExplanation =
@@ -770,6 +771,8 @@ const headers = [
     { title: "State", key: "state", align: "center" },
     { title: "", key: "attributes" }
 ];
+
+const { overviewItemsPerPage } = usePreferences();
 
 const { $api, $authStore, $store, $snackbar } = useNuxtApp();
 
