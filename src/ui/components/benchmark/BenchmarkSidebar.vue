@@ -75,12 +75,33 @@
                         </span>
                     </v-tooltip>
                 </div>
-                <template
-                    #append
-                    v-if="Object.keys(currentJob.variables || {}).length"
-                >
-                    <JobVariableOverview :variables="currentJob.variables">
-                    </JobVariableOverview>
+                <template #append>
+                    <div class="d-flex justify-space-between">
+                        <HoverMenu>
+                            <template #activator>
+                                <v-btn
+                                    size="small"
+                                    variant="text"
+                                    prepend-icon="$lightningBolt"
+                                    >Energy</v-btn
+                                >
+                            </template>
+                            <v-data-table
+                                :headers="energyHeaders"
+                                :items="energyItems"
+                                item-name="key"
+                                item-value="value"
+                                hide-default-footer
+                            ></v-data-table>
+                        </HoverMenu>
+                        <JobVariableOverview
+                            v-if="
+                                Object.keys(currentJob.variables || {}).length
+                            "
+                            :variables="currentJob.variables"
+                        >
+                        </JobVariableOverview>
+                    </div>
                 </template>
             </InfoColumn>
 
@@ -199,8 +220,7 @@ const {
 } = useSidebarInfo({
     benchmark: toRef(() => props.benchmark),
     job: currentJob,
-    nodeInfo: currentNodeInfo,
-    energy: toRef(() => props.energy?.[props.jobId] || null)
+    nodeInfo: currentNodeInfo
 });
 
 const { $api, $store, $snackbar } = useNuxtApp();
@@ -236,6 +256,33 @@ const updateInfo = async (
 
     $snackbar.show(`Updated ${title}`);
 };
+
+const energyHeaders = [
+    { title: "Consumer", value: "key" },
+    { title: "Value (kWh)", value: "value" }
+];
+
+const energyLabels: Record<string, string> = {
+    cpu: "CPU",
+    core: "Core",
+    dram: "DRAM",
+    fpga: "FPGA",
+    gpu: "GPU",
+    system: "System"
+};
+
+const energyItems = computed(() => {
+    console.log("E");
+    if (!props.energy?.[props.jobId]) {
+        return [];
+    }
+    return Object.entries(props.energy[props.jobId])
+        .filter(([_, value]) => value !== null)
+        .map(([key, value]) => ({
+            key: energyLabels[key] || key,
+            value: `${value} kWh`
+        }));
+});
 </script>
 <style lang="scss" scoped>
 .system-info-wrapper {
