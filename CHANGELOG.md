@@ -21,6 +21,7 @@ All notable changes to this project will be documented in this file.
 -   first variant of job configuration can now be deleted (#49)
 -   support for slurm bracket notation in configuration nodelists (#89)
 -   improved file upload component (#93)
+-   energy consumption statistics in sidebar (now also includes previously missing entries like DRAM etc.)
 
 ### Fixed
 
