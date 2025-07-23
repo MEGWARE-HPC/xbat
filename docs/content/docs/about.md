@@ -51,7 +51,8 @@ For general inquiries, feedback, or support, please contact us at [xbat@megware.
 <!-- KEEP IN SYNC WITH README.md -->
 
 -   [**xbat: a continuous benchmarking tool for HPC software**](https://openhsu.ub.hsu-hh.de/entities/publication/16783){:target="_blank"} Nico Tippmann et al.
--   **xbat – An Easy-to-Use and Universally Applicable Benchmarking Automation Tool for HPC Software within the Project hpc.bw (dtec.bw)** - Poster to be presented at ISC 2025 by Willi Leinen et al.
+-   [**xbat – An Easy-to-Use and Universally Applicable Benchmarking Automation Tool for HPC Software within the Project hpc.bw (dtec.bw)**](https://openhsu.ub.hsu-hh.de/entities/publication/20152){:target="_blank"} - Poster presented at ISC 2025 by Willi Leinen et al.
+-   [**Balancing energy and performance: efficient allocation of solver jobs on high-performance computing systems**](https://openhsu.ub.hsu-hh.de/entities/publication/20237){:target="_blank"} - Talk at 34th European Conference on Operational Research by Willi Leinen et al.
 
 ::Headline
 
