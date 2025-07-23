@@ -93,6 +93,19 @@
                                 item-value="value"
                                 hide-default-footer
                             ></v-data-table>
+                            <div
+                                class="text-medium-emphasis text-caption text-sm"
+                            >
+                                * Depending on the platform this value may not
+                                include subsystems like GPU etc.
+                            </div>
+                            <div
+                                class="text-medium-emphasis text-caption text-sm"
+                            >
+                                ** This is the sum of all recorded subsystems
+                                (CPU, DRAM, GPU, FPGA) excluding core and system
+                                power.
+                            </div>
                         </HoverMenu>
                         <JobVariableOverview
                             v-if="
@@ -268,14 +281,13 @@ const energyLabels: Record<string, string> = {
     dram: "DRAM",
     fpga: "FPGA",
     gpu: "GPU",
-    system: "System"
+    system: "System *",
+    total: "Total **"
 };
 
 const energyItems = computed(() => {
-    console.log("E");
-    if (!props.energy?.[props.jobId]) {
-        return [];
-    }
+    if (!props.energy?.[props.jobId]) return [];
+
     return Object.entries(props.energy[props.jobId])
         .filter(([_, value]) => value !== null)
         .map(([key, value]) => ({

@@ -615,11 +615,21 @@ def generate_csv(result):
 
 
 async def calculate_energy(jobId):
+    """
+    Calculates energy usage metrics for a given job.
+
+    Total energy consumption is an estimate based on the sum of all subsystems excluding core power and the system power itself.
+    This is necessary as, depending on the platform, system power does not include certain subsystems like for example GPU.
+
+    :param jobId: ID of job
+    """
+
     energy_metrics = [
         "CPU Power", "Core Power", "DRAM Power", "FPGA Power", "GPU Power",
         "System Power"
     ]
     result = {}
+    total = 0
     for energy_metric in energy_metrics:
         key = energy_metric.split()[0].lower()
         try:
@@ -629,7 +639,7 @@ async def calculate_energy(jobId):
             if "traces" in power_json and len(power_json["traces"]) > 0:
                 interval = power_json["traces"][0]["interval"] / 3600 / 1000
                 values = power_json["traces"][0]["values"]
-                energy_usage = round(sum(values) * interval, 4)
+                energy_usage = round(sum(values) * interval, 3)
             else:
                 energy_usage = None
 
@@ -638,6 +648,16 @@ async def calculate_energy(jobId):
             energy_usage = None
 
         result[key] = energy_usage
+
+        if energy_usage is None:
+            continue
+
+        if key == "system" or key == "core":
+            continue
+
+        total += energy_usage
+
+    result["total"] = round(total, 3)
 
     return result, 200
 
