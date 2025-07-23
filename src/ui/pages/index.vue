@@ -3,20 +3,20 @@
         <v-card max-width="95%" class="mx-auto pa-2 mt-5">
             <v-card-title>
                 <div class="d-flex align-center gap-20">
-                    <v-btn
-                        color="primary"
-                        title="Start Benchmark"
-                        @click="state.startDialog = true"
-                        :disabled="
-                            $authStore.userLevel ==
-                                $authStore.UserLevelEnum.guest ||
-                            $authStore.userLevel ==
-                                $authStore.UserLevelEnum.admin
-                        "
-                    >
-                        Start Benchmark
-                    </v-btn>
-
+                    <Submission @submit="setRefresh">
+                        <v-btn
+                            color="primary"
+                            title="Start Benchmark"
+                            :disabled="
+                                $authStore.userLevel ==
+                                    $authStore.UserLevelEnum.guest ||
+                                $authStore.userLevel ==
+                                    $authStore.UserLevelEnum.admin
+                            "
+                        >
+                            Start Benchmark
+                        </v-btn>
+                    </Submission>
                     <v-btn
                         value="share"
                         @click="state.showBenchmarkComparison = true"
@@ -602,142 +602,6 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
-        <v-dialog v-model="state.startDialog" max-width="600px">
-            <v-card>
-                <v-card-title> Start Benchmark </v-card-title>
-                <v-card-text>
-                    <v-form
-                        lazy-validation
-                        ref="submit_form"
-                        v-model="state.submitValid"
-                    >
-                        <div>
-                            <v-text-field
-                                label="Benchmark Name"
-                                class="mb-2"
-                                v-model="form.name"
-                                :rules="[vNotEmpty]"
-                            ></v-text-field>
-                            <div class="d-flex align-top">
-                                <v-autocomplete
-                                    :items="configurationItems"
-                                    label="Configuration"
-                                    v-model="form.configId"
-                                    :rules="[vNotEmpty]"
-                                    class="mb-2"
-                                    no-data-text="No configurations found"
-                                >
-                                    <template v-slot:item="{ props, item }">
-                                        <v-list-item
-                                            v-bind="props"
-                                            append-icon="$cogs"
-                                            :title="item?.raw?.title"
-                                            :value="item?.raw?.value"
-                                        >
-                                            <template #append>
-                                                <div v-if="item?.raw?.shared">
-                                                    <v-icon
-                                                        title="This is a shared configuration"
-                                                        size="small"
-                                                        color="primary-light"
-                                                        icon="$share"
-                                                    ></v-icon></div
-                                            ></template>
-                                        </v-list-item>
-                                    </template>
-                                </v-autocomplete>
-                                <v-menu
-                                    :close-on-content-click="false"
-                                    width="600"
-                                    location="bottom"
-                                >
-                                    <template v-slot:activator="{ props }">
-                                        <v-btn
-                                            v-bind="props"
-                                            class="ml-5 mt-1"
-                                            color="primary-light"
-                                            icon="$currency"
-                                            size="small"
-                                            variant="text"
-                                            title="Modify Job Variables"
-                                            :disabled="!form.configId"
-                                        >
-                                        </v-btn>
-                                    </template>
-                                    <v-card>
-                                        <v-card-title
-                                            >Job Variables</v-card-title
-                                        >
-                                        <v-card-text>
-                                            <p
-                                                class="text-medium-emphasis text-caption font-italic"
-                                            >
-                                                You can overwrite variables for
-                                                the selected configuration.
-                                                These changes will not be
-                                                persisted and only apply to the
-                                                current benchmark run.
-                                            </p>
-                                            <JobVariables
-                                                v-if="form.configId"
-                                                v-model="
-                                                    variableForm[form.configId]
-                                                "
-                                            ></JobVariables>
-                                        </v-card-text>
-                                    </v-card>
-                                </v-menu>
-                            </div>
-                            <div class="d-flex align-top">
-                                <v-autocomplete
-                                    v-show="projects.length"
-                                    :items="projects"
-                                    v-model="form.sharedProjects"
-                                    chips
-                                    closable-chips
-                                    multiple
-                                    item-title="name"
-                                    item-value="_id"
-                                    label="Share with Project"
-                                >
-                                </v-autocomplete>
-                                <v-tooltip location="bottom">
-                                    <template v-slot:activator="{ props }">
-                                        <v-icon
-                                            color="primary-light"
-                                            v-bind="props"
-                                            class="ml-5 mt-1"
-                                            style="width: 40px"
-                                            icon="$information"
-                                        >
-                                        </v-icon>
-                                    </template>
-                                    <span>{{ shareExplanation }}</span>
-                                </v-tooltip>
-                            </div>
-                        </div>
-                    </v-form>
-                </v-card-text>
-                <v-card-actions>
-                    <v-spacer></v-spacer>
-                    <v-btn
-                        color="font-light"
-                        variant="text"
-                        @click="state.startDialog = false"
-                    >
-                        Cancel
-                    </v-btn>
-                    <v-btn
-                        color="primary-light"
-                        variant="text"
-                        :disabled="!state.submitValid"
-                        @click="submit"
-                    >
-                        Submit
-                    </v-btn>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
         <BenchmarkComparison
             :modelValue="state.showBenchmarkComparison"
             @update:modelValue="state.showBenchmarkComparison = false"
@@ -790,12 +654,6 @@ const { data, refresh, pending } = await useAsyncData(
     }
 );
 
-const { data: configurations } = await useAsyncData(
-    `configurations-${$authStore.user?.user_name}`,
-    () => $api.configurations.get(),
-    { lazy: true, transform: (v) => v?.data || [] }
-);
-
 const { data: jobs } = await useAsyncData(
     `jobs-${$authStore.user?.user_name}`,
     () => $api.jobs.get(null, true),
@@ -822,7 +680,6 @@ const { benchmarkStates } = useBenchmarks({
 const projects = computed(() => $authStore.user?.projects || []);
 
 const tableSortBy = ref([{ key: "runNr", order: "desc" }]);
-const { vNotEmpty } = useFormValidation();
 const router = useRouter();
 
 const projectFilter = useCookie("xbat_project-filter", { default: () => null });
@@ -840,12 +697,6 @@ watch(
     { immediate: true }
 );
 
-const form = reactive({
-    name: "",
-    configId: null,
-    sharedProjects: []
-});
-
 const action = reactive({
     type: null,
     eligible: [],
@@ -857,9 +708,7 @@ const action = reactive({
 });
 
 const state = reactive({
-    startDialog: false,
     selected: [],
-    submitValid: false,
     intervalHandle: null,
     search: "",
     projectsToShareWith: [],
@@ -879,24 +728,16 @@ const statusDisabled = computed(() => {
     );
 });
 
-const configurationsById = computed(() =>
-    Object.fromEntries(
-        configurations.value.map((x) => [x._id, x.configuration])
-    )
-);
-
-const variableForm = ref({});
-
-watch(
-    () => form.configId,
-    (v) => {
-        if (!v) return;
-        if (!variableForm.value[v])
-            variableForm.value[v] = configurationsById.value[v].variables;
-    }
-);
-
-const submit_form = ref(null);
+const setRefresh = () => {
+    setTimeout(async () => {
+        if (state.intervalHandle === null) {
+            await refresh();
+            state.intervalHandle = setInterval(async () => {
+                await refresh();
+            }, 10000);
+        }
+    }, 5000);
+};
 
 const tableHeaders = computed(() =>
     hideShared.value ? headers.filter((x) => x.key !== "issuer") : headers
@@ -966,14 +807,6 @@ const setAction = (type) => {
     action.type = type;
     action.dialog = true;
 };
-
-const configurationItems = computed(() => {
-    return Object.values(configurations.value).map((x) => ({
-        title: x.configuration.configurationName,
-        value: x._id,
-        shared: !!x.configuration?.sharedProjects?.length
-    }));
-});
 
 const revokeAccess = async () => {
     await Promise.all(
@@ -1081,36 +914,6 @@ const handleRowClick = (_, { item }) => {
     router.push({
         path: `/benchmarks/${item.runNr}`
     });
-};
-
-const submit = async () => {
-    state.startDialog = false;
-
-    if ($store.demo) {
-        $snackbar.show($store.demoMessage);
-        return;
-    }
-
-    await $api.benchmarks.submit({
-        name: form.name,
-        configId: form.configId,
-        sharedProjects: form.sharedProjects,
-        variables: variableForm.value[form.configId] || []
-    });
-
-    if (!$store.error) {
-        $snackbar.show(
-            "Benchmark submitted - it may take a few seconds until the benchmark is displayed"
-        );
-        setTimeout(async () => {
-            if (state.intervalHandle === null) {
-                await refresh();
-                state.intervalHandle = setInterval(async () => {
-                    await refresh();
-                }, 10000);
-            }
-        }, 5000);
-    }
 };
 
 watch(

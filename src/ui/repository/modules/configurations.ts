@@ -1,5 +1,9 @@
 import FetchFactory from "../factory";
 
+export type ConfigurationResponse = {
+    data: ConfigurationDoc[];
+};
+
 export interface ConfigurationDoc {
     _id: string;
     configuration: Configuration;
@@ -49,7 +53,7 @@ class ConfigurationModule extends FetchFactory {
     private RESOURCE = "/configurations";
 
     async get() {
-        return this.call<ConfigurationDoc[]>(
+        return this.call<ConfigurationResponse>(
             "GET",
             `${this.RESOURCE}`,
             undefined // body
