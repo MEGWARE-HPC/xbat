@@ -676,8 +676,8 @@ async def get_available_metrics(jobIds=None, intersect=False):
     """
     Check all available metrics and nodes by querying each table for a single entry containing the specified jobId.
     Assume homogeneous nodes and thus same metrics available for all of them.
-    Use UNION ALL to combine to single query, however this requires checking for the existence of each table first.
-    Otherwise UNION ALL will fail if any table is not present.
+    Use INTERSECT ALL to combine to single query, however this requires checking for the existence of each table first.
+    Otherwise INTERSECT ALL will fail if any table is not present.
 
     :param jobIds: List of job IDs
     """
