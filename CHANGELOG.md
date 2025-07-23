@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 -   extended API CSV endpoint to export multiple metrics at once (#20)
 -   syntax highlighting support for CSV language in editor (#8)
 -   endpoint for energy consumption (#88)
+-   cpu and gpu energy consumption of jobs to benchmark overview (#51)
 
 ### Changed
 
