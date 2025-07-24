@@ -23,6 +23,9 @@ All notable changes to this project will be documented in this file.
 -   first variant of job configuration can now be deleted (#49)
 -   support for slurm bracket notation in configuration nodelists (#89)
 -   improved file upload component (#93)
+-   made the DocsNavigation loop (#32)
+-   open external links in the document in new tabs (#85)
+-   removed the beta prefix since xbat is released
 
 ### Fixed
 
@@ -38,6 +41,8 @@ All notable changes to this project will be documented in this file.
 -   some issues related to auto-refresh (#4, #42, #43)
 -   the display of x-axis and y-axis titles in graph export (#48)
 -   missing group/metric and trace identifier in CSV output (#98)
+-   broken links and content in the documentation (#85)
+-   in-site navigation highlighting (#101)
 -   job variables duplicate detection false alarms (#75)
 
 ## v1.0.0 - 2025-04-17
