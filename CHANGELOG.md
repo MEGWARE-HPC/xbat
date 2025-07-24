@@ -24,6 +24,7 @@ All notable changes to this project will be documented in this file.
 -   made the DocsNavigation loop (#32)
 -   open external links in the document in new tabs (#85)
 -   removed the beta prefix since xbat is released
+-   improved display of long configuration name (#55)
 
 ### Fixed
 
