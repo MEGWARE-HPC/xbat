@@ -86,7 +86,10 @@ import {
     mdiRead,
     mdiInformation,
     mdiFolderZip,
-    mdiGestureTapButton
+    mdiGestureTapButton,
+    mdiSortNumericAscending,
+    mdiSortNumericDescending,
+    mdiFormatListGroupPlus
 } from "@mdi/js";
 
 // TODO remove when out of lab stage
@@ -221,7 +224,10 @@ export default defineNuxtPlugin((app) => {
                 cloudUpload: mdiCloudUpload,
                 read: mdiRead,
                 info: mdiInformation,
-                gestureTap: mdiGestureTapButton
+                gestureTap: mdiGestureTapButton,
+                sortAsc: mdiSortNumericAscending,
+                sortDesc: mdiSortNumericDescending,
+                addArray: mdiFormatListGroupPlus
             },
             sets: {
                 mdi
@@ -285,7 +291,7 @@ export default defineNuxtPlugin((app) => {
             },
             VFileUploadItem: {
                 fileIcon: mdiFolderZip
-            },
+            }
         }
     });
     app.vueApp.use(vuetify);

@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file.
 -   extended API CSV endpoint to export multiple metrics at once (#20)
 -   syntax highlighting support for CSV language in editor (#8)
 -   endpoint for energy consumption (#88)
+-   customizable job variable sort of values (#74)
+-   array support to job variables (#76)
 
 ### Changed
 
@@ -41,6 +43,7 @@ All notable changes to this project will be documented in this file.
 -   missing group/metric and trace identifier in CSV output (#98)
 -   broken links and content in the documentation (#85)
 -   in-site navigation highlighting (#101)
+-   job variables duplicate detection false alarms (#75)
 
 ## v1.0.0 - 2025-04-17
 

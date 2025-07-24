@@ -29,7 +29,7 @@ export type JobVariable = {
     key: string;
     values: string[];
     selected: string[];
-    input?: "";
+    input?: string;
 };
 
 export type Jobscript = {
