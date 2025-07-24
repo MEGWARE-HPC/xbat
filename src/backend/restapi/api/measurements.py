@@ -2,6 +2,7 @@ import itertools
 import csv
 import re
 import logging
+import asyncio
 import numpy as np
 from io import StringIO
 from flask import request, Response, jsonify
@@ -630,12 +631,17 @@ async def calculate_energy(jobId):
     ]
     result = {}
     total = 0
-    for energy_metric in energy_metrics:
+
+    tasks = [
+        calculate_metrics(jobId, "energy", energy_metric, "job", "", False)
+        for energy_metric in energy_metrics
+    ]
+
+    responses = await asyncio.gather(*tasks, return_exceptions=True)
+
+    for energy_metric, power_json in zip(energy_metrics, responses):
         key = energy_metric.split()[0].lower()
         try:
-            power_json = await calculate_metrics(jobId, "energy",
-                                                 energy_metric, "job", "",
-                                                 False)
             if "traces" in power_json and len(power_json["traces"]) > 0:
                 interval = power_json["traces"][0]["interval"] / 3600 / 1000
                 values = power_json["traces"][0]["values"]
