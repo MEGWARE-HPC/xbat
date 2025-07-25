@@ -99,13 +99,6 @@
                                 * Depending on the platform this value may not
                                 include subsystems like GPU etc.
                             </div>
-                            <div
-                                class="text-medium-emphasis text-caption text-sm"
-                            >
-                                ** This is the sum of all recorded subsystems
-                                (CPU, DRAM, GPU, FPGA) excluding core and system
-                                power.
-                            </div>
                         </HoverMenu>
                         <JobVariableOverview
                             v-if="
@@ -281,8 +274,7 @@ const energyLabels: Record<string, string> = {
     dram: "DRAM",
     fpga: "FPGA",
     gpu: "GPU",
-    system: "System *",
-    total: "Total **"
+    system: "System *"
 };
 
 const energyItems = computed(() => {

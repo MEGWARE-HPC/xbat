@@ -625,18 +625,16 @@ async def calculate_energy(jobId):
     :param jobId: ID of job
     """
 
+    result = {}
     energy_metrics = [
         "CPU Power", "Core Power", "DRAM Power", "FPGA Power", "GPU Power",
         "System Power"
     ]
-    result = {}
-    total = 0
 
     tasks = [
         calculate_metrics(jobId, "energy", energy_metric, "job", "", False)
         for energy_metric in energy_metrics
     ]
-
     responses = await asyncio.gather(*tasks, return_exceptions=True)
 
     for energy_metric, power_json in zip(energy_metrics, responses):
@@ -654,16 +652,6 @@ async def calculate_energy(jobId):
             energy_usage = None
 
         result[key] = energy_usage
-
-        if energy_usage is None:
-            continue
-
-        if key == "system" or key == "core":
-            continue
-
-        total += energy_usage
-
-    result["total"] = round(total, 3)
 
     return result, 200
 
