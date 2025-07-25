@@ -2,6 +2,7 @@ import itertools
 import csv
 import re
 import logging
+import asyncio
 import numpy as np
 from io import StringIO
 from flask import request, Response, jsonify
@@ -615,21 +616,34 @@ def generate_csv(result):
 
 
 async def calculate_energy(jobId):
+    """
+    Calculates energy usage metrics for a given job.
+
+    Total energy consumption is an estimate based on the sum of all subsystems excluding core power and the system power itself.
+    This is necessary as, depending on the platform, system power does not include certain subsystems like for example GPU.
+
+    :param jobId: ID of job
+    """
+
+    result = {}
     energy_metrics = [
         "CPU Power", "Core Power", "DRAM Power", "FPGA Power", "GPU Power",
         "System Power"
     ]
-    result = {}
-    for energy_metric in energy_metrics:
+
+    tasks = [
+        calculate_metrics(jobId, "energy", energy_metric, "job", "", False)
+        for energy_metric in energy_metrics
+    ]
+    responses = await asyncio.gather(*tasks, return_exceptions=True)
+
+    for energy_metric, power_json in zip(energy_metrics, responses):
         key = energy_metric.split()[0].lower()
         try:
-            power_json = await calculate_metrics(jobId, "energy",
-                                                 energy_metric, "job", "",
-                                                 False)
             if "traces" in power_json and len(power_json["traces"]) > 0:
                 interval = power_json["traces"][0]["interval"] / 3600 / 1000
                 values = power_json["traces"][0]["values"]
-                energy_usage = round(sum(values) * interval, 4)
+                energy_usage = round(sum(values) * interval, 3)
             else:
                 energy_usage = None
 

@@ -52,8 +52,9 @@ export interface JobInfo {
 export interface JobOutput {
     runNr: number;
     jobId: number;
-    output: string;
     lastUpdate: Date;
+    standardOutput: string | null;
+    standardError: string | null;
 }
 
 export interface JobPatchPayload {
