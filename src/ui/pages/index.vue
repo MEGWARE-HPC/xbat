@@ -751,6 +751,13 @@ import { useRouter, onBeforeRouteLeave } from "vue-router";
 import { sanitizeDate, calculateRunTime } from "~/utils/date";
 import { encodeBraceNotation } from "~/utils/braceNotation";
 
+useSeoMeta({
+    title: "xbat",
+    ogTitle: "xbat",
+    description: "Extended benchmarking automation tool",
+    ogDescription: "Extended benchmarking automation tool"
+});
+
 const shareExplanation =
     "Shared benchmarks are visible to all other members of the selected project";
 

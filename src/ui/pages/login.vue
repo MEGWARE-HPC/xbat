@@ -114,6 +114,13 @@ const router = useRouter();
 const { $authStore, $store } = useNuxtApp();
 const { vNotEmpty } = useFormValidation();
 
+useSeoMeta({
+    title: "xbat - login",
+    ogTitle: "xbat - login",
+    description: "Login to xbat",
+    ogDescription: "Login to xbat"
+});
+
 const form = reactive<{
     username: string;
     password: string;
