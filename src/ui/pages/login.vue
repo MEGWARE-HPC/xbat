@@ -14,6 +14,14 @@
                 </p>
             </div>
         </div>
+        <v-snackbar
+            v-model="state.snackbarVisible"
+            color="warning"
+            timeout="3500"
+            location="top"
+        >
+            {{ state.snackbarMessage }}
+        </v-snackbar>
         <v-card class="mx-auto pa-12 pb-8" elevation="4" max-width="448">
             <v-card-title class="text-center relative font-weight-bold title">
                 <div class="d-flex justify-center mb-2">
@@ -101,6 +109,7 @@
 </template>
 
 <script setup lang="ts">
+const route = useRoute();
 const router = useRouter();
 const { $authStore, $store } = useNuxtApp();
 const { vNotEmpty } = useFormValidation();
@@ -115,9 +124,31 @@ const form = reactive<{
     remember: false
 });
 
-const state = reactive<{ loginValid: boolean; passwordVisible: boolean }>({
+const state = reactive<{
+    loginValid: boolean;
+    passwordVisible: boolean;
+    snackbarVisible: boolean;
+    snackbarMessage: string;
+}>({
     loginValid: false,
-    passwordVisible: false
+    passwordVisible: false,
+    snackbarVisible: false,
+    snackbarMessage: ""
+});
+
+const error = computed(() => $store.error);
+
+onMounted(() => {
+    if (route.query.reason === "expired") {
+        state.snackbarMessage = "Session expired. Please log in again.";
+        state.snackbarVisible = true;
+    }
+    if (error.value?.status === 401) {
+        state.snackbarMessage = error.value.detail || "Session expired";
+        state.snackbarVisible = true;
+
+        $store.clearError();
+    }
 });
 
 const login = async () => {
