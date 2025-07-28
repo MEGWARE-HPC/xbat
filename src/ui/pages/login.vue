@@ -115,8 +115,8 @@ const { $authStore, $store } = useNuxtApp();
 const { vNotEmpty } = useFormValidation();
 
 useSeoMeta({
-    title: "xbat - login",
-    ogTitle: "xbat - login",
+    title: "Login",
+    ogTitle: "Login",
     description: "Login to xbat",
     ogDescription: "Login to xbat"
 });

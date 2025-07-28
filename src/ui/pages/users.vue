@@ -293,6 +293,13 @@ import { deepClone } from "~/utils/misc";
 import { sanitizeDate } from "~/utils/date";
 import { ArrayUtils } from "~/utils/array";
 
+useSeoMeta({
+    title: "Users",
+    ogTitle: "Users",
+    description: "Users management for xbat",
+    ogDescription: "Users management for xbat"
+});
+
 const headers = [
     {
         title: "User",
