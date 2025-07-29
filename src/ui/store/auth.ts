@@ -75,9 +75,9 @@ export const useAuthStore = defineStore("auth", () => {
 
     const tokenExpired = ref(false);
 
-    const clearToken = (): void => {
+    const clearToken = (expired = false): void => {
         token.value = null;
-        tokenExpired.value = true;
+        tokenExpired.value = expired;
     };
 
     const resetTokenState = (): void => {
@@ -105,7 +105,7 @@ export const useAuthStore = defineStore("auth", () => {
             user.value = data;
         } catch (error) {
             console.error(error);
-            clearToken();
+            clearToken(true);
             clearUser();
         }
     };

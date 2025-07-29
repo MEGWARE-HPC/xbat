@@ -14,7 +14,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
             await $authStore.loadUser();
         } catch (error) {
             console.error("Error loading user:", error);
-            $authStore.clearToken();
+            $authStore.clearToken(true);
             return navigateTo("/login");
         }
         if (!user.value) return navigateTo("/login");
