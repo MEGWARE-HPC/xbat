@@ -87,6 +87,7 @@ import {
     mdiInformation,
     mdiFolderZip,
     mdiGestureTapButton,
+    mdiLightningBoltOutline,
     mdiCheckboxMarked,
     mdiCheckboxBlankOutline
 } from "@mdi/js";
@@ -224,6 +225,7 @@ export default defineNuxtPlugin((app) => {
                 read: mdiRead,
                 info: mdiInformation,
                 gestureTap: mdiGestureTapButton,
+                lightningBolt: mdiLightningBoltOutline,
                 checkboxMark: mdiCheckboxMarked,
                 checkboxBlank: mdiCheckboxBlankOutline
             },

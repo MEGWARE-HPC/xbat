@@ -126,7 +126,6 @@ const { $api } = useNuxtApp();
 const state = reactive({
     selected: [],
     noData: false,
-    nodesWithMeasurements: {},
     graphCount: 1,
     synchronizeGraphs: true,
     missing: [] // selected jobs that could not be accounted for during metric intersection
