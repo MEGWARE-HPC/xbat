@@ -28,6 +28,9 @@ export const usePreferences = () => {
         }),
         infoCollapsed: useCookie("xbat_info-collapsed", {
             default: () => false
+        }),
+        overviewItemsPerPage: useCookie("xbat_overview-items-per-page", {
+            default: () => 10
         })
     };
 };

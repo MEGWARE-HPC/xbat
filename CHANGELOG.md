@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 -   extended API CSV endpoint to export multiple metrics at once (#20)
 -   syntax highlighting support for CSV language in editor (#8)
 -   endpoint for energy consumption (#88)
+-   cpu and gpu energy consumption of jobs to benchmark overview (#51)
 -   customizable job variable sort of values (#74)
 -   array support to job variables (#76)
 
@@ -26,6 +27,8 @@ All notable changes to this project will be documented in this file.
 -   made the DocsNavigation loop (#32)
 -   open external links in the document in new tabs (#85)
 -   removed the beta prefix since xbat is released
+-   energy consumption statistics in sidebar (now also includes previously missing entries like DRAM etc.)
+-   selected benchmark overview table page size is now persistent (#62)
 
 ### Fixed
 
