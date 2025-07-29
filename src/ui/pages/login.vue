@@ -109,7 +109,6 @@
 </template>
 
 <script setup lang="ts">
-const route = useRoute();
 const router = useRouter();
 const { $authStore, $store } = useNuxtApp();
 const { vNotEmpty } = useFormValidation();
@@ -144,11 +143,11 @@ const state = reactive<{
 });
 
 const error = computed(() => $store.error);
-
 onMounted(() => {
-    if (route.query.reason === "expired") {
+    if ($authStore.tokenExpired) {
         state.snackbarMessage = "Session expired. Please log in again.";
         state.snackbarVisible = true;
+        $authStore.resetTokenState();
     }
     if (error.value?.status === 401) {
         state.snackbarMessage = error.value.detail || "Session expired";

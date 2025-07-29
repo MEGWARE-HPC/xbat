@@ -14,10 +14,10 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
             await $authStore.loadUser();
         } catch (error) {
             console.error("Error loading user:", error);
-            return navigateTo({ path: "/login", query: { reason: "expired" } });
+            $authStore.clearToken();
+            return navigateTo("/login");
         }
-        if (!user.value)
-            return navigateTo({ path: "/login", query: { reason: "expired" } });
+        if (!user.value) return navigateTo("/login");
     }
 
     if (to.path === "/login") {
