@@ -73,8 +73,15 @@ export const useAuthStore = defineStore("auth", () => {
         $store.error = (error as FetchError).data;
     };
 
-    const clearToken = (): void => {
+    const tokenExpired = ref(false);
+
+    const clearToken = (expired = false): void => {
         token.value = null;
+        tokenExpired.value = expired;
+    };
+
+    const resetTokenState = (): void => {
+        tokenExpired.value = false;
     };
 
     const clearUser = (): void => {
@@ -98,7 +105,7 @@ export const useAuthStore = defineStore("auth", () => {
             user.value = data;
         } catch (error) {
             console.error(error);
-            clearToken();
+            clearToken(true);
             clearUser();
         }
     };
@@ -127,7 +134,7 @@ export const useAuthStore = defineStore("auth", () => {
     };
 
     const logout = async () => {
-        revoke();
+        await revoke();
     };
 
     const login = async ({
@@ -176,6 +183,8 @@ export const useAuthStore = defineStore("auth", () => {
         loadUser,
         backendUrl,
         frontendUrl,
+        tokenExpired,
+        resetTokenState,
         clearToken,
         requestUrl
     };
