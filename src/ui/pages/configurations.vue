@@ -505,13 +505,15 @@
                                                 ></v-icon>
                                             </div>
                                         </template>
-                                        {{
-                                            "configurationName" in
-                                            v.configuration
-                                                ? v.configuration
-                                                      .configurationName
-                                                : id
-                                        }}
+                                        <span class="configuration-name">
+                                            {{
+                                                "configurationName" in
+                                                v.configuration
+                                                    ? v.configuration
+                                                          .configurationName
+                                                    : id
+                                            }}
+                                        </span>
                                         <template #append>
                                             <v-btn-group
                                                 devided
@@ -931,6 +933,10 @@ watch(
     .list {
         overflow-y: auto;
         max-height: 80vh;
+    }
+    .configuration-name {
+        white-space: normal;
+        word-break: break-all;
     }
 }
 

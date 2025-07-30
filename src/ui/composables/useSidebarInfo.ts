@@ -67,13 +67,11 @@ const softwareEntries: SidebarEntry[] = [
 export const useSidebarInfo = ({
     benchmark,
     job,
-    nodeInfo,
-    powerConsumption
+    nodeInfo
 }: {
     benchmark: Ref<Benchmark>;
     job: Ref<Job>;
     nodeInfo: Ref<SystemInfo>;
-    powerConsumption: Ref<{ [key: number]: { [key: string]: number } }>;
 }) => {
     const benchmarkItems = computed(() => {
         const benchmarkInfo = {
@@ -154,18 +152,6 @@ export const useSidebarInfo = ({
                     _job.capturetimeSeconds
                 }s)`,
                 key: "capturedRuntime"
-            });
-        }
-
-        if (job.value.jobId in powerConsumption.value) {
-            Object.entries(
-                powerConsumption.value[job.value.jobId] || {}
-            ).forEach(([key, value]) => {
-                items.push({
-                    title: key,
-                    key: key,
-                    value: `${value} kWh`
-                });
             });
         }
 
