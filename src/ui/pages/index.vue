@@ -193,7 +193,6 @@ import { useRouter, onBeforeRouteLeave } from "vue-router";
 import { sanitizeDate } from "~/utils/date";
 import { encodeBraceNotation } from "~/utils/braceNotation";
 
-<<<<<<< HEAD
 useSeoMeta({
     title: "xbat",
     ogTitle: "xbat",
@@ -201,11 +200,6 @@ useSeoMeta({
     ogDescription: "xbat HPC application benchmarking and optimization tool"
 });
 
-const shareExplanation =
-    "Shared benchmarks are visible to all other members of the selected project";
-
-=======
->>>>>>> master
 const headers = [
     {
         title: "#",
