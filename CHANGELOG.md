@@ -28,6 +28,8 @@ All notable changes to this project will be documented in this file.
 -   energy consumption statistics in sidebar (now also includes previously missing entries like DRAM etc.)
 -   selected benchmark overview table page size is now persistent (#62)
 -   improved display of long configuration name (#55)
+-   error message with missing metrics in benchmark comparison (#105)
+-   optimized and refactored metrics endpoint
 
 ### Fixed
 
@@ -45,6 +47,8 @@ All notable changes to this project will be documented in this file.
 -   missing group/metric and trace identifier in CSV output (#98)
 -   broken links and content in the documentation (#85)
 -   in-site navigation highlighting (#101)
+-   duplicate selections in benchmark comparison (#95)
+-   action of clear button in benchmark comparison (#105)
 
 ## v1.0.0 - 2025-04-17
 

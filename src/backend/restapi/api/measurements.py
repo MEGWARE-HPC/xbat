@@ -686,18 +686,18 @@ def jobs_cacheable(jobIds):
     return cacheable
 
 
-async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
+async def get_available_metrics(jobIds=None, intersect=False):
     """
     Check all available metrics and nodes by querying each table for a single entry containing the specified jobId.
     Assume homogeneous nodes and thus same metrics available for all of them.
-    Use UNION ALL to combine to single query, however this requires checking for the existence of each table first.
-    Otherwise UNION ALL will fail if any table is not present.
+    Use INTERSECT ALL to combine to single query, however this requires checking for the existence of each table first.
+    Otherwise INTERSECT ALL will fail if any table is not present.
 
-    :param jobId: ID of job
+    :param jobIds: List of job IDs
     """
 
     # do not cache default metrics to prevent invalid cache entries after update
-    if not jobId and not jobIds:
+    if not jobIds:
         return METRICS, 200
 
     valkey_key = get_request_uri()
@@ -705,8 +705,6 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
 
     if cache is not None:
         return cache, 200
-
-    jobIds = jobIds if jobIds else [jobId]
 
     # prevent caching of unfinished jobs
     cacheable = jobs_cacheable(jobIds)
@@ -802,11 +800,6 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
             "jobId": job_id
         })
 
-    if len(jobIds) == 1:
-        if cacheable:
-            valkey.set(valkey_key, aggregated[jobIds[0]])
-        return aggregated[jobIds[0]], 200
-
     if not intersect:
         if cacheable:
             valkey.set(valkey_key, aggregated)
@@ -823,7 +816,17 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
     ]
 
     if not len(aggregated_metrics):
-        raise httpErrors.BadRequest()
+        response = {"metrics": {}, "nodes": [], "missing": skipped_jobs}
+        if cacheable:
+            valkey.set(valkey_key, response)
+        return response, 200
+
+    if len(jobIds) == 1:
+        response = aggregated[jobIds[0]]
+        response["missing"] = [] if response["metrics"] else [jobIds[0]]
+        if cacheable:
+            valkey.set(valkey_key, response)
+        return response, 200
 
     # check that metrics are available in all jobs
     groups = set.intersection(*map(set, [x.keys()

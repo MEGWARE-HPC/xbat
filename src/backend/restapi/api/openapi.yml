@@ -631,7 +631,6 @@ paths:
       operationId: backend.restapi.api.measurements.get_available_metrics
       parameters:
         # oneOf not working here for jobId(s) - see JobIdQuery definition
-        - $ref: "#/components/parameters/JobIdQuery"
         - $ref: "#/components/parameters/JobIdsQuery"
         - in: query
           name: intersect
