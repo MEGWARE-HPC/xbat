@@ -723,11 +723,11 @@ async def process_table(csvs_path, jobId_map):
     if table_dict:
         jobId_list = []
         try:
-            with open(table_dict["mem_usage"],
+            with open(table_dict["likwid_l2_bw"],
                       'r',
                       newline='',
-                      encoding='utf-8') as mem_usage_file:
-                reader = csv.DictReader(mem_usage_file)
+                      encoding='utf-8') as likwid_l2_bw_file:
+                reader = csv.DictReader(likwid_l2_bw_file)
                 if 'jobId' not in reader.fieldnames:
                     logger.error(f"'jobId' column not found in {csvs_path}")
                 for row in reader:
@@ -739,7 +739,7 @@ async def process_table(csvs_path, jobId_map):
         jobId_list_str = [f"'{x}'" for x in jobId_list]
         jobIds = f"({', '.join(jobId_list_str)})"
         data_count = await questdb.execute_query(
-            f"SELECT COUNT(*) AS count FROM mem_usage WHERE jobId IN {jobIds};"
+            f"SELECT COUNT(*) AS count FROM likwid_l2_bw WHERE jobId IN {jobIds};"
         )
         if data_count:
             data_count = int(data_count[0]['count'])
