@@ -1,6 +1,6 @@
 import { operators } from "~/utils/misc";
 import { decodeBraceNotation, isValidBrace } from "~/utils/braceNotation";
-import { humanSizeFixed } from "~/utils/conversion";
+import { CONVERSION_SIZES } from "~/utils/conversion";
 import { colors } from "~/utils/colors";
 import { ArrayUtils } from "~/utils/array";
 import { extractNumber } from "~/utils/string";
@@ -9,6 +9,17 @@ import type { Graph, Trace } from "~/types/graph";
 import type { StoreGraphReturnDefault } from "~/store/graph";
 
 const { allTitels: benchmarkTitles } = useNodeBenchmarks();
+
+const parseGeneralUnit = (unit: string) => {
+    const match = unit.match(/^([KMGTP]?)([a-zA-Z\/]+)$/);
+    if (!match) return { prefix: "", base: unit, index: 0 };
+    const [, prefix, base] = match;
+    return {
+        prefix,
+        base,
+        index: CONVERSION_SIZES.indexOf(prefix.toUpperCase())
+    };
+};
 
 export const useGraph = () => {
     const { createLayout, createTrace, calculateTimestamps } = useGraphBase();
@@ -19,26 +30,21 @@ export const useGraph = () => {
         const storeGraph = $graphStore.useStoreGraph(graphId, "default");
 
         const query = storeGraph.query.value;
+        const overrides = storeGraph.overrides.value;
 
-        if (!Object.keys(query).length)
+        if (!Object.keys(query).length) {
             return {
                 traces: [],
                 layout: createLayout({ dataCount: 0, noData: true })
             };
+        }
 
-        const overrides = storeGraph.overrides.value;
-
-        let all: {
-            traces: Partial<Trace>[];
-            dataCount: number;
-            unit: string;
-            traceCount: number;
-        } = {
-            traces: [],
-            dataCount: 0,
-            unit: "",
-            traceCount: 0
-        };
+        const unitInfoList: {
+            baseUnit: string;
+            unitIndex: number;
+            jobId: number;
+            prefix: string;
+        }[] = [];
 
         for (const jobId of query.jobIds) {
             let prefix = query.jobIds.length > 1 ? `${jobId} ` : "";
@@ -49,16 +55,72 @@ export const useGraph = () => {
             )
                 prefix = `${overrides.prefixes[jobId]} `;
 
-            let { traces, dataCount, unit } = assembleGraph({
-                storeGraph,
-                jobId: jobId,
-                prefix,
-                traceCount: all.traceCount
+            const measurements = $graphStore.getMeasurements({
+                ...query,
+                jobIds: [jobId]
             });
-            all.traces.push(...traces);
-            all.dataCount += dataCount;
-            all.unit = unit;
-            all.traceCount += traces.length;
+
+            if (!measurements || !measurements.traces?.length) continue;
+
+            const unit = measurements.traces[0]?.unit;
+            if (!unit) continue;
+
+            const parsed = parseGeneralUnit(unit);
+            unitInfoList.push({
+                baseUnit: parsed.base,
+                unitIndex: parsed.index,
+                jobId,
+                prefix
+            });
+        }
+
+        if (unitInfoList.length === 0) {
+            return {
+                traces: [],
+                layout: createLayout({ dataCount: 0, noData: true })
+            };
+        }
+
+        const allBaseUnits = new Set(unitInfoList.map((u) => u.baseUnit));
+        if (allBaseUnits.size > 1) {
+            console.warn("Inconsistent base units across jobs:", [
+                ...allBaseUnits
+            ]);
+        }
+
+        const unifiedBaseUnit = unitInfoList[0].baseUnit;
+        const unifiedUnitIndex = Math.max(
+            ...unitInfoList.map((u) => u.unitIndex)
+        );
+        const unifiedUnit = `${CONVERSION_SIZES[unifiedUnitIndex]}${unifiedBaseUnit}`;
+
+        let all: {
+            traces: Partial<Trace>[];
+            dataCount: number;
+            unit: string;
+            traceCount: number;
+        } = {
+            traces: [],
+            dataCount: 0,
+            unit: unifiedUnit,
+            traceCount: 0
+        };
+
+        for (const { jobId, prefix } of unitInfoList) {
+            const result = assembleGraph({
+                storeGraph,
+                jobId,
+                prefix,
+                traceCount: all.traceCount,
+                unifiedBaseUnit,
+                unifiedUnitIndex
+            });
+
+            if (!result || !result.traces.length) continue;
+
+            all.traces.push(...result.traces);
+            all.dataCount += result.dataCount;
+            all.traceCount += result.traces.length;
         }
 
         // visible traces resets on group/metric/level change -> set all traces to visible initially
@@ -109,12 +171,16 @@ export const useGraph = () => {
         storeGraph,
         jobId,
         prefix = "",
-        traceCount = 0
+        traceCount = 0,
+        unifiedBaseUnit,
+        unifiedUnitIndex
     }: {
         storeGraph: StoreGraphReturnDefault;
         jobId: number;
         prefix?: string;
         traceCount?: number;
+        unifiedBaseUnit: string;
+        unifiedUnitIndex: number;
     }) => {
         const { $graphStore } = useNuxtApp();
 
@@ -124,13 +190,16 @@ export const useGraph = () => {
             ...query,
             jobIds: [jobId]
         });
+
         const preferences = storeGraph.preferences.value;
 
         if (!result || !result?.traces?.length)
             return {
                 traces: [],
                 dataCount: 0,
-                unit: ""
+                unit: "",
+                baseUnit: "",
+                unitIndex: 0
             };
 
         let measurements = result.traces;
@@ -141,6 +210,7 @@ export const useGraph = () => {
 
         // assume same unit for all traces
         const unit = measurements[0]?.unit || "";
+        const parsedUnit = parseGeneralUnit(unit);
 
         const modifiers = storeGraph.modifiers.value;
         const settings = storeGraph.settings.value;
@@ -173,7 +243,12 @@ export const useGraph = () => {
 
             const metricName = prefix + (overrideName || metric.name);
             const metricRawName = metric.rawName;
-            const values = metric.values;
+
+            const conversionFactor = Math.pow(
+                1000,
+                parsedUnit.index - unifiedUnitIndex
+            );
+            const values = metric.values.map((v) => v * conversionFactor);
             xMax = Math.max(values.length, xMax);
 
             let visible: string | boolean = settings.visible.length
@@ -227,7 +302,7 @@ export const useGraph = () => {
                 tableName = metric.id;
 
             let trace: Trace = createTrace({
-                x: calculateTimestamps(metric.values.length, metric.interval),
+                x: calculateTimestamps(values.length, metric.interval),
                 y: values,
                 name: metricName,
 
@@ -236,7 +311,7 @@ export const useGraph = () => {
                 visible: visible,
                 rawName: metricRawName,
                 table: metric.table,
-                unit: unit,
+                unit: `${CONVERSION_SIZES[unifiedUnitIndex]}${parsedUnit.base}`,
                 color: palette[traceCount % palette.length],
                 uid: metric.uid
             });
@@ -251,94 +326,12 @@ export const useGraph = () => {
             traces.push(trace);
         }
 
-        for (const [metric, statistics] of Object.entries(result.statistics)) {
-            if (!settings.visibleStatistics?.includes(metric)) continue;
-
-            const legendgroup = `stats_${metric}`;
-            const baseUid = `${metric}-${jobId}`;
-            traces.push(
-                createTrace({
-                    name: `${metric} avg`,
-                    y: statistics.values.avg,
-                    interval,
-                    legendgroup: legendgroup,
-                    width: 3,
-                    auxiliary: true,
-                    color: palette[traceCount % palette.length],
-                    uid: `${baseUid}-avg`
-                }),
-                createTrace({
-                    name: `${metric} max`,
-                    y: statistics.values.max,
-                    interval,
-                    legendgroup: legendgroup,
-                    // fill: "tonexty",
-                    width: 3,
-                    auxiliary: true,
-                    color: palette[(traceCount + 1) % palette.length],
-                    uid: `${baseUid}-max`
-                }),
-                createTrace({
-                    name: `${metric} min`,
-                    y: statistics.values.min,
-                    interval,
-                    legendgroup: legendgroup,
-                    // fill: "tonexty",
-                    width: 3,
-                    auxiliary: true,
-                    color: palette[(traceCount + 2) % palette.length],
-                    uid: `${baseUid}-min`
-                })
-            );
-            traceCount += 3;
-        }
-
-        const nodes = storeGraph.nodes.value;
-
-        if (modifiers.systemBenchmarks?.length) {
-            modifiers.systemBenchmarks.forEach((benchmark) => {
-                const nodeNames = Object.keys(nodes[query.jobIds[0]]);
-                const node =
-                    nodes[query.jobIds[0]]?.[
-                        query.level == "job" ? nodeNames[0] : query.node
-                    ];
-                let peak = node?.benchmarks?.[benchmark];
-                if (!node || !peak) return;
-
-                peak = peak * modifiers.systemBenchmarksScalingFactor;
-
-                if (query.level == "job") peak = peak * nodeNames.length;
-
-                const isBandwidth = benchmark.includes("bandwidth");
-                const baseUnit = unit.substring(
-                    0,
-                    unit.length - (isBandwidth ? "B/s".length : "FLOPS".length)
-                );
-
-                const uid = `${query.node}-peak-${benchmark}`;
-                const paletteColor = palette[traceCount % palette.length];
-
-                const scaledPeak = humanSizeFixed(peak, baseUnit);
-                traces.push(
-                    createTrace({
-                        name: `Peak ${benchmarkTitles.value[benchmark]}`,
-                        y: new Array(xMax).fill(scaledPeak),
-                        interval,
-                        legendgroup: "benchmarks",
-                        width: 3,
-                        auxiliary: true,
-                        color: paletteColor,
-                        uid: uid
-                    })
-                );
-                traceCount += 1;
-            });
-        }
-
         return {
             traces,
             dataCount,
-            unit
+            unit,
+            baseUnit: parsedUnit.base,
+            unitIndex: parsedUnit.index
         };
     };
 
