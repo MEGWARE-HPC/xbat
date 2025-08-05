@@ -326,6 +326,90 @@ export const useGraph = () => {
             traces.push(trace);
         }
 
+        for (const [metric, statistics] of Object.entries(result.statistics)) {
+            if (!settings.visibleStatistics?.includes(metric)) continue;
+
+            const legendgroup = `stats_${metric}`;
+            const baseUid = `${metric}-${jobId}`;
+            traces.push(
+                createTrace({
+                    name: `${metric} avg`,
+                    y: statistics.values.avg,
+                    interval,
+                    legendgroup: legendgroup,
+                    width: 3,
+                    auxiliary: true,
+                    color: palette[traceCount % palette.length],
+                    uid: `${baseUid}-avg`
+                }),
+                createTrace({
+                    name: `${metric} max`,
+                    y: statistics.values.max,
+                    interval,
+                    legendgroup: legendgroup,
+                    // fill: "tonexty",
+                    width: 3,
+                    auxiliary: true,
+                    color: palette[(traceCount + 1) % palette.length],
+                    uid: `${baseUid}-max`
+                }),
+                createTrace({
+                    name: `${metric} min`,
+                    y: statistics.values.min,
+                    interval,
+                    legendgroup: legendgroup,
+                    // fill: "tonexty",
+                    width: 3,
+                    auxiliary: true,
+                    color: palette[(traceCount + 2) % palette.length],
+                    uid: `${baseUid}-min`
+                })
+            );
+            traceCount += 3;
+        }
+
+        const nodes = storeGraph.nodes.value;
+
+        if (modifiers.systemBenchmarks?.length) {
+            modifiers.systemBenchmarks.forEach((benchmark) => {
+                const nodeNames = Object.keys(nodes[query.jobIds[0]]);
+                const node =
+                    nodes[query.jobIds[0]]?.[
+                        query.level == "job" ? nodeNames[0] : query.node
+                    ];
+                let peak = node?.benchmarks?.[benchmark];
+                if (!node || !peak) return;
+
+                peak = peak * modifiers.systemBenchmarksScalingFactor;
+
+                if (query.level == "job") peak = peak * nodeNames.length;
+
+                const isBandwidth = benchmark.includes("bandwidth");
+                const baseUnit = unit.substring(
+                    0,
+                    unit.length - (isBandwidth ? "B/s".length : "FLOPS".length)
+                );
+
+                const uid = `${query.node}-peak-${benchmark}`;
+                const paletteColor = palette[traceCount % palette.length];
+
+                const scaledPeak = humanSizeFixed(peak, baseUnit);
+                traces.push(
+                    createTrace({
+                        name: `Peak ${benchmarkTitles.value[benchmark]}`,
+                        y: new Array(xMax).fill(scaledPeak),
+                        interval,
+                        legendgroup: "benchmarks",
+                        width: 3,
+                        auxiliary: true,
+                        color: paletteColor,
+                        uid: uid
+                    })
+                );
+                traceCount += 1;
+            });
+        }
+
         return {
             traces,
             dataCount,
