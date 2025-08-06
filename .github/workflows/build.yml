@@ -1,23 +1,92 @@
-name: Build xbat daemon
+name: Build and Test xbat daemon
 
 on:
   push:
     branches:
       - main
+  pull_request:
 
 jobs:
   build-el8:
+    name: Build for AlmaLinux 8
     runs-on: ubuntu-latest
+    outputs:
+      rpm_name: ${{ steps.get_rpm.outputs.rpm_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Build for AlmaLinux 8
+
+      - name: Run build.sh for el8
+        working-directory: src/xbatd
         run: ./build.sh 1.0.0 --release rc0 --distro el8 --executor docker
 
+      - name: Find built RPM (el8)
+        id: get_rpm
+        working-directory: src/xbatd
+        run: |
+          RPM_NAME=$(ls xbatd-1.0.0-rc0.el8*.rpm)
+          echo "Found RPM: $RPM_NAME"
+          echo "rpm_name=$RPM_NAME" >> "$GITHUB_OUTPUT"
+
   build-el9:
+    name: Build for AlmaLinux 9
     runs-on: ubuntu-latest
+    outputs:
+      rpm_name: ${{ steps.get_rpm.outputs.rpm_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Build for AlmaLinux 9
+
+      - name: Run build.sh for el9
+        working-directory: src/xbatd
         run: ./build.sh 1.0.0 --release rc0 --distro el9 --executor docker
+
+      - name: Find built RPM (el9)
+        id: get_rpm
+        working-directory: src/xbatd
+        run: |
+          RPM_NAME=$(ls xbatd-1.0.0-rc0.el9*.rpm)
+          echo "Found RPM: $RPM_NAME"
+          echo "rpm_name=$RPM_NAME" >> "$GITHUB_OUTPUT"
+
+  install-el8:
+    name: Install test on AlmaLinux 8
+    needs: build-el8
+    runs-on: ubuntu-latest
+    container: almalinux:8
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Copy built RPM from workspace
+        run: |
+          cp src/xbatd/xbatd-1.0.0-rc0.el8*.rpm .
+
+      - name: Install RPM
+        run: |
+          dnf install -y ./xbatd-1.0.0-rc0.el8*.rpm
+
+      - name: Remove RPM
+        run: |
+          dnf remove -y xbatd || true
+
+  install-el9:
+    name: Install test on AlmaLinux 9
+    needs: build-el9
+    runs-on: ubuntu-latest
+    container: almalinux:9
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Copy built RPM from workspace
+        run: |
+          cp src/xbatd/xbatd-1.0.0-rc0.el9*.rpm .
+
+      - name: Install RPM
+        run: |
+          dnf install -y ./xbatd-1.0.0-rc0.el9*.rpm
+
+      - name: Remove RPM
+        run: |
+          dnf remove -y xbatd || true
