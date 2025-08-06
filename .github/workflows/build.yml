@@ -1,0 +1,23 @@
+name: Build xbat daemon
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-el8:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Build for AlmaLinux 8
+        run: ./build.sh 1.0.0 --release rc0 --distro el8 --executor docker
+
+  build-el9:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Build for AlmaLinux 9
+        run: ./build.sh 1.0.0 --release rc0 --distro el9 --executor docker
