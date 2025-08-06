@@ -45,6 +45,7 @@ All notable changes to this project will be documented in this file.
 -   missing group/metric and trace identifier in CSV output (#98)
 -   broken links and content in the documentation (#85)
 -   in-site navigation highlighting (#101)
+-   hydration attribute mismatch problem (#115)
 
 ## v1.0.0 - 2025-04-17
 
