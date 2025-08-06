@@ -75,13 +75,13 @@ int CNvidiaGPU::prepare() {
                 auto result = nvmlDeviceGetFieldValues(device, 2, fields);
                 if (result == NVML_SUCCESS) {
                     // TODO Time between initial value and first query from collect() is not equal to interval
-                    initial_nvlink_tx_throughput.push_back(fields[0].value.ullVal);
-                    initial_nvlink_rx_throughput.push_back(fields[1].value.ullVal);
+                    initial_nvlink_rx_throughput.push_back(fields[0].value.ullVal);
+                    initial_nvlink_tx_throughput.push_back(fields[1].value.ullVal);
                 }
                 else {
                     // TODO Might require error info instead of filling zeros
-                    initial_nvlink_tx_throughput.push_back(0);
                     initial_nvlink_rx_throughput.push_back(0);
+                    initial_nvlink_tx_throughput.push_back(0);
                 }
             }
         }
