@@ -198,8 +198,8 @@ int CNvidiaGPU::collect() {
         fields[1].fieldId = NVML_FI_DEV_NVLINK_THROUGHPUT_DATA_TX;
         fields[1].scopeId = UINT_MAX;
         auto result = nvmlDeviceGetFieldValues(device, 2, fields);
-        auto tx_sum = (fields[0].value.ullVal - tx_former_sum) / (interval / 1000);
-        auto rx_sum = (fields[1].value.ullVal - rx_former_sum) / (interval / 1000);
+        auto rx_sum = (fields[0].value.ullVal - rx_former_sum) / (interval / 1000);
+        auto tx_sum = (fields[1].value.ullVal - tx_former_sum) / (interval / 1000);
         logger.log(CLogging::info, "Interval: " + std::to_string(interval / 1000) + " Sum TX: " + std::to_string(tx_sum) + " Sum RX: " + std::to_string(rx_sum) + " " + result_info);
     }
 
