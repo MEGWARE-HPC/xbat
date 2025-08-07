@@ -58,7 +58,8 @@ export default defineNuxtConfig({
         },
         experimental: {
             // @ts-expect-error
-            search: true
+            search: true,
+            payloadExtraction: true
         }
     },
     site: { url: "xbat.dev" },
