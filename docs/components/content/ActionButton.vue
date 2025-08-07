@@ -5,25 +5,14 @@
             class="btn"
             :append-icon="props.icon"
             :href="props.href"
-            :target="props.target"
-            rel="noopener noreferrer"
             ><ContentSlot :use="$slots.default"
         /></v-btn>
     </div>
 </template>
 <script setup lang="ts">
 const props = withDefaults(
-    defineProps<{
-        color?: string;
-        icon?: string;
-        href: string;
-        target?: string;
-    }>(),
-    {
-        color: "primary",
-        href: "#",
-        target: "_self"
-    }
+    defineProps<{ color: string; icon: string | undefined; href: string }>(),
+    { color: "primary", href: "#" }
 );
 </script>
 <style scoped lang="scss">
