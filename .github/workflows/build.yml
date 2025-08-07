@@ -82,7 +82,6 @@ jobs:
 
             dnf install -y ./rpm_dir/xbatd-1.0.0-rc0.el8*.rpm && \
 
-            cd src/xbatd && \
             ./setup.sh install --home-mnt /home/ --executor docker --workers 4 && \
 
             if [ -f /usr/bin/xbatd ]; then
@@ -126,7 +125,6 @@ jobs:
 
             dnf install -y ./rpm_dir/xbatd-1.0.0-rc0.el9*.rpm && \
 
-            cd src/xbatd && \
             ./setup.sh install --home-mnt /home/ --executor docker --workers 4 && \
 
             if [ -f /usr/bin/xbatd ]; then
