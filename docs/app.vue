@@ -2,24 +2,25 @@
     <v-app>
         <TopBar />
         <NuxtLayout>
-            <NuxtLoadingIndicator></NuxtLoadingIndicator>
+            <NuxtLoadingIndicator />
             <NuxtPage />
         </NuxtLayout>
     </v-app>
 </template>
-<script lang="ts" setup>
+
+<script setup lang="ts">
 useHead({
     htmlAttrs: {
-        lang: "en",
-        style: "font-size: 14px; font-family: 'Source Sans Pro', sans-serif;"
+        lang: "en"
     }
 });
 
-const { data: nav } = await useAsyncData("navigation", () =>
-    fetchContentNavigation()
-);
-
-provide("navigation", nav.value);
+if (import.meta.client) {
+    const { data: nav } = await useAsyncData("navigation", () =>
+        fetchContentNavigation()
+    );
+    provide("navigation", nav.value);
+}
 </script>
 <style lang="scss">
 @use "~/assets/css/general.scss" as *;
@@ -28,5 +29,9 @@ provide("navigation", nav.value);
 :root {
     scroll-padding-top: 65px;
     background-color: $background;
+}
+html {
+    font-size: 14px;
+    font-family: "Source Sans Pro", sans-serif;
 }
 </style>

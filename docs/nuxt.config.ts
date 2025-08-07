@@ -25,7 +25,8 @@ export default defineNuxtConfig({
     ],
     nitro: {
         prerender: {
-            routes: [...routes]
+            routes: [...routes],
+            crawlLinks: true
         }
     },
     image: {
@@ -64,7 +65,7 @@ export default defineNuxtConfig({
     experimental: {
         payloadExtraction: true
     },
-    site: { url: "xbat.dev" },
+    site: { url: "https://xbat.dev/" },
     router: {
         options: {
             scrollBehaviorType: "smooth"
