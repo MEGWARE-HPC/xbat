@@ -100,7 +100,7 @@ jobs:
           sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo
 
       - name: Install RPM (el9)
-        run: dnf install -y --replacefiles /rpm_dir/xbatd-1.0.0-rc0.el9*.rpm
+        run: dnf install -y /rpm_dir/xbatd-1.0.0-rc0.el9*.rpm
 
       - name: Remove RPM (el9)
         run: dnf remove -y xbatd || true
