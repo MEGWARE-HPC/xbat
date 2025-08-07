@@ -9,7 +9,10 @@
         >
             <template v-if="items">
                 <div class="mt-13">
-                    <div class="doc-type-head text-medium-emphasis">
+                    <div
+                        v-if="$store.currentDocType"
+                        class="doc-type-head text-medium-emphasis"
+                    >
                         {{ $store.currentDocType }} Documentation
                     </div>
                     <div class="d-flex align-center justify-center">
@@ -40,10 +43,9 @@
                     mandatory
                     open-strategy="multiple"
                 >
-                    <template v-for="item in items.children">
+                    <template v-for="item in items.children" :key="item._path">
                         <v-list-item
                             v-if="!item.children?.length"
-                            :key="`item-${item._path}`"
                             :title="item.title"
                             :value="item._path"
                             :to="item._path"
@@ -52,8 +54,7 @@
                             :aria-current="
                                 route.path === item._path ? 'page' : undefined
                             "
-                        ></v-list-item>
-
+                        />
                         <v-list-group
                             v-else
                             :key="`group-${item._path}`"
@@ -66,7 +67,7 @@
                                     :id="`group-${encodeURIComponent(
                                         item._path
                                     )}`"
-                                ></v-list-item>
+                                />
                             </template>
 
                             <v-list-item
@@ -84,7 +85,7 @@
                                         ? 'page'
                                         : undefined
                                 "
-                            ></v-list-item>
+                            />
                         </v-list-group>
                     </template>
                 </v-list>
@@ -98,21 +99,6 @@ import { useWindowSize } from "@vueuse/core";
 
 const route = useRoute();
 const { $store } = useNuxtApp();
-
-const isMobile = ref(false);
-
-if (import.meta.client) {
-    const { width } = useWindowSize();
-    watchEffect(() => {
-        isMobile.value = width.value <= 992;
-    });
-}
-
-const docStartingRoutes: Record<string, string> = {
-    user: "/docs/user/introduction",
-    admin: "/docs/admin/setup/installation",
-    developer: "/docs/developer/contribute"
-};
 
 const props = defineProps({
     links: {
@@ -131,6 +117,14 @@ watch(
     { immediate: true }
 );
 
+const isMobile = ref(false);
+onMounted(() => {
+    const { width } = useWindowSize();
+    watchEffect(() => {
+        isMobile.value = width.value <= 992;
+    });
+});
+
 const items = computed(() => {
     const categories =
         Array.isArray(props.links) && props.links[0]?.children
@@ -144,22 +138,25 @@ const items = computed(() => {
     return filtered.length ? filtered[0] : null;
 });
 
+const docStartingRoutes: Record<string, string> = {
+    user: "/docs/user/introduction",
+    admin: "/docs/admin/setup/installation",
+    developer: "/docs/developer/contribute"
+};
+
 const docTypes = ["user", "admin", "developer"];
 
 const currentIndex = computed(() => {
     const docType = $store.currentDocType;
-    return docType && docTypes.includes(docType)
-        ? docTypes.indexOf(docType)
-        : 0;
+    return docTypes.includes(docType) ? docTypes.indexOf(docType) : 0;
 });
 
-const nextIndex = computed(() => (currentIndex.value + 1) % docTypes.length);
-const prevIndex = computed(
-    () => (currentIndex.value - 1 + docTypes.length) % docTypes.length
+const nextDocType = computed(
+    () => docTypes[(currentIndex.value + 1) % docTypes.length]
 );
-
-const nextDocType = computed(() => docTypes[nextIndex.value]);
-const prevDocType = computed(() => docTypes[prevIndex.value]);
+const prevDocType = computed(
+    () => docTypes[(currentIndex.value - 1 + docTypes.length) % docTypes.length]
+);
 </script>
 <style scoped lang="scss">
 @use "~/assets/css/colors.scss" as *;
