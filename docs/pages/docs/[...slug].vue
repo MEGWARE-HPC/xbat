@@ -94,8 +94,10 @@ definePageMeta({
 const route = useRoute();
 const { $store } = useNuxtApp();
 
-const { data: page } = await useAsyncData(`docs-${route.path}`, () =>
-    queryContent(route.path).findOne()
+const { data: page } = await useAsyncData(
+    `docs-${route.path}`,
+    () => queryContent(route.path).findOne(),
+    { lazy: true }
 );
 
 if (!page.value) {
