@@ -53,18 +53,13 @@ jobs:
     name: Install test on AlmaLinux 8
     needs: build-el8
     runs-on: ubuntu-latest
-    container: almalinux:8
+    container:
+      image: almalinux:8
+      options: --volume ${{ github.workspace }}/src/xbatd:/rpm_dir:ro
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Copy built RPM from workspace
-        run: |
-          cp src/xbatd/xbatd-1.0.0-rc0.el8*.rpm .
-
       - name: Install RPM
         run: |
-          dnf install -y ./xbatd-1.0.0-rc0.el8*.rpm
+          dnf install -y /rpm_dir/xbatd-1.0.0-rc0.el8*.rpm
 
       - name: Remove RPM
         run: |
@@ -74,18 +69,28 @@ jobs:
     name: Install test on AlmaLinux 9
     needs: build-el9
     runs-on: ubuntu-latest
-    container: almalinux:9
+    container:
+      image: almalinux:9
+      options: --volume ${{ github.workspace }}/src/xbatd:/rpm_dir:ro
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Copy built RPM from workspace
+      - name: Enable EPEL and install wheel via pip
         run: |
-          cp src/xbatd/xbatd-1.0.0-rc0.el9*.rpm .
+          dnf install -y epel-release
+          dnf config-manager --set-enabled crb
+          dnf update -y
+          dnf install -y python3-pip
+          pip3 install wheel
+
+
+      - name: Install amd-smi-lib dependency
+        run: |
+          dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm
+          sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo
+          dnf install -y amd-smi-lib
 
       - name: Install RPM
         run: |
-          dnf install -y ./xbatd-1.0.0-rc0.el9*.rpm
+          dnf install -y /rpm_dir/xbatd-1.0.0-rc0.el9*.rpm
 
       - name: Remove RPM
         run: |
