@@ -62,6 +62,7 @@ export default defineNuxtConfig({
             search: true
         }
     },
+    plugins: ["~/plugins/debug-hydration.ts"],
     site: { url: "xbat.dev" },
     router: {
         options: {
