@@ -34,6 +34,7 @@ jobs:
           name: rpm-el8
           path: src/xbatd/xbatd-1.0.0-rc0.el8*.rpm
 
+
   build-el9:
     name: Build for AlmaLinux 9
     runs-on: ubuntu-latest
@@ -59,6 +60,7 @@ jobs:
           name: rpm-el9
           path: src/xbatd/xbatd-1.0.0-rc0.el9*.rpm
 
+
   install-el8:
     name: Install and Test on AlmaLinux 8
     needs: build-el8
@@ -75,12 +77,25 @@ jobs:
         run: |
           docker run --rm -v ${{ github.workspace }}:/workdir -w /workdir almalinux:8 /bin/bash -c "
             echo -e '#!/bin/bash\nexit 0' > /usr/bin/systemctl && chmod +x /usr/bin/systemctl && \
+
+            dnf install -y rsync && \
+
             dnf install -y ./rpm_dir/xbatd-1.0.0-rc0.el8*.rpm && \
+
+            cd src/xbatd && \
             ./setup.sh install --home-mnt /home/ --executor docker --workers 4 && \
-            if [ -f /usr/bin/xbatd ]; then echo 'xbatd binary exists'; else echo 'xbatd missing' && exit 1; fi && \
+
+            if [ -f /usr/bin/xbatd ]; then
+              echo 'xbatd binary exists'
+            else
+              echo 'xbatd missing' && exit 1
+            fi && \
+
             ./setup.sh uninstall && \
+
             dnf remove -y xbatd
           "
+
 
   install-el9:
     name: Install and Test on AlmaLinux 9
@@ -98,15 +113,29 @@ jobs:
         run: |
           docker run --rm -v ${{ github.workspace }}:/workdir -w /workdir almalinux:9 /bin/bash -c "
             echo -e '#!/bin/bash\nexit 0' > /usr/bin/systemctl && chmod +x /usr/bin/systemctl && \
+
             dnf install -y epel-release dnf-utils python3-pip && \
             dnf config-manager --set-enabled crb && \
             dnf update -y && \
             pip3 install wheel && \
+
+            dnf install -y rsync && \
+
             dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm && \
             sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo && \
+
             dnf install -y ./rpm_dir/xbatd-1.0.0-rc0.el9*.rpm && \
+
+            cd src/xbatd && \
             ./setup.sh install --home-mnt /home/ --executor docker --workers 4 && \
-            if [ -f /usr/bin/xbatd ]; then echo 'xbatd binary exists'; else echo 'xbatd missing' && exit 1; fi && \
+
+            if [ -f /usr/bin/xbatd ]; then
+              echo 'xbatd binary exists'
+            else
+              echo 'xbatd missing' && exit 1
+            fi && \
+
             ./setup.sh uninstall && \
+
             dnf remove -y xbatd
           "
