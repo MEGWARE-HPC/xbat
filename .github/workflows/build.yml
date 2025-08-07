@@ -75,6 +75,16 @@ jobs:
       - name: Install RPM (el8)
         run: dnf install -y /rpm_dir/xbatd-1.0.0-rc0.el8*.rpm
 
+      - name: Install xbat.service via setup.sh (el8)
+        working-directory: src/xbat
+        run: |
+          sudo ./setup.sh install --home-mnt /home/ --executor docker --workers 4
+          systemctl status xbat.service
+
+      - name: Uninstall xbat.service via setup.sh (el8)
+        working-directory: src/xbat
+        run: sudo ./setup.sh uninstall
+
       - name: Remove RPM (el8)
         run: dnf remove -y xbatd || true
 
@@ -101,6 +111,16 @@ jobs:
 
       - name: Install RPM (el9)
         run: dnf install -y /rpm_dir/xbatd-1.0.0-rc0.el9*.rpm
+
+      - name: Install xbat.service via setup.sh (el9)
+        working-directory: src/xbat
+        run: |
+          sudo ./setup.sh install --home-mnt /home/ --executor docker --workers 4
+          systemctl status xbat.service
+
+      - name: Uninstall xbat.service via setup.sh (el9)
+        working-directory: src/xbat
+        run: sudo ./setup.sh uninstall
 
       - name: Remove RPM (el9)
         run: dnf remove -y xbatd || true
