@@ -1,19 +1,16 @@
 <template>
     <ClientOnly>
         <v-navigation-drawer
-            v-model="$store.docsDrawerOpen"
+            v-model="drawerOpen"
             v-model:selected="selectedEntry"
             class="pl-2 pr-2"
-            :permanent="!isMobile"
-            :temporary="isMobile"
+            :permanent="windowWidth > 992"
+            :temporary="windowWidth <= 992"
         >
             <template v-if="items">
                 <div class="mt-13">
-                    <div
-                        v-if="$store.currentDocType"
-                        class="doc-type-head text-medium-emphasis"
-                    >
-                        {{ $store.currentDocType }} Documentation
+                    <div class="doc-type-head text-medium-emphasis">
+                        {{ currentDocType }} Documentation
                     </div>
                     <div class="d-flex align-center justify-center">
                         <v-btn
@@ -43,9 +40,13 @@
                     mandatory
                     open-strategy="multiple"
                 >
-                    <template v-for="item in items.children" :key="item._path">
+                    <template
+                        v-for="item in items.children"
+                        :key="`item-group-${item._path}`"
+                    >
                         <v-list-item
                             v-if="!item.children?.length"
+                            :key="`item-${item._path}`"
                             :title="item.title"
                             :value="item._path"
                             :to="item._path"
@@ -69,7 +70,6 @@
                                     )}`"
                                 />
                             </template>
-
                             <v-list-item
                                 v-for="entry in item.children"
                                 :key="`entry-${entry._path}`"
@@ -97,9 +97,6 @@
 import type { NavItem } from "@nuxt/content";
 import { useWindowSize } from "@vueuse/core";
 
-const route = useRoute();
-const { $store } = useNuxtApp();
-
 const props = defineProps({
     links: {
         type: Object as PropType<NavItem[]>,
@@ -107,25 +104,32 @@ const props = defineProps({
     }
 });
 
-const selectedEntry = ref<string[]>([]);
+const route = useRoute();
+const { $store } = useNuxtApp();
 
+const drawerOpen = computed({
+    get: () => $store.docsDrawerOpen,
+    set: (val: boolean) => ($store.docsDrawerOpen = val)
+});
+
+const windowWidth = ref(1024);
+onMounted(() => {
+    windowWidth.value = window.innerWidth;
+});
+
+const selectedEntry = ref<string[]>([route.path]);
 watch(
     () => route.path,
     (newPath) => {
         selectedEntry.value = [newPath];
-    },
-    { immediate: true }
+    }
 );
 
-const isMobile = ref(false);
-onMounted(() => {
-    const { width } = useWindowSize();
-    watchEffect(() => {
-        isMobile.value = width.value <= 992;
-    });
+const currentDocType = computed(() => {
+    return route.path.match(/^\/docs\/([a-zA-Z]+)\//)?.[1] ?? "developer";
 });
 
-const items = computed(() => {
+const items: Ref<NavItem | null> = computed(() => {
     const categories =
         Array.isArray(props.links) && props.links[0]?.children
             ? props.links[0].children
@@ -145,18 +149,14 @@ const docStartingRoutes: Record<string, string> = {
 };
 
 const docTypes = ["user", "admin", "developer"];
-
-const currentIndex = computed(() => {
-    const docType = $store.currentDocType;
-    return docTypes.includes(docType) ? docTypes.indexOf(docType) : 0;
-});
-
-const nextDocType = computed(
-    () => docTypes[(currentIndex.value + 1) % docTypes.length]
+const currentIndex = computed(() => docTypes.indexOf(currentDocType.value));
+const nextIndex = computed(() => (currentIndex.value + 1) % docTypes.length);
+const prevIndex = computed(
+    () => (currentIndex.value - 1 + docTypes.length) % docTypes.length
 );
-const prevDocType = computed(
-    () => docTypes[(currentIndex.value - 1 + docTypes.length) % docTypes.length]
-);
+
+const nextDocType = computed(() => docTypes[nextIndex.value]);
+const prevDocType = computed(() => docTypes[prevIndex.value]);
 </script>
 <style scoped lang="scss">
 @use "~/assets/css/colors.scss" as *;
