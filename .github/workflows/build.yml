@@ -98,7 +98,6 @@ jobs:
           pip3 install wheel
           dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm
           sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo
-          dnf install -y amd-smi-lib
 
       - name: Install RPM (el9)
         run: dnf install -y --replacefiles /rpm_dir/xbatd-1.0.0-rc0.el9*.rpm
