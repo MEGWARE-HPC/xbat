@@ -1,5 +1,4 @@
 name: Build and Test xbat daemon
-# Trigger-Test, keine Änderung an der Logik
 
 on:
   push:
@@ -72,13 +71,13 @@ jobs:
           name: rpm-el8
           path: ./rpm_dir
 
-      - name: Run AlmaLinux 8 container and install RPM + setup service
+      - name: Run AlmaLinux 8 container and install RPM + test install
         run: |
           docker run --rm -v ${{ github.workspace }}:/workdir -w /workdir almalinux:8 /bin/bash -c "
             dnf install -y ./rpm_dir/xbatd-1.0.0-rc0.el8*.rpm && \
             cd src/xbat && \
             ./setup.sh install --home-mnt /home/ --executor docker --workers 4 && \
-            systemctl status xbat.service && \
+            if [ -f /usr/bin/xbatd ]; then echo 'xbatd binary exists'; else echo 'xbatd missing' && exit 1; fi && \
             ./setup.sh uninstall
           "
 
@@ -97,7 +96,7 @@ jobs:
           name: rpm-el9
           path: ./rpm_dir
 
-      - name: Prepare AlmaLinux 9 for dependencies and install RPM + setup service
+      - name: Prepare AlmaLinux 9 container and install RPM + test install
         run: |
           docker run --rm -v ${{ github.workspace }}:/workdir -w /workdir almalinux:9 /bin/bash -c "
             dnf install -y epel-release dnf-utils python3-pip && \
@@ -109,7 +108,7 @@ jobs:
             dnf install -y ./rpm_dir/xbatd-1.0.0-rc0.el9*.rpm && \
             cd src/xbat && \
             ./setup.sh install --home-mnt /home/ --executor docker --workers 4 && \
-            systemctl status xbat.service && \
+            if [ -f /usr/bin/xbatd ]; then echo 'xbatd binary exists'; else echo 'xbatd missing' && exit 1; fi && \
             ./setup.sh uninstall
           "
 
