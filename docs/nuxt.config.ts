@@ -63,9 +63,9 @@ export default defineNuxtConfig({
         }
     },
     experimental: {
-        payloadExtraction: false
+        payloadExtraction: true
     },
-    site: { url: "https://xbat.dev/" },
+    site: { url: "xbat.dev" },
     router: {
         options: {
             scrollBehaviorType: "smooth"
