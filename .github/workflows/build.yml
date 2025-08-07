@@ -60,7 +60,7 @@ jobs:
           path: src/xbatd/xbatd-1.0.0-rc0.el9*.rpm
 
   install-el8:
-    name: Install test on AlmaLinux 8
+    name: Install and Test on AlmaLinux 8
     needs: build-el8
     runs-on: ubuntu-latest
     steps:
@@ -71,21 +71,19 @@ jobs:
           name: rpm-el8
           path: ./rpm_dir
 
-      - name: Run AlmaLinux 8 container and install RPM + test install
+      - name: Run AlmaLinux 8 container, install RPM and setup.sh install/uninstall test
         run: |
           docker run --rm -v ${{ github.workspace }}:/workdir -w /workdir almalinux:8 /bin/bash -c "
             dnf install -y ./rpm_dir/xbatd-1.0.0-rc0.el8*.rpm && \
             cd src/xbat && \
             ./setup.sh install --home-mnt /home/ --executor docker --workers 4 && \
             if [ -f /usr/bin/xbatd ]; then echo 'xbatd binary exists'; else echo 'xbatd missing' && exit 1; fi && \
-            ./setup.sh uninstall
+            ./setup.sh uninstall && \
+            dnf remove -y xbatd
           "
 
-      - name: Remove RPM (el8)
-        run: dnf remove -y xbatd || true
-
   install-el9:
-    name: Install test on AlmaLinux 9
+    name: Install and Test on AlmaLinux 9
     needs: build-el9
     runs-on: ubuntu-latest
     steps:
@@ -96,7 +94,7 @@ jobs:
           name: rpm-el9
           path: ./rpm_dir
 
-      - name: Prepare AlmaLinux 9 container and install RPM + test install
+      - name: Run AlmaLinux 9 container, prepare env, install RPM and setup.sh install/uninstall test
         run: |
           docker run --rm -v ${{ github.workspace }}:/workdir -w /workdir almalinux:9 /bin/bash -c "
             dnf install -y epel-release dnf-utils python3-pip && \
@@ -109,8 +107,6 @@ jobs:
             cd src/xbat && \
             ./setup.sh install --home-mnt /home/ --executor docker --workers 4 && \
             if [ -f /usr/bin/xbatd ]; then echo 'xbatd binary exists'; else echo 'xbatd missing' && exit 1; fi && \
-            ./setup.sh uninstall
+            ./setup.sh uninstall && \
+            dnf remove -y xbatd
           "
-
-      - name: Remove RPM (el9)
-        run: dnf remove -y xbatd || true
