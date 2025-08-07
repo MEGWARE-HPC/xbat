@@ -64,28 +64,23 @@ jobs:
     name: Install test on AlmaLinux 8
     needs: build-el8
     runs-on: ubuntu-latest
-    container:
-      image: almalinux:8
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/download-artifact@v4
         with:
           name: rpm-el8
-          path: /rpm_dir
+          path: ./rpm_dir
 
-      - name: Install RPM (el8)
-        run: dnf install -y /rpm_dir/xbatd-1.0.0-rc0.el8*.rpm
-
-      - name: Install xbat.service via setup.sh (el8)
-        working-directory: src/xbat
+      - name: Run AlmaLinux 8 container and install RPM + setup service
         run: |
-          sudo ./setup.sh install --home-mnt /home/ --executor docker --workers 4
-          systemctl status xbat.service
-
-      - name: Uninstall xbat.service via setup.sh (el8)
-        working-directory: src/xbat
-        run: sudo ./setup.sh uninstall
+          docker run --rm -v ${{ github.workspace }}:/workdir -w /workdir almalinux:8 /bin/bash -c "
+            dnf install -y ./rpm_dir/xbatd-1.0.0-rc0.el8*.rpm && \
+            cd src/xbat && \
+            ./setup.sh install --home-mnt /home/ --executor docker --workers 4 && \
+            systemctl status xbat.service && \
+            ./setup.sh uninstall
+          "
 
       - name: Remove RPM (el8)
         run: dnf remove -y xbatd || true
@@ -94,37 +89,29 @@ jobs:
     name: Install test on AlmaLinux 9
     needs: build-el9
     runs-on: ubuntu-latest
-    container:
-      image: almalinux:9
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/download-artifact@v4
         with:
           name: rpm-el9
-          path: /rpm_dir
+          path: ./rpm_dir
 
-      - name: Prepare AlmaLinux 9 for dependencies
+      - name: Prepare AlmaLinux 9 for dependencies and install RPM + setup service
         run: |
-          dnf install -y epel-release dnf-utils python3-pip
-          dnf config-manager --set-enabled crb
-          dnf update -y
-          pip3 install wheel
-          dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm
-          sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo
-
-      - name: Install RPM (el9)
-        run: dnf install -y /rpm_dir/xbatd-1.0.0-rc0.el9*.rpm
-
-      - name: Install xbat.service via setup.sh (el9)
-        working-directory: src/xbat
-        run: |
-          sudo ./setup.sh install --home-mnt /home/ --executor docker --workers 4
-          systemctl status xbat.service
-
-      - name: Uninstall xbat.service via setup.sh (el9)
-        working-directory: src/xbat
-        run: sudo ./setup.sh uninstall
+          docker run --rm -v ${{ github.workspace }}:/workdir -w /workdir almalinux:9 /bin/bash -c "
+            dnf install -y epel-release dnf-utils python3-pip && \
+            dnf config-manager --set-enabled crb && \
+            dnf update -y && \
+            pip3 install wheel && \
+            dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm && \
+            sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo && \
+            dnf install -y ./rpm_dir/xbatd-1.0.0-rc0.el9*.rpm && \
+            cd src/xbat && \
+            ./setup.sh install --home-mnt /home/ --executor docker --workers 4 && \
+            systemctl status xbat.service && \
+            ./setup.sh uninstall
+          "
 
       - name: Remove RPM (el9)
         run: dnf remove -y xbatd || true
