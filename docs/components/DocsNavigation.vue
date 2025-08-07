@@ -1,7 +1,6 @@
 <template>
     <ClientOnly>
         <v-navigation-drawer
-            v-if="isClient"
             v-model="$store.docsDrawerOpen"
             v-model:selected="selectedEntry"
             class="pl-2 pr-2"
@@ -100,11 +99,9 @@ import { useWindowSize } from "@vueuse/core";
 const route = useRoute();
 const { $store } = useNuxtApp();
 
-const isClient = ref(false);
 const isMobile = ref(false);
 
 if (import.meta.client) {
-    isClient.value = true;
     const { width } = useWindowSize();
     watchEffect(() => {
         isMobile.value = width.value <= 992;
