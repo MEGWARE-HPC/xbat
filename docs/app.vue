@@ -7,20 +7,19 @@
         </NuxtLayout>
     </v-app>
 </template>
-
-<script setup lang="ts">
+<script lang="ts" setup>
 useHead({
     htmlAttrs: {
-        lang: "en"
+        lang: "en",
+        style: "font-size: 14px; font-family: 'Source Sans Pro', sans-serif;"
     }
 });
 
-if (import.meta.client) {
-    const { data: nav } = await useAsyncData("navigation", () =>
-        fetchContentNavigation()
-    );
-    provide("navigation", nav.value);
-}
+const { data: nav } = await useAsyncData("navigation", () =>
+    fetchContentNavigation()
+);
+
+provide("navigation", nav.value);
 </script>
 <style lang="scss">
 @use "~/assets/css/general.scss" as *;
@@ -29,9 +28,5 @@ if (import.meta.client) {
 :root {
     scroll-padding-top: 65px;
     background-color: $background;
-}
-html {
-    font-size: 14px;
-    font-family: "Source Sans Pro", sans-serif;
 }
 </style>
