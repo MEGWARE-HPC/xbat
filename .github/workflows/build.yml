@@ -101,7 +101,7 @@ jobs:
           dnf install -y amd-smi-lib
 
       - name: Install RPM (el9)
-        run: dnf install -y /rpm_dir/xbatd-1.0.0-rc0.el9*.rpm
+        run: dnf install -y --replacefiles /rpm_dir/xbatd-1.0.0-rc0.el9*.rpm
 
       - name: Remove RPM (el9)
         run: dnf remove -y xbatd || true
