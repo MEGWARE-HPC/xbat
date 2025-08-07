@@ -63,7 +63,7 @@ export default defineNuxtConfig({
         }
     },
     experimental: {
-        payloadExtraction: true
+        payloadExtraction: false
     },
     site: { url: "https://xbat.dev/" },
     router: {
