@@ -1,11 +1,10 @@
 <template>
     <v-navigation-drawer
-        v-if="hydrated"
         v-model="$store.docsDrawerOpen"
         v-model:selected="selectedEntry"
         class="pl-2 pr-2"
-        :permanent="windowWidth > 992"
-        :temporary="windowWidth <= 992"
+        :permanent="!isMobile"
+        :temporary="isMobile"
     >
         <template v-if="items">
             <div class="mt-13">
@@ -40,10 +39,7 @@
                 mandatory
                 open-strategy="multiple"
             >
-                <template
-                    v-for="item in items.children"
-                    :key="`item-group-${item._path}`"
-                >
+                <template v-for="item in items.children">
                     <v-list-item
                         v-if="!item.children?.length"
                         :key="`item-${item._path}`"
@@ -62,7 +58,7 @@
                         :key="`group-${item._path}`"
                         :value="item._path"
                     >
-                        <template v-slot:activator="{ props }">
+                        <template #activator="{ props }">
                             <v-list-item
                                 v-bind="props"
                                 :title="item.title"
@@ -95,8 +91,16 @@ import type { NavItem } from "@nuxt/content";
 import { useWindowSize } from "@vueuse/core";
 
 const route = useRoute();
-const { width: windowWidth } = useWindowSize();
 const { $store } = useNuxtApp();
+
+const isMobile = ref(false);
+if (process.client) {
+    const { width } = useWindowSize();
+    watchEffect(() => {
+        isMobile.value = width.value <= 992;
+    });
+}
+
 const docStartingRoutes: Record<string, string> = {
     user: "/docs/user/introduction",
     admin: "/docs/admin/setup/installation",
@@ -110,23 +114,17 @@ const props = defineProps({
     }
 });
 
-const hydrated = ref(false);
-onMounted(() => {
-    hydrated.value = true;
-});
-
 const selectedEntry = ref<string[]>([]);
-onMounted(() => {
-    selectedEntry.value = [route.path];
-    watch(
-        () => route.path,
-        (newPath) => {
-            selectedEntry.value = [newPath];
-        }
-    );
-});
 
-const items: Ref<NavItem | null> = computed(() => {
+watch(
+    () => route.path,
+    (newPath) => {
+        selectedEntry.value = [newPath];
+    },
+    { immediate: true }
+);
+
+const items = computed(() => {
     const categories =
         Array.isArray(props.links) && props.links[0]?.children
             ? props.links[0].children
@@ -143,10 +141,9 @@ const docTypes = ["user", "admin", "developer"];
 
 const currentIndex = computed(() => {
     const docType = $store.currentDocType;
-    if (docType && docTypes.includes(docType)) {
-        return docTypes.indexOf(docType);
-    }
-    return 0;
+    return docType && docTypes.includes(docType)
+        ? docTypes.indexOf(docType)
+        : 0;
 });
 
 const nextIndex = computed(() => (currentIndex.value + 1) % docTypes.length);
