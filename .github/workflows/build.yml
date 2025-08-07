@@ -82,7 +82,7 @@ jobs:
 
             dnf install -y ./rpm_dir/xbatd-1.0.0-rc0.el8*.rpm && \
 
-            ./setup.sh install --home-mnt /home/ --executor docker --workers 4 && \
+            ./setup.sh install --home-mnt /home/ --executor shell --workers 4 && \
 
             if [ -f /usr/bin/xbatd ]; then
               echo 'xbatd binary exists'
@@ -125,7 +125,7 @@ jobs:
 
             dnf install -y ./rpm_dir/xbatd-1.0.0-rc0.el9*.rpm && \
 
-            ./setup.sh install --home-mnt /home/ --executor docker --workers 4 && \
+            ./setup.sh install --home-mnt /home/ --executor shell --workers 4 && \
 
             if [ -f /usr/bin/xbatd ]; then
               echo 'xbatd binary exists'
