@@ -16,7 +16,7 @@ jobs:
     outputs:
       rpm_name: ${{ steps.get_rpm.outputs.rpm_name }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Build with build.sh (el8)
         working-directory: src/xbatd
@@ -30,7 +30,7 @@ jobs:
           echo "Found RPM: $RPM_NAME"
           echo "rpm_name=$RPM_NAME" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: rpm-el8
           path: src/xbatd/xbatd-1.0.0-rc0.el8*.rpm
@@ -41,7 +41,7 @@ jobs:
     outputs:
       rpm_name: ${{ steps.get_rpm.outputs.rpm_name }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Build with build.sh (el9)
         working-directory: src/xbatd
@@ -55,7 +55,7 @@ jobs:
           echo "Found RPM: $RPM_NAME"
           echo "rpm_name=$RPM_NAME" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: rpm-el9
           path: src/xbatd/xbatd-1.0.0-rc0.el9*.rpm
@@ -67,7 +67,7 @@ jobs:
     container:
       image: almalinux:8
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: rpm-el8
           path: /rpm_dir
@@ -85,7 +85,7 @@ jobs:
     container:
       image: almalinux:9
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: rpm-el9
           path: /rpm_dir
