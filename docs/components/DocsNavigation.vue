@@ -1,16 +1,16 @@
 <template>
     <ClientOnly>
         <v-navigation-drawer
-            v-model="drawerOpen"
+            v-model="$store.docsDrawerOpen"
             v-model:selected="selectedEntry"
             class="pl-2 pr-2"
-            :permanent="windowWidth > 992"
-            :temporary="windowWidth <= 992"
+            :permanent="!isMobile"
+            :temporary="isMobile"
         >
             <template v-if="items">
                 <div class="mt-13">
                     <div class="doc-type-head text-medium-emphasis">
-                        {{ currentDocType }} Documentation
+                        {{ $store.currentDocType }} Documentation
                     </div>
                     <div class="d-flex align-center justify-center">
                         <v-btn
@@ -40,10 +40,7 @@
                     mandatory
                     open-strategy="multiple"
                 >
-                    <template
-                        v-for="item in items.children"
-                        :key="`item-group-${item._path}`"
-                    >
+                    <template v-for="item in items.children">
                         <v-list-item
                             v-if="!item.children?.length"
                             :key="`item-${item._path}`"
@@ -55,7 +52,8 @@
                             :aria-current="
                                 route.path === item._path ? 'page' : undefined
                             "
-                        />
+                        ></v-list-item>
+
                         <v-list-group
                             v-else
                             :key="`group-${item._path}`"
@@ -68,8 +66,9 @@
                                     :id="`group-${encodeURIComponent(
                                         item._path
                                     )}`"
-                                />
+                                ></v-list-item>
                             </template>
+
                             <v-list-item
                                 v-for="entry in item.children"
                                 :key="`entry-${entry._path}`"
@@ -85,7 +84,7 @@
                                         ? 'page'
                                         : undefined
                                 "
-                            />
+                            ></v-list-item>
                         </v-list-group>
                     </template>
                 </v-list>
@@ -97,6 +96,24 @@
 import type { NavItem } from "@nuxt/content";
 import { useWindowSize } from "@vueuse/core";
 
+const route = useRoute();
+const { $store } = useNuxtApp();
+
+const isMobile = ref(false);
+
+if (import.meta.client) {
+    const { width } = useWindowSize();
+    watchEffect(() => {
+        isMobile.value = width.value <= 992;
+    });
+}
+
+const docStartingRoutes: Record<string, string> = {
+    user: "/docs/user/introduction",
+    admin: "/docs/admin/setup/installation",
+    developer: "/docs/developer/contribute"
+};
+
 const props = defineProps({
     links: {
         type: Object as PropType<NavItem[]>,
@@ -104,32 +121,17 @@ const props = defineProps({
     }
 });
 
-const route = useRoute();
-const { $store } = useNuxtApp();
+const selectedEntry = ref<string[]>([]);
 
-const drawerOpen = computed({
-    get: () => $store.docsDrawerOpen,
-    set: (val: boolean) => ($store.docsDrawerOpen = val)
-});
-
-const windowWidth = ref(1024);
-onMounted(() => {
-    windowWidth.value = window.innerWidth;
-});
-
-const selectedEntry = ref<string[]>([route.path]);
 watch(
     () => route.path,
     (newPath) => {
         selectedEntry.value = [newPath];
-    }
+    },
+    { immediate: true }
 );
 
-const currentDocType = computed(() => {
-    return route.path.match(/^\/docs\/([a-zA-Z]+)\//)?.[1] ?? "developer";
-});
-
-const items: Ref<NavItem | null> = computed(() => {
+const items = computed(() => {
     const categories =
         Array.isArray(props.links) && props.links[0]?.children
             ? props.links[0].children
@@ -142,14 +144,15 @@ const items: Ref<NavItem | null> = computed(() => {
     return filtered.length ? filtered[0] : null;
 });
 
-const docStartingRoutes: Record<string, string> = {
-    user: "/docs/user/introduction",
-    admin: "/docs/admin/setup/installation",
-    developer: "/docs/developer/contribute"
-};
-
 const docTypes = ["user", "admin", "developer"];
-const currentIndex = computed(() => docTypes.indexOf(currentDocType.value));
+
+const currentIndex = computed(() => {
+    const docType = $store.currentDocType;
+    return docType && docTypes.includes(docType)
+        ? docTypes.indexOf(docType)
+        : 0;
+});
+
 const nextIndex = computed(() => (currentIndex.value + 1) % docTypes.length);
 const prevIndex = computed(
     () => (currentIndex.value - 1 + docTypes.length) % docTypes.length
