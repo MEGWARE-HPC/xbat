@@ -1,4 +1,5 @@
 name: Build and Test xbat daemon
+# Trigger-Test, keine Änderung an der Logik
 
 on:
   push:
