@@ -67,6 +67,8 @@ jobs:
     container:
       image: almalinux:8
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           name: rpm-el8
@@ -95,6 +97,8 @@ jobs:
     container:
       image: almalinux:9
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           name: rpm-el9
