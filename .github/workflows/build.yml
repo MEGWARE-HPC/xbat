@@ -3,8 +3,10 @@ name: Build and Test xbat daemon
 on:
   push:
     branches:
-      - main
+      - ci-testing
   pull_request:
+    branches:
+      - ci-testing
 
 jobs:
   build-el8:
@@ -13,14 +15,13 @@ jobs:
     outputs:
       rpm_name: ${{ steps.get_rpm.outputs.rpm_name }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Run build.sh for el8
+      - name: Build with build.sh (el8)
         working-directory: src/xbatd
         run: ./build.sh 1.0.0 --release rc0 --distro el8 --executor docker
 
-      - name: Find built RPM (el8)
+      - name: Find RPM (el8)
         id: get_rpm
         working-directory: src/xbatd
         run: |
@@ -28,20 +29,24 @@ jobs:
           echo "Found RPM: $RPM_NAME"
           echo "rpm_name=$RPM_NAME" >> "$GITHUB_OUTPUT"
 
+      - uses: actions/upload-artifact@v3
+        with:
+          name: rpm-el8
+          path: src/xbatd/xbatd-1.0.0-rc0.el8*.rpm
+
   build-el9:
     name: Build for AlmaLinux 9
     runs-on: ubuntu-latest
     outputs:
       rpm_name: ${{ steps.get_rpm.outputs.rpm_name }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Run build.sh for el9
+      - name: Build with build.sh (el9)
         working-directory: src/xbatd
         run: ./build.sh 1.0.0 --release rc0 --distro el9 --executor docker
 
-      - name: Find built RPM (el9)
+      - name: Find RPM (el9)
         id: get_rpm
         working-directory: src/xbatd
         run: |
@@ -49,21 +54,28 @@ jobs:
           echo "Found RPM: $RPM_NAME"
           echo "rpm_name=$RPM_NAME" >> "$GITHUB_OUTPUT"
 
+      - uses: actions/upload-artifact@v3
+        with:
+          name: rpm-el9
+          path: src/xbatd/xbatd-1.0.0-rc0.el9*.rpm
+
   install-el8:
     name: Install test on AlmaLinux 8
     needs: build-el8
     runs-on: ubuntu-latest
     container:
       image: almalinux:8
-      options: --volume ${{ github.workspace }}/src/xbatd:/rpm_dir:ro
     steps:
-      - name: Install RPM
-        run: |
-          dnf install -y /rpm_dir/xbatd-1.0.0-rc0.el8*.rpm
+      - uses: actions/download-artifact@v3
+        with:
+          name: rpm-el8
+          path: /rpm_dir
 
-      - name: Remove RPM
-        run: |
-          dnf remove -y xbatd || true
+      - name: Install RPM (el8)
+        run: dnf install -y /rpm_dir/xbatd-1.0.0-rc0.el8*.rpm
+
+      - name: Remove RPM (el8)
+        run: dnf remove -y xbatd || true
 
   install-el9:
     name: Install test on AlmaLinux 9
@@ -71,27 +83,24 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: almalinux:9
-      options: --volume ${{ github.workspace }}/src/xbatd:/rpm_dir:ro
     steps:
-      - name: Enable EPEL and install wheel via pip
+      - uses: actions/download-artifact@v3
+        with:
+          name: rpm-el9
+          path: /rpm_dir
+
+      - name: Prepare AlmaLinux 9 for dependencies
         run: |
-          dnf install -y epel-release
+          dnf install -y epel-release dnf-utils python3-pip
           dnf config-manager --set-enabled crb
           dnf update -y
-          dnf install -y python3-pip
           pip3 install wheel
-
-
-      - name: Install amd-smi-lib dependency
-        run: |
           dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm
           sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo
           dnf install -y amd-smi-lib
 
-      - name: Install RPM
-        run: |
-          dnf install -y /rpm_dir/xbatd-1.0.0-rc0.el9*.rpm
+      - name: Install RPM (el9)
+        run: dnf install -y /rpm_dir/xbatd-1.0.0-rc0.el9*.rpm
 
-      - name: Remove RPM
-        run: |
-          dnf remove -y xbatd || true
+      - name: Remove RPM (el9)
+        run: dnf remove -y xbatd || true
