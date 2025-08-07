@@ -120,7 +120,7 @@ test-xbat:
 
 ::
 
-In this scenario, your GitLab instance (GL-external) does not have direct access to the xbat server. Instead, you can use another public-facing GitLab instance (GL-internal) sharing the same network with xbat as a proxy to trigger the benchmark. Visit the [GitLab documentation](https://docs.gitlab.com/ee/ci/triggers/){:target="_blank"} for more information on pipeline triggers.
+In this scenario, your GitLab instance (GL-external) does not have direct access to the xbat server. Instead, you can use another public-facing GitLab instance (GL-internal) sharing the same network with xbat as a proxy to trigger the benchmark. Visit the [GitLab documentation](https://docs.gitlab.com/ee/ci/triggers/) for more information on pipeline triggers.
 Firstly, create a new project in GL-internal and add the following `.gitlab-ci.yml` configuration.
 
 ::Codeblock
