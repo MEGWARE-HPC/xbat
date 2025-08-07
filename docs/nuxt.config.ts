@@ -58,9 +58,11 @@ export default defineNuxtConfig({
         },
         experimental: {
             // @ts-expect-error
-            search: true,
-            payloadExtraction: true
+            search: true
         }
+    },
+    experimental: {
+        payloadExtraction: true
     },
     site: { url: "xbat.dev" },
     router: {
