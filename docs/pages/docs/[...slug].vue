@@ -123,8 +123,9 @@ watchEffect(() => {
 const { data: surround } = await useAsyncData(
     `docs-${route.path}-surround`,
     () => {
-        return queryContent().findSurround(
-            route.path.endsWith("/") ? route.path.slice(0, -1) : route.path
+        const cleanPath = route.path.replace(/^\/docs/, "");
+        return queryContent("docs").findSurround(
+            cleanPath.endsWith("/") ? cleanPath.slice(0, -1) : cleanPath
         );
     },
     {
