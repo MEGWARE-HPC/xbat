@@ -28,6 +28,7 @@ All notable changes to this project will be documented in this file.
 -   energy consumption statistics in sidebar (now also includes previously missing entries like DRAM etc.)
 -   selected benchmark overview table page size is now persistent (#62)
 -   improved display of long configuration name (#55)
+-   removed empty navigation on mobile devices
 
 ### Fixed
 
