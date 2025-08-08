@@ -1,7 +1,7 @@
 <template>
     <ClientOnly>
         <v-navigation-drawer
-            v-if="isClient"
+            v-if="isClient && (!isMobile || items)"
             v-model="$store.docsDrawerOpen"
             v-model:selected="selectedEntry"
             class="pl-2 pr-2"
