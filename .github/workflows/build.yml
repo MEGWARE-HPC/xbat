@@ -111,11 +111,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install dependencies (el8)
-        run: echo "No dependencies to install"
-      - name: Run setup.sh install in AlmaLinux 8 container
+      - name: Install dependencies and run setup.sh install in AlmaLinux 8 container
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace almalinux:8 /bin/bash -c "
+            dnf install -y rsync && \
             ./setup.sh install --home-mnt /home/ --executor docker --workers 4"
       - name: Run setup.sh uninstall in AlmaLinux 8 container
         run: |
@@ -128,13 +127,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Prepare AlmaLinux 9 for dependencies (host)
-        run: |
-          echo "Preparation done on host (not container)"
-      - name: Run setup.sh install in AlmaLinux 9 container
+      - name: Prepare AlmaLinux 9 and run setup.sh install in container
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace almalinux:9 /bin/bash -c "
-            dnf install -y epel-release dnf-utils python3-pip && \
+            dnf install -y epel-release dnf-utils python3-pip rsync && \
             dnf config-manager --set-enabled crb && \
             dnf update -y && \
             pip3 install wheel && \
@@ -143,4 +139,5 @@ jobs:
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace almalinux:9 /bin/bash -c "
             ./setup.sh uninstall"
+
 
