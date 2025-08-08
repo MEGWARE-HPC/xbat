@@ -73,7 +73,16 @@ class XbatCtldServicer(xbat_pb2_grpc.xbatctldServicer):
 
 
 def serve(cancelled):
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    options = [('grpc.keepalive_time_ms', 120000),
+               ('grpc.keepalive_timeout_ms', 30000),
+               ('grpc.http2.min_time_between_pings_ms', 60000),
+               ('grpc.http2.max_pings_without_data', 10),
+               ('grpc.http2.keepalive_permit_without_calls', True),
+               ('grpc.max_send_message_length', 50 * 1024 * 1024),
+               ('grpc.max_receive_message_length', 50 * 1024 * 1024),
+               ('grpc.log_level', 'debug')]
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10),
+                         options=options)
     xbat_pb2_grpc.add_xbatctldServicer_to_server(XbatCtldServicer(), server)
     server.add_insecure_port('[::]:50051')
     server.start()
