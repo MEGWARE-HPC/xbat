@@ -109,36 +109,38 @@ jobs:
     name: Install and uninstall xbat service on AlmaLinux 8
     needs: install-el8          
     runs-on: ubuntu-latest
-    container:
-      image: almalinux:8
     steps:
       - uses: actions/checkout@v4
-      - name: Install dependencies
+      - name: Install dependencies (el8)
         run: echo "No dependencies to install"
-      - name: Run setup.sh install
-        working-directory: src/xbat
-        run: sudo ./setup.sh install --home-mnt /home/ --executor docker --workers 4
-      - name: Run setup.sh uninstall
-        working-directory: src/xbat
-        run: sudo ./setup.sh uninstall
+      - name: Run setup.sh install in AlmaLinux 8 container
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace/src/xbat almalinux:8 /bin/bash -c "
+            sudo ./setup.sh install --home-mnt /home/ --executor docker --workers 4"
+      - name: Run setup.sh uninstall in AlmaLinux 8 container
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace/src/xbat almalinux:8 /bin/bash -c "
+            sudo ./setup.sh uninstall"
 
   install-service-el9:
     name: Install and uninstall xbat service on AlmaLinux 9
     needs: install-el9            
     runs-on: ubuntu-latest
-    container:
-      image: almalinux:9
     steps:
       - uses: actions/checkout@v4
-      - name: Prepare AlmaLinux 9 for dependencies
+      - name: Prepare AlmaLinux 9 for dependencies (host)
         run: |
-          dnf install -y epel-release dnf-utils python3-pip
-          dnf config-manager --set-enabled crb
-          dnf update -y
-          pip3 install wheel
-      - name: Run setup.sh install
-        working-directory: src/xbat
-        run: sudo ./setup.sh install --home-mnt /home/ --executor docker --workers 4
-      - name: Run setup.sh uninstall
-        working-directory: src/xbat
-        run: sudo ./setup.sh uninstall
+          echo "Preparation done on host (not container)"
+      - name: Run setup.sh install in AlmaLinux 9 container
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace/src/xbat almalinux:9 /bin/bash -c "
+            dnf install -y epel-release dnf-utils python3-pip && \
+            dnf config-manager --set-enabled crb && \
+            dnf update -y && \
+            pip3 install wheel && \
+            sudo ./setup.sh install --home-mnt /home/ --executor docker --workers 4"
+      - name: Run setup.sh uninstall in AlmaLinux 9 container
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace/src/xbat almalinux:9 /bin/bash -c "
+            sudo ./setup.sh uninstall"
+
