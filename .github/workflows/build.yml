@@ -114,7 +114,7 @@ jobs:
       - name: Install dependencies and run setup.sh install in AlmaLinux 8 container
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace almalinux:8 /bin/bash -c "
-            dnf install -y rsync && \
+            dnf install -y rsync wget && \
             ./setup.sh install --home-mnt /home/ --executor docker --workers 4"
       - name: Run setup.sh uninstall in AlmaLinux 8 container
         run: |
@@ -130,7 +130,7 @@ jobs:
       - name: Prepare AlmaLinux 9 and run setup.sh install in container
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace almalinux:9 /bin/bash -c "
-            dnf install -y epel-release dnf-utils python3-pip rsync && \
+            dnf install -y epel-release dnf-utils python3-pip rsync wget && \
             dnf config-manager --set-enabled crb && \
             dnf update -y && \
             pip3 install wheel && \
