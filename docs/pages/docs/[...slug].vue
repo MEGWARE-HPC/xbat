@@ -94,21 +94,8 @@ definePageMeta({
 const route = useRoute();
 const { $store } = useNuxtApp();
 
-const slug = computed(() => {
-    const slugArray = Array.isArray(route.params.slug)
-        ? route.params.slug
-        : route.params.slug
-        ? [route.params.slug]
-        : [];
-    return `/docs/${slugArray.join("/")}`;
-});
-
-const {
-    data: page,
-    pending,
-    error
-} = await useAsyncData(`docs-${slug.value}`, () =>
-    queryContent(slug.value).findOne()
+const { data: page, pending } = await useAsyncData(`docs-${route.path}`, () =>
+    queryContent(route.path).findOne()
 );
 
 watchEffect(() => {
