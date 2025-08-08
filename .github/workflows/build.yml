@@ -115,11 +115,11 @@ jobs:
         run: echo "No dependencies to install"
       - name: Run setup.sh install in AlmaLinux 8 container
         run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace/src/xbat almalinux:8 /bin/bash -c "
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace almalinux:8 /bin/bash -c "
             ./setup.sh install --home-mnt /home/ --executor docker --workers 4"
       - name: Run setup.sh uninstall in AlmaLinux 8 container
         run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace/src/xbat almalinux:8 /bin/bash -c "
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace almalinux:8 /bin/bash -c "
             ./setup.sh uninstall"
 
   install-service-el9:
@@ -133,7 +133,7 @@ jobs:
           echo "Preparation done on host (not container)"
       - name: Run setup.sh install in AlmaLinux 9 container
         run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace/src/xbat almalinux:9 /bin/bash -c "
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace almalinux:9 /bin/bash -c "
             dnf install -y epel-release dnf-utils python3-pip && \
             dnf config-manager --set-enabled crb && \
             dnf update -y && \
@@ -141,6 +141,6 @@ jobs:
             ./setup.sh install --home-mnt /home/ --executor docker --workers 4"
       - name: Run setup.sh uninstall in AlmaLinux 9 container
         run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace/src/xbat almalinux:9 /bin/bash -c "
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace almalinux:9 /bin/bash -c "
             ./setup.sh uninstall"
 
