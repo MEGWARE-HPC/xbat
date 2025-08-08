@@ -15,8 +15,7 @@
                     class="content"
                     :value="doc"
                     :components="{ NuxtImg }"
-                >
-                </ContentRenderer>
+                />
             </ContentDoc>
             <div class="mt-6">
                 <v-divider></v-divider>
@@ -27,14 +26,12 @@
                             variant="plain"
                             class="text-left"
                             style="text-transform: none"
-                            :to="surround[0]._path"
+                            :to="surround[0]?._path"
                             v-if="surround?.[0]"
                             size="large"
                         >
                             <div>
-                                <p>
-                                    {{ surround[0].title }}
-                                </p>
+                                <p>{{ surround[0].title }}</p>
                                 <p>{{ surround[0].description }}</p>
                             </div>
                         </v-btn>
@@ -45,23 +42,21 @@
                             variant="plain"
                             class="text-right"
                             style="text-transform: none"
-                            :to="surround[1]._path"
+                            :to="surround[1]?._path"
                             v-if="surround?.[1]"
                             size="large"
                         >
                             <div>
-                                <p>
-                                    {{ surround[1].title }}
-                                </p>
-                                <p>
-                                    {{ surround[1].description }}
-                                </p>
+                                <p>{{ surround[1].title }}</p>
+                                <p>{{ surround[1].description }}</p>
                             </div>
                         </v-btn>
                     </div>
                 </div>
             </div>
-            <TOC :toc="toc"></TOC>
+
+            <TOC :toc="toc" />
+
             <div class="d-flex align-center text-medium-emphasis mt-6">
                 Edit this Page on
                 <NuxtLink
@@ -94,8 +89,10 @@ definePageMeta({
 const route = useRoute();
 const { $store } = useNuxtApp();
 
-const { data: page } = await useAsyncData(`docs-${route.path}`, () =>
-    queryContent(route.path).findOne()
+const path = route.path;
+
+const { data: page } = await useAsyncData(`docs-${path}`, () =>
+    queryContent().where({ _path: path }).findOne()
 );
 
 if (!page.value) {
@@ -103,10 +100,10 @@ if (!page.value) {
 }
 
 const { data: surround } = await useAsyncData(
-    `docs-${route.path}-surround`,
+    `docs-${path}-surround`,
     () => {
         return queryContent().findSurround(
-            route.path.endsWith("/") ? route.path.slice(0, -1) : route.path
+            path.endsWith("/") ? path.slice(0, -1) : path
         );
     },
     {
