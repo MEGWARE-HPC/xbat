@@ -93,11 +93,17 @@ definePageMeta({
 
 const route = useRoute();
 const { $store } = useNuxtApp();
+const slugPath = computed(() => {
+    const parts = Array.isArray(route.params.slug)
+        ? route.params.slug
+        : route.params.slug
+        ? [route.params.slug]
+        : [];
+    return `/docs/${parts.join("/")}`;
+});
 
-const { data: page } = await useAsyncData(
-    `docs-${route.path}`,
-    () => queryContent(route.path).findOne(),
-    { lazy: true }
+const { data: page } = await useAsyncData(`docs-${slugPath.value}`, () =>
+    queryContent(slugPath.value).findOne()
 );
 
 if (!page.value) {
