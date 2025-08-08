@@ -102,8 +102,15 @@
 
 <script setup lang="ts">
 const router = useRouter();
-const { $authStore, $store } = useNuxtApp();
+const { $authStore, $store, $snackbar } = useNuxtApp();
 const { vNotEmpty } = useFormValidation();
+
+useSeoMeta({
+    title: "Login",
+    ogTitle: "Login",
+    description: "Login to xbat",
+    ogDescription: "Login to xbat"
+});
 
 const form = reactive<{
     username: string;
@@ -118,6 +125,13 @@ const form = reactive<{
 const state = reactive<{ loginValid: boolean; passwordVisible: boolean }>({
     loginValid: false,
     passwordVisible: false
+});
+
+onMounted(() => {
+    if ($authStore.tokenExpired) {
+        $snackbar.show("Session expired. Please log in again.", "warning");
+        $authStore.resetTokenState();
+    }
 });
 
 const login = async () => {
