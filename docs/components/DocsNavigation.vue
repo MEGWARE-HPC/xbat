@@ -1,5 +1,6 @@
 <template>
     <v-navigation-drawer
+        v-if="hydrated"
         v-model="$store.docsDrawerOpen"
         v-model:selected="selectedEntry"
         class="pl-2 pr-2"
@@ -39,7 +40,10 @@
                 mandatory
                 open-strategy="multiple"
             >
-                <template v-for="item in items.children">
+                <template
+                    v-for="item in items.children"
+                    :key="`item-group-${item._path}`"
+                >
                     <v-list-item
                         v-if="!item.children?.length"
                         :key="`item-${item._path}`"
@@ -92,12 +96,12 @@ import { useWindowSize } from "@vueuse/core";
 
 const route = useRoute();
 const { width: windowWidth } = useWindowSize();
+const { $store } = useNuxtApp();
 const docStartingRoutes: Record<string, string> = {
     user: "/docs/user/introduction",
     admin: "/docs/admin/setup/installation",
     developer: "/docs/developer/contribute"
 };
-const { $store } = useNuxtApp();
 
 const props = defineProps({
     links: {
@@ -106,15 +110,21 @@ const props = defineProps({
     }
 });
 
-const selectedEntry = ref<string[]>([]);
+const hydrated = ref(false);
+onMounted(() => {
+    hydrated.value = true;
+});
 
-watch(
-    () => route.path,
-    (newPath) => {
-        selectedEntry.value = [newPath];
-    },
-    { immediate: true }
-);
+const selectedEntry = ref<string[]>([]);
+onMounted(() => {
+    selectedEntry.value = [route.path];
+    watch(
+        () => route.path,
+        (newPath) => {
+            selectedEntry.value = [newPath];
+        }
+    );
+});
 
 const items: Ref<NavItem | null> = computed(() => {
     const categories =
