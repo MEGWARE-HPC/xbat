@@ -107,6 +107,7 @@ const { data: page } = await useAsyncData(`docs-${slugPath.value}`, () =>
 );
 
 if (!page.value) {
+    console.log(page);
     throw createError({ statusCode: 404, statusMessage: "Page not found" });
 }
 
