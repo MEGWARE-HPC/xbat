@@ -10,11 +10,11 @@ on:
       - ci-testing
 
 jobs:
-  el8:
-    name: Build, Install and Test on AlmaLinux 8
+  build-el8:
+    name: Build for AlmaLinux 8
     runs-on: ubuntu-latest
-    container:
-      image: almalinux:8
+    outputs:
+      rpm_name: ${{ steps.get_rpm.outputs.rpm_name }}
     steps:
       - uses: actions/checkout@v4
 
@@ -23,34 +23,23 @@ jobs:
         run: ./build.sh 1.0.0 --release rc0 --distro el8 --executor docker
 
       - name: Find RPM (el8)
-        working-directory: src/xbatd
         id: get_rpm
+        working-directory: src/xbatd
         run: |
           RPM_NAME=$(ls xbatd-1.0.0-rc0.el8*.rpm)
+          echo "Found RPM: $RPM_NAME"
           echo "rpm_name=$RPM_NAME" >> "$GITHUB_OUTPUT"
 
-      - name: Install dependencies for service
-        run: dnf install -y which tar gzip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpm-el8
+          path: src/xbatd/xbatd-1.0.0-rc0.el8*.rpm
 
-      - name: Install RPM (el8)
-        run: dnf install -y src/xbatd/${{ steps.get_rpm.outputs.rpm_name }}
-
-      - name: Run setup.sh install
-        working-directory: src/xbat
-        run: ./setup.sh install --home-mnt /home/ --executor docker --workers 4
-
-      - name: Run setup.sh uninstall
-        working-directory: src/xbat
-        run: ./setup.sh uninstall
-
-      - name: Remove RPM (el8)
-        run: dnf remove -y xbatd || true
-
-  el9:
-    name: Build, Install and Test on AlmaLinux 9
+  build-el9:
+    name: Build for AlmaLinux 9
     runs-on: ubuntu-latest
-    container:
-      image: almalinux:9
+    outputs:
+      rpm_name: ${{ steps.get_rpm.outputs.rpm_name }}
     steps:
       - uses: actions/checkout@v4
 
@@ -59,15 +48,51 @@ jobs:
         run: ./build.sh 1.0.0 --release rc0 --distro el9 --executor docker
 
       - name: Find RPM (el9)
-        working-directory: src/xbatd
         id: get_rpm
+        working-directory: src/xbatd
         run: |
           RPM_NAME=$(ls xbatd-1.0.0-rc0.el9*.rpm)
+          echo "Found RPM: $RPM_NAME"
           echo "rpm_name=$RPM_NAME" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpm-el9
+          path: src/xbatd/xbatd-1.0.0-rc0.el9*.rpm
+
+  install-el8:
+    name: Install test on AlmaLinux 8
+    needs: build-el8
+    runs-on: ubuntu-latest
+    container:
+      image: almalinux:8
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: rpm-el8
+          path: /rpm_dir
+
+      - name: Install RPM (el8)
+        run: dnf install -y /rpm_dir/xbatd-1.0.0-rc0.el8*.rpm
+
+      - name: Remove RPM (el8)
+        run: dnf remove -y xbatd || true
+
+  install-el9:
+    name: Install test on AlmaLinux 9
+    needs: build-el9
+    runs-on: ubuntu-latest
+    container:
+      image: almalinux:9
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: rpm-el9
+          path: /rpm_dir
 
       - name: Prepare AlmaLinux 9 for dependencies
         run: |
-          dnf install -y epel-release dnf-utils python3-pip which tar gzip
+          dnf install -y epel-release dnf-utils python3-pip
           dnf config-manager --set-enabled crb
           dnf update -y
           pip3 install wheel
@@ -75,15 +100,45 @@ jobs:
           sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo
 
       - name: Install RPM (el9)
-        run: dnf install -y src/xbatd/${{ steps.get_rpm.outputs.rpm_name }}
-
-      - name: Run setup.sh install
-        working-directory: src/xbat
-        run: ./setup.sh install --home-mnt /home/ --executor docker --workers 4
-
-      - name: Run setup.sh uninstall
-        working-directory: src/xbat
-        run: ./setup.sh uninstall
+        run: dnf install -y /rpm_dir/xbatd-1.0.0-rc0.el9*.rpm
 
       - name: Remove RPM (el9)
         run: dnf remove -y xbatd || true
+
+  install-service-el8:
+    name: Install and uninstall xbat service on AlmaLinux 8
+    needs: install-el8          
+    runs-on: ubuntu-latest
+    container:
+      image: almalinux:8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: echo "No dependencies to install"
+      - name: Run setup.sh install
+        working-directory: src/xbat
+        run: sudo ./setup.sh install --home-mnt /home/ --executor docker --workers 4
+      - name: Run setup.sh uninstall
+        working-directory: src/xbat
+        run: sudo ./setup.sh uninstall
+
+  install-service-el9:
+    name: Install and uninstall xbat service on AlmaLinux 9
+    needs: install-el9            
+    runs-on: ubuntu-latest
+    container:
+      image: almalinux:9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare AlmaLinux 9 for dependencies
+        run: |
+          dnf install -y epel-release dnf-utils python3-pip
+          dnf config-manager --set-enabled crb
+          dnf update -y
+          pip3 install wheel
+      - name: Run setup.sh install
+        working-directory: src/xbat
+        run: sudo ./setup.sh install --home-mnt /home/ --executor docker --workers 4
+      - name: Run setup.sh uninstall
+        working-directory: src/xbat
+        run: sudo ./setup.sh uninstall
