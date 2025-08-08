@@ -116,11 +116,11 @@ jobs:
       - name: Run setup.sh install in AlmaLinux 8 container
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace/src/xbat almalinux:8 /bin/bash -c "
-            sudo ./setup.sh install --home-mnt /home/ --executor docker --workers 4"
+            ./setup.sh install --home-mnt /home/ --executor docker --workers 4"
       - name: Run setup.sh uninstall in AlmaLinux 8 container
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace/src/xbat almalinux:8 /bin/bash -c "
-            sudo ./setup.sh uninstall"
+            ./setup.sh uninstall"
 
   install-service-el9:
     name: Install and uninstall xbat service on AlmaLinux 9
@@ -138,9 +138,9 @@ jobs:
             dnf config-manager --set-enabled crb && \
             dnf update -y && \
             pip3 install wheel && \
-            sudo ./setup.sh install --home-mnt /home/ --executor docker --workers 4"
+            ./setup.sh install --home-mnt /home/ --executor docker --workers 4"
       - name: Run setup.sh uninstall in AlmaLinux 9 container
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace/src/xbat almalinux:9 /bin/bash -c "
-            sudo ./setup.sh uninstall"
+            ./setup.sh uninstall"
 
