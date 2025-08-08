@@ -66,34 +66,37 @@ jobs:
     needs: build-el8
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - uses: actions/download-artifact@v4
-        with:
-          name: rpm-el8
-          path: ./rpm_dir
+    - uses: actions/download-artifact@v4
+      with:
+        name: rpm-el8
+        path: ./rpm_dir
 
-      - name: Run AlmaLinux 8 container, install RPM and setup.sh install/uninstall test
-        run: |
-          docker run --rm -v ${{ github.workspace }}:/workdir -w /workdir almalinux:8 /bin/bash -c "
-            echo -e '#!/bin/bash\nexit 0' > /usr/bin/systemctl && chmod +x /usr/bin/systemctl && \
+    - name: Run AlmaLinux 8 container, install RPM and setup.sh install/uninstall test
+      run: |
+        docker run --rm -v ${{ github.workspace }}:/workdir -w /workdir almalinux:8 /bin/bash -c "
+          echo -e '#!/bin/bash\nexit 0' > /usr/bin/systemctl && chmod +x /usr/bin/systemctl && \
 
-            dnf install -y rsync wget && \
+          dnf install -y rsync wget docker && \
 
-            dnf install -y ./rpm_dir/xbatd-1.0.0-rc0.el8*.rpm && \
+          dnf install -y ./rpm_dir/xbatd-1.0.0-rc0.el8*.rpm && \
 
-            ./setup.sh install --home-mnt /home/ --executor shell --workers 4 && \
+          ./setup.sh install --home-mnt /home/ --executor docker --workers 4 && \
 
-            if [ -f /usr/bin/xbatd ]; then
-              echo 'xbatd binary exists'
-            else
-              echo 'xbatd missing' && exit 1
-            fi && \
+          if [ -f /usr/bin/xbatd ]; then
+            echo 'xbatd binary exists'
+          else
+            echo 'xbatd missing' && exit 1
+          fi && \
 
-            ./setup.sh uninstall && \
+          ./setup.sh uninstall && \
 
-            dnf remove -y xbatd
-          "
+          dnf remove -y xbatd
+        "
+
+
+
 
 
   install-el9:
@@ -101,39 +104,40 @@ jobs:
     needs: build-el9
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - uses: actions/download-artifact@v4
-        with:
-          name: rpm-el9
-          path: ./rpm_dir
+    - uses: actions/download-artifact@v4
+      with:
+        name: rpm-el9
+        path: ./rpm_dir
 
-      - name: Run AlmaLinux 9 container, prepare env, install RPM and setup.sh install/uninstall test
-        run: |
-          docker run --rm -v ${{ github.workspace }}:/workdir -w /workdir almalinux:9 /bin/bash -c "
-            echo -e '#!/bin/bash\nexit 0' > /usr/bin/systemctl && chmod +x /usr/bin/systemctl && \
+    - name: Run AlmaLinux 9 container, prepare env, install RPM and setup.sh install/uninstall test
+      run: |
+        docker run --rm -v ${{ github.workspace }}:/workdir -w /workdir almalinux:9 /bin/bash -c "
+          echo -e '#!/bin/bash\nexit 0' > /usr/bin/systemctl && chmod +x /usr/bin/systemctl && \
 
-            dnf install -y epel-release dnf-utils python3-pip && \
-            dnf config-manager --set-enabled crb && \
-            dnf update -y && \
-            pip3 install wheel && \
+          dnf install -y epel-release dnf-utils python3-pip docker && \
+          dnf config-manager --set-enabled crb && \
+          dnf update -y && \
+          pip3 install wheel && \
 
-            dnf install -y rsync wget && \
+          dnf install -y rsync wget && \
 
-            dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm && \
-            sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo && \
+          dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm && \
+          sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo && \
 
-            dnf install -y ./rpm_dir/xbatd-1.0.0-rc0.el9*.rpm && \
+          dnf install -y ./rpm_dir/xbatd-1.0.0-rc0.el9*.rpm && \
 
-            ./setup.sh install --home-mnt /home/ --executor shell --workers 4 && \
+          ./setup.sh install --home-mnt /home/ --executor docker --workers 4 && \
 
-            if [ -f /usr/bin/xbatd ]; then
-              echo 'xbatd binary exists'
-            else
-              echo 'xbatd missing' && exit 1
-            fi && \
+          if [ -f /usr/bin/xbatd ]; then
+            echo 'xbatd binary exists'
+          else
+            echo 'xbatd missing' && exit 1
+          fi && \
 
-            ./setup.sh uninstall && \
+          ./setup.sh uninstall && \
 
-            dnf remove -y xbatd
-          "
+          dnf remove -y xbatd
+        "
+
