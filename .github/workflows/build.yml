@@ -78,7 +78,8 @@ jobs:
         docker run --rm -v ${{ github.workspace }}:/workdir -w /workdir almalinux:8 /bin/bash -c "
           echo -e '#!/bin/bash\nexit 0' > /usr/bin/systemctl && chmod +x /usr/bin/systemctl && \
 
-          dnf install -y rsync wget docker && \
+          dnf install -y rsync wget docker python3-pip && \
+          pip3 install podman-compose && \
 
           dnf install -y ./rpm_dir/xbatd-1.0.0-rc0.el8*.rpm && \
 
@@ -94,9 +95,6 @@ jobs:
 
           dnf remove -y xbatd
         "
-
-
-
 
 
   install-el9:
@@ -117,6 +115,7 @@ jobs:
           echo -e '#!/bin/bash\nexit 0' > /usr/bin/systemctl && chmod +x /usr/bin/systemctl && \
 
           dnf install -y epel-release dnf-utils python3-pip docker && \
+          pip3 install podman-compose && \
           dnf config-manager --set-enabled crb && \
           dnf update -y && \
           pip3 install wheel && \
@@ -140,4 +139,5 @@ jobs:
 
           dnf remove -y xbatd
         "
+
 
