@@ -93,23 +93,32 @@ definePageMeta({
 
 const route = useRoute();
 const { $store } = useNuxtApp();
-const slugPath = computed(() => {
-    const parts = Array.isArray(route.params.slug)
+
+const slug = computed(() => {
+    const slugArray = Array.isArray(route.params.slug)
         ? route.params.slug
         : route.params.slug
         ? [route.params.slug]
         : [];
-    return `/docs/${parts.join("/")}`;
+    return `/docs/${slugArray.join("/")}`;
 });
 
-const { data: page } = await useAsyncData(`docs-${slugPath.value}`, () =>
-    queryContent(slugPath.value).findOne()
+const {
+    data: page,
+    pending,
+    error
+} = await useAsyncData(`docs-${slug.value}`, () =>
+    queryContent(slug.value).findOne()
 );
 
-if (!page.value) {
-    console.log(page);
-    throw createError({ statusCode: 404, statusMessage: "Page not found" });
-}
+watchEffect(() => {
+    if (!pending.value && !page.value && import.meta.client) {
+        throw createError({
+            statusCode: 404,
+            statusMessage: "Page not found (client)"
+        });
+    }
+});
 
 const { data: surround } = await useAsyncData(
     `docs-${route.path}-surround`,
