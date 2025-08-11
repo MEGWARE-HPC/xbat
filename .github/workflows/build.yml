@@ -141,7 +141,7 @@ jobs:
       run: |
         sudo chmod +x ./setup.sh
         sudo ./setup.sh install --home-mnt /home/ --executor docker --workers 4
-        sudo ./setup.sh uninstall
+        sudo ./setup.sh remove
 
     - name: Test install and uninstall of RPM in AlmaLinux 8 container
       run: |
@@ -192,7 +192,7 @@ jobs:
       run: |
         sudo chmod +x ./setup.sh
         sudo ./setup.sh install --home-mnt /home/ --executor docker --workers 4
-        sudo ./setup.sh uninstall
+        sudo ./setup.sh remove
 
     - name: Test install and uninstall of RPM in AlmaLinux 9 container
       run: |
