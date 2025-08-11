@@ -30,6 +30,7 @@ All notable changes to this project will be documented in this file.
 -   selected benchmark overview table page size is now persistent (#62)
 -   improved display of long configuration name (#55)
 -   login expired message changed from dialog to snackbar
+-   removed empty navigation on mobile devices
 
 ### Fixed
 
