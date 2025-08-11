@@ -1,6 +1,6 @@
 import { operators } from "~/utils/misc";
 import { decodeBraceNotation, isValidBrace } from "~/utils/braceNotation";
-import { CONVERSION_SIZES } from "~/utils/conversion";
+import { humanSizeFixed, CONVERSION_SIZES } from "~/utils/conversion";
 import { colors } from "~/utils/colors";
 import { ArrayUtils } from "~/utils/array";
 import { extractNumber } from "~/utils/string";
@@ -26,7 +26,6 @@ export const useGraph = () => {
 
     const generateGraph = (graphId: string): Graph => {
         const { $graphStore } = useNuxtApp();
-
         const storeGraph = $graphStore.useStoreGraph(graphId, "default");
 
         const query = storeGraph.query.value;
@@ -52,15 +51,15 @@ export const useGraph = () => {
                 prefix &&
                 jobId in overrides.prefixes &&
                 overrides.prefixes[jobId]?.length
-            )
+            ) {
                 prefix = `${overrides.prefixes[jobId]} `;
-
+            }
             const measurements = $graphStore.getMeasurements({
                 ...query,
                 jobIds: [jobId]
             });
 
-            if (!measurements || !measurements.traces?.length) continue;
+            if (!measurements?.traces?.length) continue;
 
             const unit = measurements.traces[0]?.unit;
             if (!unit) continue;
@@ -74,7 +73,7 @@ export const useGraph = () => {
             });
         }
 
-        if (unitInfoList.length === 0) {
+        if (!unitInfoList.length) {
             return {
                 traces: [],
                 layout: createLayout({ dataCount: 0, noData: true })
@@ -116,7 +115,7 @@ export const useGraph = () => {
                 unifiedUnitIndex
             });
 
-            if (!result || !result.traces.length) continue;
+            if (!result?.traces.length) continue;
 
             all.traces.push(...result.traces);
             all.dataCount += result.dataCount;
@@ -193,7 +192,7 @@ export const useGraph = () => {
 
         const preferences = storeGraph.preferences.value;
 
-        if (!result || !result?.traces?.length)
+        if (!result?.traces?.length)
             return {
                 traces: [],
                 dataCount: 0,
@@ -380,9 +379,9 @@ export const useGraph = () => {
                 let peak = node?.benchmarks?.[benchmark];
                 if (!node || !peak) return;
 
-                peak = peak * modifiers.systemBenchmarksScalingFactor;
+                peak *= modifiers.systemBenchmarksScalingFactor;
 
-                if (query.level == "job") peak = peak * nodeNames.length;
+                if (query.level == "job") peak *= nodeNames.length;
 
                 const isBandwidth = benchmark.includes("bandwidth");
                 const baseUnit = unit.substring(
