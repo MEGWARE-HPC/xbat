@@ -271,11 +271,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ "$EXECUTOR" == "docker" ]]; then
-  EXECUTOR_COMPOSE="docker-compose"
-else
-  EXECUTOR_COMPOSE="podman-compose"
-fi
+#if [[ "$EXECUTOR" == "docker" ]]; then
+#  EXECUTOR_COMPOSE="docker-compose"
+#else
+#  EXECUTOR_COMPOSE="podman-compose"
+#fi
 
 set -- "${POSITIONAL_ARGS[@]}"
 
