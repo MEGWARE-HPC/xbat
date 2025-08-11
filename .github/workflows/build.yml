@@ -106,48 +106,54 @@ jobs:
         run: dnf remove -y xbatd || true
 
   install-service-el8:
-    name: Install and uninstall xbat service on AlmaLinux 8 (in container)
+    name: Install and uninstall xbat service on AlmaLinux 8 (rootless podman)
     needs: install-el8
     runs-on: ubuntu-latest
-    container:
-      image: almalinux:8
     steps:
     - uses: actions/checkout@v4
-    - name: Install dependencies in container
+    - name: Install dependencies on Ubuntu
       run: |
-        dnf update -y
-        dnf install -y epel-release dnf-utils python3-pip rsync wget podman
-        pip3 install wheel podman-compose
-        dnf clean all
-    - name: Run setup.sh install
+        sudo apt-get update
+        sudo apt-get install -y podman podman-compose
+        podman --version
+    - name: Install dependencies inside AlmaLinux 8 container
       run: |
-        chmod +x ./setup.sh
-        ./setup.sh install --home-mnt /home/ --executor podman --workers 4
-    - name: Run setup.sh uninstall
-      run: ./setup.sh uninstall
+        podman run --rm -v .:/workspace:Z -w /workspace almalinux:8 \
+          sh -c "
+            dnf update -y &&
+            dnf install -y epel-release dnf-utils python3-pip rsync wget &&
+            pip3 install wheel podman-compose &&
+            chmod +x ./setup.sh &&
+            ./setup.sh install --home-mnt /home/ --executor podman --workers 4 &&
+            ./setup.sh uninstall
+          "
 
   install-service-el9:
-    name: Install and uninstall xbat service on AlmaLinux 9 (in container)
+    name: Install and uninstall xbat service on AlmaLinux 9 (rootless podman)
     needs: install-el9
     runs-on: ubuntu-latest
-    container:
-      image: almalinux:9
     steps:
     - uses: actions/checkout@v4
-    - name: Install dependencies in container
+    - name: Install dependencies on Ubuntu
       run: |
-        dnf install -y epel-release dnf-utils python3-pip rsync wget podman
-        pip3 install wheel podman-compose
-        dnf config-manager --set-enabled crb
-        dnf update -y
-        dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm
-        sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo
-        dnf clean all
-    - name: Run setup.sh install
+        sudo apt-get update
+        sudo apt-get install -y podman podman-compose
+        podman --version
+    - name: Install dependencies inside AlmaLinux 9 container
       run: |
-        chmod +x ./setup.sh
-        ./setup.sh install --home-mnt /home/ --executor podman --workers 4
-    - name: Run setup.sh uninstall
-      run: ./setup.sh uninstall
+        podman run --rm -v .:/workspace:Z -w /workspace almalinux:9 \
+          sh -c "
+            dnf install -y epel-release dnf-utils python3-pip rsync wget &&
+            pip3 install wheel podman-compose &&
+            dnf config-manager --set-enabled crb &&
+            dnf update -y &&
+            dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm &&
+            sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo &&
+            dnf clean all &&
+            chmod +x ./setup.sh &&
+            ./setup.sh install --home-mnt /home/ --executor podman --workers 4 &&
+            ./setup.sh uninstall
+          "
+
 
 
