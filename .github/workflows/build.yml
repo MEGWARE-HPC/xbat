@@ -106,39 +106,49 @@ jobs:
         run: dnf remove -y xbatd || true
 
   install-service-el8:
-    name: Install and uninstall xbat service on AlmaLinux 8 (on runner)
+    name: Install and uninstall xbat service on AlmaLinux 8 (in container)
     needs: install-el8
     runs-on: ubuntu-latest
+    container:
+      image: almalinux:8
     steps:
     - uses: actions/checkout@v4
-    - name: Install Podman on runner
+    - name: Install dependencies in container
       run: |
-        sudo apt-get update
-        sudo apt-get install -y podman
-    - name: Install dependencies and run setup.sh install on runner (el8)
+        dnf update -y
+        dnf install -y epel-release dnf-utils python3-pip rsync wget podman
+        dnf clean all
+        pip3 install wheel
+    - name: Copy setup.sh and run install
       run: |
-        sudo dnf update -y
-        sudo dnf install -y rsync wget podman
+        cp src/xbatd/setup.sh .
+        chmod +x setup.sh
         ./setup.sh install --home-mnt /home/ --executor podman --workers 4
-    - name: Run setup.sh uninstall on runner (el8)
+    - name: Run uninstall
       run: ./setup.sh uninstall
 
   install-service-el9:
-    name: Install and uninstall xbat service on AlmaLinux 9 (on runner)
+    name: Install and uninstall xbat service on AlmaLinux 9 (in container)
     needs: install-el9
     runs-on: ubuntu-latest
+    container:
+      image: almalinux:9
     steps:
     - uses: actions/checkout@v4
-    - name: Install Podman on runner
+    - name: Install dependencies in container
       run: |
-        sudo apt-get update
-        sudo apt-get install -y podman
-    - name: Install dependencies and run setup.sh install on runner (el9)
+        dnf install -y epel-release dnf-utils python3-pip rsync wget podman
+        dnf config-manager --set-enabled crb
+        dnf update -y
+        pip3 install wheel
+        dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm
+        sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo
+        dnf clean all
+    - name: Copy setup.sh and run install
       run: |
-        sudo dnf install -y epel-release dnf-utils python3-pip rsync wget podman
-        sudo dnf config-manager --set-enabled crb
-        sudo dnf update -y
-        sudo pip3 install wheel
+        cp src/xbatd/setup.sh .
+        chmod +x setup.sh
         ./setup.sh install --home-mnt /home/ --executor podman --workers 4
-    - name: Run setup.sh uninstall on runner (el9)
+    - name: Run uninstall
       run: ./setup.sh uninstall
+
