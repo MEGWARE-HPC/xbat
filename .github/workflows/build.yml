@@ -106,11 +106,12 @@ jobs:
         run: dnf remove -y xbatd || true
 
   install-service-el8:
-    name: Install and uninstall xbat service on AlmaLinux 8 (Docker)
+    name: Install and uninstall xbat service on AlmaLinux 8 (Host + Container)
     needs: install-el8
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+
     - name: Install Docker on Ubuntu runner
       run: |
         sudo apt-get update
@@ -136,23 +137,32 @@ jobs:
         docker info || { echo "Docker info failed - aborting"; exit 1; }
         docker ps || { echo "Docker ps failed - aborting"; exit 1; }
 
-    - name: Install dependencies inside AlmaLinux 8 container (excl. podman-compose)
+    - name: Run setup.sh install and uninstall on host (ubuntu-latest)
+      run: |
+        sudo chmod +x ./setup.sh
+        sudo ./setup.sh install --home-mnt /home/ --executor docker --workers 4
+        sudo ./setup.sh uninstall
+
+    - name: Test install and uninstall of RPM in AlmaLinux 8 container
       run: |
         docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace almalinux:8 sh -c "
           dnf update -y &&
-          dnf install -y epel-release dnf-utils python3-pip python3-devel gcc make rsync wget &&
-          pip3 install wheel &&
-          chmod +x ./setup.sh &&
-          ./setup.sh install --home-mnt /home/ --executor docker --workers 4 &&
-          ./setup.sh uninstall
+          dnf install -y epel-release dnf-utils &&
+          rpm_files=\$(ls *.rpm) &&
+          for rpm in \$rpm_files; do
+            echo 'Installing' \$rpm &&
+            dnf install -y ./\$rpm &&
+            dnf remove -y ./\$rpm
+          done
         "
 
   install-service-el9:
-    name: Install and uninstall xbat service on AlmaLinux 9 (Docker)
+    name: Install and uninstall xbat service on AlmaLinux 9 (Host + Container)
     needs: install-el9
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+
     - name: Install Docker on Ubuntu runner
       run: |
         sudo apt-get update
@@ -178,20 +188,29 @@ jobs:
         docker info || { echo "Docker info failed - aborting"; exit 1; }
         docker ps || { echo "Docker ps failed - aborting"; exit 1; }
 
-    - name: Install dependencies inside AlmaLinux 9 container (excl. podman-compose)
+    - name: Run setup.sh install and uninstall on host (ubuntu-latest)
+      run: |
+        sudo chmod +x ./setup.sh
+        sudo ./setup.sh install --home-mnt /home/ --executor docker --workers 4
+        sudo ./setup.sh uninstall
+
+    - name: Test install and uninstall of RPM in AlmaLinux 9 container
       run: |
         docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace almalinux:9 sh -c "
           dnf update -y &&
-          dnf install -y epel-release dnf-utils python3-pip python3-devel gcc make rsync wget &&
-          pip3 install wheel &&
+          dnf install -y epel-release dnf-utils &&
           dnf config-manager --set-enabled crb &&
           dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm &&
           sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo &&
           dnf clean all &&
-          chmod +x ./setup.sh &&
-          ./setup.sh install --home-mnt /home/ --executor docker --workers 4 &&
-          ./setup.sh uninstall
+          rpm_files=\$(ls *.rpm) &&
+          for rpm in \$rpm_files; do
+            echo 'Installing' \$rpm &&
+            dnf install -y ./\$rpm &&
+            dnf remove -y ./\$rpm
+          done
         "
+
 
 
 
