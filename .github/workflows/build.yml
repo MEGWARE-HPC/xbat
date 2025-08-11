@@ -119,12 +119,11 @@ jobs:
         dnf install -y epel-release dnf-utils python3-pip rsync wget podman
         dnf clean all
         pip3 install wheel
-    - name: Copy setup.sh and run install
+    - name: Run setup.sh install
       run: |
-        cp src/xbatd/setup.sh .
-        chmod +x setup.sh
+        chmod +x ./setup.sh
         ./setup.sh install --home-mnt /home/ --executor podman --workers 4
-    - name: Run uninstall
+    - name: Run setup.sh uninstall
       run: ./setup.sh uninstall
 
   install-service-el9:
@@ -144,11 +143,11 @@ jobs:
         dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm
         sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo
         dnf clean all
-    - name: Copy setup.sh and run install
+    - name: Run setup.sh install
       run: |
-        cp src/xbatd/setup.sh .
-        chmod +x setup.sh
+        chmod +x ./setup.sh
         ./setup.sh install --home-mnt /home/ --executor podman --workers 4
-    - name: Run uninstall
+    - name: Run setup.sh uninstall
       run: ./setup.sh uninstall
+
 
