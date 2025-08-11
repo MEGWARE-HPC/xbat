@@ -114,7 +114,19 @@ jobs:
     - name: Install Docker on Ubuntu runner
       run: |
         sudo apt-get update
-        sudo apt-get install -y docker.io
+        sudo apt-get remove -y containerd docker docker-engine docker.io || true
+        sudo apt-get install -y \
+          ca-certificates \
+          curl \
+          gnupg \
+          lsb-release
+        sudo mkdir -p /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        echo \
+          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+          $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+        sudo apt-get update
+        sudo apt-get install -y docker-ce docker-ce-cli containerd.io
         docker --version
     - name: Install dependencies inside AlmaLinux 8 container (excl. podman-compose)
       run: |
@@ -136,7 +148,19 @@ jobs:
     - name: Install Docker on Ubuntu runner
       run: |
         sudo apt-get update
-        sudo apt-get install -y docker.io
+        sudo apt-get remove -y containerd docker docker-engine docker.io || true
+        sudo apt-get install -y \
+          ca-certificates \
+          curl \
+          gnupg \
+          lsb-release
+        sudo mkdir -p /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        echo \
+          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+          $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+        sudo apt-get update
+        sudo apt-get install -y docker-ce docker-ce-cli containerd.io
         docker --version
     - name: Install dependencies inside AlmaLinux 9 container (excl. podman-compose)
       run: |
