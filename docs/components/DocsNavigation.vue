@@ -1,102 +1,116 @@
 <template>
-    <v-navigation-drawer
-        v-if="hydrated"
-        v-model="$store.docsDrawerOpen"
-        v-model:selected="selectedEntry"
-        class="pl-2 pr-2"
-        :permanent="windowWidth > 992"
-        :temporary="windowWidth <= 992"
-    >
-        <template v-if="items">
-            <div class="mt-13">
-                <div class="doc-type-head text-medium-emphasis">
-                    {{ $store.currentDocType }} Documentation
+    <ClientOnly>
+        <v-navigation-drawer
+            v-if="isClient && (!isMobile || items)"
+            v-model="$store.docsDrawerOpen"
+            v-model:selected="selectedEntry"
+            class="pl-2 pr-2"
+            :permanent="!isMobile"
+            :temporary="isMobile"
+        >
+            <template v-if="items">
+                <div class="mt-13">
+                    <div class="doc-type-head text-medium-emphasis">
+                        {{ $store.currentDocType }} Documentation
+                    </div>
+                    <div class="d-flex align-center justify-center">
+                        <v-btn
+                            variant="plain"
+                            :to="docStartingRoutes[prevDocType]"
+                            prepend-icon="$arrowLeft"
+                            :title="`Visit ${prevDocType} documentation`"
+                            size="small"
+                        >
+                            {{ prevDocType }}
+                        </v-btn>
+                        <v-btn
+                            variant="plain"
+                            :to="docStartingRoutes[nextDocType]"
+                            append-icon="$arrowRight"
+                            :title="`Visit ${nextDocType} documentation`"
+                            size="small"
+                        >
+                            {{ nextDocType }}
+                        </v-btn>
+                    </div>
                 </div>
-                <div class="d-flex align-center justify-center">
-                    <v-btn
-                        variant="plain"
-                        :to="docStartingRoutes[prevDocType]"
-                        prepend-icon="$arrowLeft"
-                        :title="`Visit ${prevDocType} documentation`"
-                        size="small"
-                    >
-                        {{ prevDocType }}
-                    </v-btn>
-                    <v-btn
-                        variant="plain"
-                        :to="docStartingRoutes[nextDocType]"
-                        append-icon="$arrowRight"
-                        :title="`Visit ${nextDocType} documentation`"
-                        size="small"
-                    >
-                        {{ nextDocType }}
-                    </v-btn>
-                </div>
-            </div>
-            <v-list
-                v-model:selected="selectedEntry"
-                color="primary-light"
-                class="navigation mt-4"
-                mandatory
-                open-strategy="multiple"
-            >
-                <template
-                    v-for="item in items.children"
-                    :key="`item-group-${item._path}`"
+                <v-list
+                    v-model:selected="selectedEntry"
+                    color="primary-light"
+                    class="navigation mt-4"
+                    mandatory
+                    open-strategy="multiple"
                 >
-                    <v-list-item
-                        v-if="!item.children?.length"
-                        :key="`item-${item._path}`"
-                        :title="item.title"
-                        :value="item._path"
-                        :to="item._path"
-                        :id="`item-${encodeURIComponent(item._path)}`"
-                        :class="{ 'active-doc': route.path === item._path }"
-                        :aria-current="
-                            route.path === item._path ? 'page' : undefined
-                        "
-                    ></v-list-item>
-
-                    <v-list-group
-                        v-else
-                        :key="`group-${item._path}`"
-                        :value="item._path"
-                    >
-                        <template v-slot:activator="{ props }">
-                            <v-list-item
-                                v-bind="props"
-                                :title="item.title"
-                                :id="`group-${encodeURIComponent(item._path)}`"
-                            ></v-list-item>
-                        </template>
-
+                    <template v-for="item in items.children">
                         <v-list-item
-                            v-for="entry in item.children"
-                            :key="`entry-${entry._path}`"
-                            :title="entry.title"
-                            :value="entry._path"
-                            :to="entry._path"
-                            :id="`entry-${encodeURIComponent(entry._path)}`"
-                            :class="{
-                                'active-doc': route.path === entry._path
-                            }"
+                            v-if="!item.children?.length"
+                            :key="`item-${item._path}`"
+                            :title="item.title"
+                            :value="item._path"
+                            :to="item._path"
+                            :id="`item-${encodeURIComponent(item._path)}`"
+                            :class="{ 'active-doc': route.path === item._path }"
                             :aria-current="
-                                route.path === entry._path ? 'page' : undefined
+                                route.path === item._path ? 'page' : undefined
                             "
                         ></v-list-item>
-                    </v-list-group>
-                </template>
-            </v-list>
-        </template>
-    </v-navigation-drawer>
+
+                        <v-list-group
+                            v-else
+                            :key="`group-${item._path}`"
+                            :value="item._path"
+                        >
+                            <template #activator="{ props }">
+                                <v-list-item
+                                    v-bind="props"
+                                    :title="item.title"
+                                    :id="`group-${encodeURIComponent(
+                                        item._path
+                                    )}`"
+                                ></v-list-item>
+                            </template>
+
+                            <v-list-item
+                                v-for="entry in item.children"
+                                :key="`entry-${entry._path}`"
+                                :title="entry.title"
+                                :value="entry._path"
+                                :to="entry._path"
+                                :id="`entry-${encodeURIComponent(entry._path)}`"
+                                :class="{
+                                    'active-doc': route.path === entry._path
+                                }"
+                                :aria-current="
+                                    route.path === entry._path
+                                        ? 'page'
+                                        : undefined
+                                "
+                            ></v-list-item>
+                        </v-list-group>
+                    </template>
+                </v-list>
+            </template>
+        </v-navigation-drawer>
+    </ClientOnly>
 </template>
 <script setup lang="ts">
 import type { NavItem } from "@nuxt/content";
 import { useWindowSize } from "@vueuse/core";
 
 const route = useRoute();
-const { width: windowWidth } = useWindowSize();
 const { $store } = useNuxtApp();
+
+const isClient = ref(false);
+const isMobile = ref(false);
+
+if (import.meta.client) {
+    isClient.value = true;
+    const { width } = useWindowSize();
+    watchEffect(() => {
+        isMobile.value = width.value <= 992;
+    });
+}
+
 const docStartingRoutes: Record<string, string> = {
     user: "/docs/user/introduction",
     admin: "/docs/admin/setup/installation",
@@ -110,23 +124,17 @@ const props = defineProps({
     }
 });
 
-const hydrated = ref(false);
-onMounted(() => {
-    hydrated.value = true;
-});
-
 const selectedEntry = ref<string[]>([]);
-onMounted(() => {
-    selectedEntry.value = [route.path];
-    watch(
-        () => route.path,
-        (newPath) => {
-            selectedEntry.value = [newPath];
-        }
-    );
-});
 
-const items: Ref<NavItem | null> = computed(() => {
+watch(
+    () => route.path,
+    (newPath) => {
+        selectedEntry.value = [newPath];
+    },
+    { immediate: true }
+);
+
+const items = computed(() => {
     const categories =
         Array.isArray(props.links) && props.links[0]?.children
             ? props.links[0].children
@@ -143,10 +151,9 @@ const docTypes = ["user", "admin", "developer"];
 
 const currentIndex = computed(() => {
     const docType = $store.currentDocType;
-    if (docType && docTypes.includes(docType)) {
-        return docTypes.indexOf(docType);
-    }
-    return 0;
+    return docType && docTypes.includes(docType)
+        ? docTypes.indexOf(docType)
+        : 0;
 });
 
 const nextIndex = computed(() => (currentIndex.value + 1) % docTypes.length);
