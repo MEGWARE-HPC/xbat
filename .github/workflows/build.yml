@@ -116,9 +116,9 @@ jobs:
     - name: Install dependencies in container
       run: |
         dnf update -y
-        dnf install -y epel-release dnf-utils python3-pip rsync wget podman podman-compose
+        dnf install -y epel-release dnf-utils python3-pip rsync wget podman
+        pip3 install wheel podman-compose
         dnf clean all
-        pip3 install wheel
     - name: Run setup.sh install
       run: |
         chmod +x ./setup.sh
@@ -136,10 +136,10 @@ jobs:
     - uses: actions/checkout@v4
     - name: Install dependencies in container
       run: |
-        dnf install -y epel-release dnf-utils python3-pip rsync wget podman podman-compose
+        dnf install -y epel-release dnf-utils python3-pip rsync wget podman
+        pip3 install wheel podman-compose
         dnf config-manager --set-enabled crb
         dnf update -y
-        pip3 install wheel
         dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm
         sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo
         dnf clean all
