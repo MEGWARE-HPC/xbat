@@ -119,7 +119,7 @@ jobs:
     - name: Install dependencies inside AlmaLinux 8 container (excl. podman-compose)
       run: |
         podman run --rm -v .:/workspace:Z -w /workspace almalinux:8 sh -c "
-          dnf update -y &&
+        dnf update -y &&
           dnf install -y epel-release dnf-utils python3-pip rsync wget podman &&
           pip3 install wheel &&
           chmod +x ./setup.sh &&
@@ -138,8 +138,8 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y podman podman-compose
         podman --version
-    - name: Install dependencies inside AlmaLinux 9 container (excl. podman-compose)
-      run: |
+    - name: Install dependencies inside AlmaLinux 9 containerF (excl. podman-compose)
+      run:
         podman run --rm -v .:/workspace:Z -w /workspace almalinux:9 sh -c "
           dnf update -y &&
           dnf install -y epel-release dnf-utils python3-pip rsync wget podman &&
@@ -152,6 +152,7 @@ jobs:
           ./setup.sh install --home-mnt /home/ --executor podman --workers 4 &&
           ./setup.sh uninstall
         "
+
 
 
 
