@@ -128,6 +128,14 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y docker-ce docker-ce-cli containerd.io
         docker --version
+
+    - name: Start Docker daemon and check status
+      run: |
+        sudo systemctl start docker || echo "Warning: systemctl start docker failed"
+        sudo systemctl status docker || echo "Warning: Docker service not running"
+        docker info || { echo "Docker info failed - aborting"; exit 1; }
+        docker ps || { echo "Docker ps failed - aborting"; exit 1; }
+
     - name: Install dependencies inside AlmaLinux 8 container (excl. podman-compose)
       run: |
         docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace almalinux:8 sh -c "
@@ -162,6 +170,14 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y docker-ce docker-ce-cli containerd.io
         docker --version
+
+    - name: Start Docker daemon and check status
+      run: |
+        sudo systemctl start docker || echo "Warning: systemctl start docker failed"
+        sudo systemctl status docker || echo "Warning: Docker service not running"
+        docker info || { echo "Docker info failed - aborting"; exit 1; }
+        docker ps || { echo "Docker ps failed - aborting"; exit 1; }
+
     - name: Install dependencies inside AlmaLinux 9 container (excl. podman-compose)
       run: |
         docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace almalinux:9 sh -c "
@@ -176,6 +192,7 @@ jobs:
           ./setup.sh install --home-mnt /home/ --executor docker --workers 4 &&
           ./setup.sh uninstall
         "
+
 
 
 
