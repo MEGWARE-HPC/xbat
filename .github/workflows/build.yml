@@ -106,52 +106,46 @@ jobs:
         run: dnf remove -y xbatd || true
 
   install-service-el8:
-    name: Install and uninstall xbat service on AlmaLinux 8 (container)
+    name: Install and uninstall xbat service on AlmaLinux 8 (on runner)
     needs: install-el8
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Run setup.sh install in AlmaLinux 8 container
+    - name: Install Docker on runner
       run: |
-        docker run --rm \
-          -v /var/run/docker.sock:/var/run/docker.sock \
-          -v ${{ github.workspace }}:/workspace \
-          -w /workspace \
-          almalinux:8 /bin/bash -c "
-            dnf update -y && dnf install -y rsync wget podman && \
-            ./setup.sh install --home-mnt /home/ --executor docker --workers 4"
-    - name: Run setup.sh uninstall in AlmaLinux 8 container
+        sudo apt-get update
+        sudo apt-get install -y docker.io
+        sudo systemctl start docker
+        sudo systemctl enable docker
+    - name: Install dependencies and run setup.sh install on runner (el8)
       run: |
-        docker run --rm \
-          -v /var/run/docker.sock:/var/run/docker.sock \
-          -v ${{ github.workspace }}:/workspace \
-          -w /workspace \
-          almalinux:8 /bin/bash -c "./setup.sh uninstall"
+        sudo dnf update -y
+        sudo dnf install -y rsync wget podman
+        ./setup.sh install --home-mnt /home/ --executor docker --workers 4
+    - name: Run setup.sh uninstall on runner (el8)
+      run: ./setup.sh uninstall
 
   install-service-el9:
-    name: Install and uninstall xbat service on AlmaLinux 9 (container)
+    name: Install and uninstall xbat service on AlmaLinux 9 (on runner)
     needs: install-el9
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Prepare AlmaLinux 9 and run setup.sh install in container
+    - name: Install Docker on runner
       run: |
-        docker run --rm \
-          -v /var/run/docker.sock:/var/run/docker.sock \
-          -v ${{ github.workspace }}:/workspace \
-          -w /workspace \
-          almalinux:9 /bin/bash -c "
-            dnf install -y epel-release dnf-utils python3-pip rsync wget podman && \
-            dnf config-manager --set-enabled crb && dnf update -y && \
-            pip3 install wheel && \
-            ./setup.sh install --home-mnt /home/ --executor docker --workers 4"
-    - name: Run setup.sh uninstall in AlmaLinux 9 container
+        sudo apt-get update
+        sudo apt-get install -y docker.io
+        sudo systemctl start docker
+        sudo systemctl enable docker
+    - name: Install dependencies and run setup.sh install on runner (el9)
       run: |
-        docker run --rm \
-          -v /var/run/docker.sock:/var/run/docker.sock \
-          -v ${{ github.workspace }}:/workspace \
-          -w /workspace \
-          almalinux:9 /bin/bash -c "./setup.sh uninstall"
+        sudo dnf install -y epel-release dnf-utils python3-pip rsync wget podman
+        sudo dnf config-manager --set-enabled crb
+        sudo dnf update -y
+        sudo pip3 install wheel
+        ./setup.sh install --home-mnt /home/ --executor docker --workers 4
+    - name: Run setup.sh uninstall on runner (el9)
+      run: ./setup.sh uninstall
 
 
 
