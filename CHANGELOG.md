@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 -   syntax highlighting support for CSV language in editor (#8)
 -   endpoint for energy consumption (#88)
 -   cpu and gpu energy consumption of jobs to benchmark overview (#51)
+-   tab titles to each page
 
 ### Changed
 
@@ -28,6 +29,8 @@ All notable changes to this project will be documented in this file.
 -   energy consumption statistics in sidebar (now also includes previously missing entries like DRAM etc.)
 -   selected benchmark overview table page size is now persistent (#62)
 -   improved display of long configuration name (#55)
+-   login expired message changed from dialog to snackbar
+-   removed empty navigation on mobile devices
 
 ### Fixed
 
@@ -45,6 +48,8 @@ All notable changes to this project will be documented in this file.
 -   missing group/metric and trace identifier in CSV output (#98)
 -   broken links and content in the documentation (#85)
 -   in-site navigation highlighting (#101)
+-   hydration attribute mismatch problem (#115)
+-   login page error caused by token expiration (#99)
 
 ## v1.0.0 - 2025-04-17
 
