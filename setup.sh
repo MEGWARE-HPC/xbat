@@ -61,7 +61,11 @@ create_user_if_missing() {
 }
 
 check_prerequisites() {
-    local cmds=("rsync" "wget" "$EXECUTOR" "$EXECUTOR_COMPOSE")
+    local cmds=("rsync" "wget" "$EXECUTOR")
+    if [[ "$EXECUTOR" == "podman" ]]; then
+        cmds+=("$EXECUTOR_COMPOSE")
+    fi
+
     for cmd in "${cmds[@]}"; do
         if ! command -v "$cmd" &>/dev/null; then
             log_error "$cmd is not installed. Please install it and try again."
