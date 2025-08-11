@@ -140,7 +140,7 @@ jobs:
       run: |
         docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace almalinux:8 sh -c "
           dnf update -y &&
-          dnf install -y epel-release dnf-utils python3-pip python3-devel gcc make rsync wget docker &&
+          dnf install -y epel-release dnf-utils python3-pip python3-devel gcc make rsync wget &&
           pip3 install wheel &&
           chmod +x ./setup.sh &&
           ./setup.sh install --home-mnt /home/ --executor docker --workers 4 &&
@@ -182,7 +182,7 @@ jobs:
       run: |
         docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace almalinux:9 sh -c "
           dnf update -y &&
-          dnf install -y epel-release dnf-utils python3-pip python3-devel gcc make rsync wget docker &&
+          dnf install -y epel-release dnf-utils python3-pip python3-devel gcc make rsync wget &&
           pip3 install wheel &&
           dnf config-manager --set-enabled crb &&
           dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm &&
@@ -192,6 +192,7 @@ jobs:
           ./setup.sh install --home-mnt /home/ --executor docker --workers 4 &&
           ./setup.sh uninstall
         "
+
 
 
 
