@@ -274,6 +274,11 @@ const refreshPaused = computed(
 const route = useRoute();
 const { graphPreferences, displayColumns, infoCollapsed } = usePreferences();
 
+useSeoMeta({
+    title: `Benchmark - ${route.params.id}`,
+    description: "xbat benchmark results"
+});
+
 const metrics = ref({});
 const metricsCache = ref({}); // cache raw api responses for metrics call
 const runNr = computed(() => parseInt(route.params.id) || 0);
