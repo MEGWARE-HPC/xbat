@@ -61,7 +61,7 @@ export default defineNuxtPlugin((nuxtApp) => {
                         status: 401,
                         detail: "Session expired"
                     };
-                    $authStore.clearToken();
+                    $authStore.clearToken(true);
                     navigateTo("/login");
                 });
             } else if (!response.ok) {
