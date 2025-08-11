@@ -105,11 +105,16 @@ const router = useRouter();
 const { $authStore, $store, $snackbar } = useNuxtApp();
 const { vNotEmpty } = useFormValidation();
 
+const title = $store.demo ? "xbat Demo Login" : "xbat Login";
+const description = $store.demo
+    ? "xbat HPC application benchmarking and optimization tool demo"
+    : "xbat login page";
+
 useSeoMeta({
-    title: "xbat Login",
-    ogTitle: "xbat Login",
-    description: "xbat HPC application benchmarking and optimization tool",
-    ogDescription: "xbat HPC application benchmarking and optimization tool"
+    title,
+    ogTitle: title,
+    description,
+    ogDescription: description
 });
 
 const form = reactive<{
