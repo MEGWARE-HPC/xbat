@@ -116,7 +116,7 @@ jobs:
     - name: Install dependencies in container
       run: |
         dnf update -y
-        dnf install -y epel-release dnf-utils python3-pip rsync wget podman
+        dnf install -y epel-release dnf-utils python3-pip rsync wget podman podman-compose
         dnf clean all
         pip3 install wheel
     - name: Run setup.sh install
@@ -136,7 +136,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Install dependencies in container
       run: |
-        dnf install -y epel-release dnf-utils python3-pip rsync wget podman
+        dnf install -y epel-release dnf-utils python3-pip rsync wget podman podman-compose
         dnf config-manager --set-enabled crb
         dnf update -y
         pip3 install wheel
