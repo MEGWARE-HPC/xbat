@@ -276,9 +276,7 @@ const { graphPreferences, displayColumns, infoCollapsed } = usePreferences();
 
 useSeoMeta({
     title: `Benchmark - ${route.params.id}`,
-    ogTitle: `Benchmark - ${route.params.id}`,
-    description: "xbat HPC application benchmarking and optimization tool",
-    ogDescription: "xbat HPC application benchmarking and optimization tool"
+    description: "xbat benchmark results"
 });
 
 const metrics = ref({});

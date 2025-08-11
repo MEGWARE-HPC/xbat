@@ -120,9 +120,7 @@ const { $api, $snackbar, $store } = useNuxtApp();
 
 useSeoMeta({
     title: "Projects",
-    ogTitle: "Projects",
     description: "Projects management for xbat",
-    ogDescription: "Projects management for xbat"
 });
 
 const headers = [

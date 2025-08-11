@@ -295,9 +295,7 @@ import { ArrayUtils } from "~/utils/array";
 
 useSeoMeta({
     title: "Users",
-    ogTitle: "Users",
-    description: "Users management for xbat",
-    ogDescription: "Users management for xbat"
+    description: "User management for xbat",
 });
 
 const headers = [

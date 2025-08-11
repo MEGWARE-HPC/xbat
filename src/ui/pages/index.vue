@@ -195,9 +195,7 @@ import { encodeBraceNotation } from "~/utils/braceNotation";
 
 useSeoMeta({
     title: "xbat",
-    ogTitle: "xbat",
-    description: "xbat HPC application benchmarking and optimization tool",
-    ogDescription: "xbat HPC application benchmarking and optimization tool"
+    description: "xbat benchmark overview"
 });
 
 const headers = [

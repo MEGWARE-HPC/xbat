@@ -106,10 +106,10 @@ const { $authStore, $store, $snackbar } = useNuxtApp();
 const { vNotEmpty } = useFormValidation();
 
 useSeoMeta({
-    title: "Login",
-    ogTitle: "Login",
-    description: "Login to xbat",
-    ogDescription: "Login to xbat"
+    title: "xbat Login",
+    ogTitle: "xbat Login",
+    description: "xbat HPC application benchmarking and optimization tool",
+    ogDescription: "xbat HPC application benchmarking and optimization tool"
 });
 
 const form = reactive<{

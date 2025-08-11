@@ -631,9 +631,7 @@ const { $authStore, $api, $snackbar, $store } = useNuxtApp();
 
 useSeoMeta({
     title: "Configurations",
-    ogTitle: "Configurations",
-    description: "Configuration management for xbat",
-    ogDescription: "Configuration management for xbat"
+    description: "Configuration management for xbat"
 });
 
 const validity = reactive({ settings: true, jobscript: true });
