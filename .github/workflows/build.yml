@@ -110,105 +110,137 @@ jobs:
     needs: install-el8
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install Docker and Docker Compose plugin on Ubuntu runner
-      run: |
-        sudo apt-get update
-        sudo apt-get remove -y containerd docker docker-engine docker.io docker-compose || true
-        sudo apt-get install -y \
-          ca-certificates \
-          curl \
-          gnupg \
-          lsb-release
-        sudo mkdir -p /etc/apt/keyrings
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-        echo \
-          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-          $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-        sudo apt-get update
-        sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-        docker --version
-        docker compose version
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
-    - name: Start Docker daemon and check status
-      run: |
-        sudo systemctl start docker || echo "Warning: systemctl start docker failed"
-        sudo systemctl status docker || echo "Warning: Docker service not running"
-        docker info || { echo "Docker info failed - aborting"; exit 1; }
-        docker ps || { echo "Docker ps failed - aborting"; exit 1; }
+      - name: Cache Nuxt fonts cache
+        uses: actions/cache@v3
+        with:
+          path: .nuxt/fonts-cache
+          key: ${{ runner.os }}-fonts-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-fonts-
 
-    - name: Run setup.sh install and uninstall on host (ubuntu-latest)
-      run: |
-        sudo chmod +x ./setup.sh
-        sudo env PATH=$PATH ./setup.sh install --home-mnt /home/ --executor docker --workers 4
-        sudo env PATH=$PATH ./setup.sh remove
+      - name: Install Docker and Docker Compose plugin on Ubuntu runner
+        run: |
+          sudo apt-get update
+          sudo apt-get remove -y containerd docker docker-engine docker.io docker-compose || true
+          sudo apt-get install -y \
+            ca-certificates \
+            curl \
+            gnupg \
+            lsb-release
+          sudo mkdir -p /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+          echo \
+            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+            $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+          docker --version
+          docker compose version
 
-    - name: Test install and uninstall of RPM in AlmaLinux 8 container
-      run: |
-        docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace almalinux:8 sh -c "
-          dnf update -y &&
-          dnf install -y epel-release dnf-utils &&
-          rpm_files=\$(ls *.rpm) &&
-          for rpm in \$rpm_files; do
-            echo 'Installing' \$rpm &&
-            dnf install -y ./\$rpm &&
-            dnf remove -y ./\$rpm
-          done
-        "
+      - name: Start Docker daemon and check status
+        run: |
+          sudo systemctl start docker || echo "Warning: systemctl start docker failed"
+          sudo systemctl status docker || echo "Warning: Docker service not running"
+          docker info || { echo "Docker info failed - aborting"; exit 1; }
+          docker ps || { echo "Docker ps failed - aborting"; exit 1; }
+
+      - name: Run setup.sh install and uninstall on host (ubuntu-latest)
+        run: |
+          sudo chmod +x ./setup.sh
+          sudo env PATH=$PATH ./setup.sh install --home-mnt /home/ --executor docker --workers 4
+          sudo env PATH=$PATH ./setup.sh remove
+
+      - name: Test install and uninstall of RPM in AlmaLinux 8 container
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace almalinux:8 sh -c "
+            dnf update -y &&
+            dnf install -y epel-release dnf-utils &&
+            rpm_files=\$(ls *.rpm) &&
+            for rpm in \$rpm_files; do
+              echo 'Installing' \$rpm &&
+              dnf install -y ./\$rpm &&
+              dnf remove -y ./\$rpm
+            done
+          "
 
   install-service-el9:
     name: Install and uninstall xbat service on AlmaLinux 9 (Host + Container)
     needs: install-el9
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install Docker and Docker Compose plugin on Ubuntu runner
-      run: |
-        sudo apt-get update
-        sudo apt-get remove -y containerd docker docker-engine docker.io docker-compose || true
-        sudo apt-get install -y \
-          ca-certificates \
-          curl \
-          gnupg \
-          lsb-release
-        sudo mkdir -p /etc/apt/keyrings
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-        echo \
-          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-          $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-        sudo apt-get update
-        sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-        docker --version
-        docker compose version
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
-    - name: Start Docker daemon and check status
-      run: |
-        sudo systemctl start docker || echo "Warning: systemctl start docker failed"
-        sudo systemctl status docker || echo "Warning: Docker service not running"
-        docker info || { echo "Docker info failed - aborting"; exit 1; }
-        docker ps || { echo "Docker ps failed - aborting"; exit 1; }
+      - name: Cache Nuxt fonts cache
+        uses: actions/cache@v3
+        with:
+          path: .nuxt/fonts-cache
+          key: ${{ runner.os }}-fonts-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-fonts-
 
-    - name: Run setup.sh install and uninstall on host (ubuntu-latest)
-      run: |
-        sudo chmod +x ./setup.sh
-        sudo env PATH=$PATH ./setup.sh install --home-mnt /home/ --executor docker --workers 4
-        sudo env PATH=$PATH ./setup.sh remove
+      - name: Install Docker and Docker Compose plugin on Ubuntu runner
+        run: |
+          sudo apt-get update
+          sudo apt-get remove -y containerd docker docker-engine docker.io docker-compose || true
+          sudo apt-get install -y \
+            ca-certificates \
+            curl \
+            gnupg \
+            lsb-release
+          sudo mkdir -p /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+          echo \
+            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+            $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+          docker --version
+          docker compose version
 
-    - name: Test install and uninstall of RPM in AlmaLinux 9 container
-      run: |
-        docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace almalinux:9 sh -c "
-          dnf update -y &&
-          dnf install -y epel-release dnf-utils &&
-          dnf config-manager --set-enabled crb &&
-          dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm &&
-          sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo &&
-          dnf clean all &&
-          rpm_files=\$(ls *.rpm) &&
-          for rpm in \$rpm_files; do
-            echo 'Installing' \$rpm &&
-            dnf install -y ./\$rpm &&
-            dnf remove -y ./\$rpm
-          done
-        "
+      - name: Start Docker daemon and check status
+        run: |
+          sudo systemctl start docker || echo "Warning: systemctl start docker failed"
+          sudo systemctl status docker || echo "Warning: Docker service not running"
+          docker info || { echo "Docker info failed - aborting"; exit 1; }
+          docker ps || { echo "Docker ps failed - aborting"; exit 1; }
+
+      - name: Run setup.sh install and uninstall on host (ubuntu-latest)
+        run: |
+          sudo chmod +x ./setup.sh
+          sudo env PATH=$PATH ./setup.sh install --home-mnt /home/ --executor docker --workers 4
+          sudo env PATH=$PATH ./setup.sh remove
+
+      - name: Test install and uninstall of RPM in AlmaLinux 9 container
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace almalinux:9 sh -c "
+            dnf update -y &&
+            dnf install -y epel-release dnf-utils &&
+            dnf config-manager --set-enabled crb &&
+            dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm &&
+            sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo &&
+            dnf clean all &&
+            rpm_files=\$(ls *.rpm) &&
+            for rpm in \$rpm_files; do
+              echo 'Installing' \$rpm &&
+              dnf install -y ./\$rpm &&
+              dnf remove -y ./\$rpm
+            done
+          "
