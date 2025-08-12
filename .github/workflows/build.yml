@@ -1,217 +1,52 @@
-name: Build and Test xbat daemon
-# Trigger-Test, keine Änderung an der Logik
+name: Build and Test xbatd RPM
 
 on:
   push:
     branches:
-      - ci-testing
+      - main
   pull_request:
-    branches:
-      - ci-testing
 
 jobs:
   build-el8:
-    name: Build for AlmaLinux 8
+    name: Build xbatd RPM for AlmaLinux 8
     runs-on: ubuntu-latest
-    outputs:
-      rpm_name: ${{ steps.get_rpm.outputs.rpm_name }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Build with build.sh (el8)
-        working-directory: src/xbatd
-        run: ./build.sh 1.0.0 --release rc0 --distro el8 --executor docker
-
-      - name: Find RPM (el8)
-        id: get_rpm
-        working-directory: src/xbatd
-        run: |
-          RPM_NAME=$(ls xbatd-1.0.0-rc0.el8*.rpm)
-          echo "Found RPM: $RPM_NAME"
-          echo "rpm_name=$RPM_NAME" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/upload-artifact@v4
+      - name: Build xbatd (el8)
+        uses: ./github/actions/build-xbat
         with:
-          name: rpm-el8
-          path: src/xbatd/xbatd-1.0.0-rc0.el8*.rpm
+          version: '1.0.0'
+          release: 'rc0'
+          distro: 'el8'
+          executor: 'docker'
 
   build-el9:
-    name: Build for AlmaLinux 9
+    name: Build xbatd RPM for AlmaLinux 9
     runs-on: ubuntu-latest
-    outputs:
-      rpm_name: ${{ steps.get_rpm.outputs.rpm_name }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Build with build.sh (el9)
-        working-directory: src/xbatd
-        run: ./build.sh 1.0.0 --release rc0 --distro el9 --executor docker
-
-      - name: Find RPM (el9)
-        id: get_rpm
-        working-directory: src/xbatd
-        run: |
-          RPM_NAME=$(ls xbatd-1.0.0-rc0.el9*.rpm)
-          echo "Found RPM: $RPM_NAME"
-          echo "rpm_name=$RPM_NAME" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/upload-artifact@v4
+      - name: Build xbatd (el9)
+        uses: ./github/actions/build-xbat
         with:
-          name: rpm-el9
-          path: src/xbatd/xbatd-1.0.0-rc0.el9*.rpm
+          version: '1.0.0'
+          release: 'rc0'
+          distro: 'el9'
+          executor: 'docker'
 
-  install-el8:
-    name: Install test on AlmaLinux 8
+  install-test-el8:
+    name: Install and remove RPM on AlmaLinux 8 container
+    runs-on: ubuntu-latest
     needs: build-el8
-    runs-on: ubuntu-latest
-    container:
-      image: almalinux:8
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Test install/remove on el8
+        uses: ./github/actions/install-test
         with:
-          name: rpm-el8
-          path: /rpm_dir
+          distro: 'el8'
 
-      - name: Install RPM (el8)
-        run: dnf install -y /rpm_dir/xbatd-1.0.0-rc0.el8*.rpm
-
-      - name: Remove RPM (el8)
-        run: dnf remove -y xbatd || true
-
-  install-el9:
-    name: Install test on AlmaLinux 9
+  install-test-el9:
+    name: Install and remove RPM on AlmaLinux 9 container
+    runs-on: ubuntu-latest
     needs: build-el9
-    runs-on: ubuntu-latest
-    container:
-      image: almalinux:9
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Test install/remove on el9
+        uses: ./github/actions/install-test
         with:
-          name: rpm-el9
-          path: /rpm_dir
-
-      - name: Prepare AlmaLinux 9 for dependencies
-        run: |
-          dnf install -y epel-release dnf-utils python3-pip
-          dnf config-manager --set-enabled crb
-          dnf update -y
-          pip3 install wheel
-          dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm
-          sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo
-
-      - name: Install RPM (el9)
-        run: dnf install -y /rpm_dir/xbatd-1.0.0-rc0.el9*.rpm
-
-      - name: Remove RPM (el9)
-        run: dnf remove -y xbatd || true
-
-  install-service-el8:
-    name: Install and uninstall xbat service on AlmaLinux 8 (Host + Container)
-    needs: install-el8
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Cache node modules
-        uses: actions/cache@v3
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Cache Nuxt fonts cache
-        uses: actions/cache@v3
-        with:
-          path: .nuxt/fonts-cache
-          key: ${{ runner.os }}-fonts-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-fonts-
-
-      - name: Install Docker and Docker Compose plugin on Ubuntu runner
-        run: |
-          sudo apt-get update
-          sudo apt-get remove -y containerd docker docker-engine docker.io docker-compose || true
-          sudo apt-get install -y \
-            ca-certificates \
-            curl \
-            gnupg \
-            lsb-release
-          sudo mkdir -p /etc/apt/keyrings
-          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-          echo \
-            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-            $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-          sudo apt-get update
-          sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-          docker --version
-          docker compose version
-
-      - name: Start Docker daemon and check status
-        run: |
-          sudo systemctl start docker || echo "Warning: systemctl start docker failed"
-          sudo systemctl status docker || echo "Warning: Docker service not running"
-          docker info || { echo "Docker info failed - aborting"; exit 1; }
-          docker ps || { echo "Docker ps failed - aborting"; exit 1; }
-
-      - name: Run setup.sh install and uninstall on host (ubuntu-latest)
-        run: |
-          sudo chmod +x ./setup.sh
-          sudo env PATH=$PATH ./setup.sh install --home-mnt /home/ --executor docker --workers 4
-          sudo env PATH=$PATH ./setup.sh remove --yes
-
-  install-service-el9:
-    name: Install and uninstall xbat service on AlmaLinux 9 (Host + Container)
-    needs: install-el9
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Cache node modules
-        uses: actions/cache@v3
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Cache Nuxt fonts cache
-        uses: actions/cache@v3
-        with:
-          path: .nuxt/fonts-cache
-          key: ${{ runner.os }}-fonts-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-fonts-
-
-      - name: Install Docker and Docker Compose plugin on Ubuntu runner
-        run: |
-          sudo apt-get update
-          sudo apt-get remove -y containerd docker docker-engine docker.io docker-compose || true
-          sudo apt-get install -y \
-            ca-certificates \
-            curl \
-            gnupg \
-            lsb-release
-          sudo mkdir -p /etc/apt/keyrings
-          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-          echo \
-            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-            $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-          sudo apt-get update
-          sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-          docker --version
-          docker compose version
-
-      - name: Start Docker daemon and check status
-        run: |
-          sudo systemctl start docker || echo "Warning: systemctl start docker failed"
-          sudo systemctl status docker || echo "Warning: Docker service not running"
-          docker info || { echo "Docker info failed - aborting"; exit 1; }
-          docker ps || { echo "Docker ps failed - aborting"; exit 1; }
-
-      - name: Run setup.sh install and uninstall on host (ubuntu-latest)
-        run: |
-          sudo chmod +x ./setup.sh
-          sudo env PATH=$PATH ./setup.sh install --home-mnt /home/ --executor docker --workers 4
-          sudo env PATH=$PATH ./setup.sh remove --yes
-
+          distro: 'el9'

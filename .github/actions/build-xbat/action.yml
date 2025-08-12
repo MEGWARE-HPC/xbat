@@ -1,0 +1,36 @@
+name: 'Build xbatd'
+description: 'Builds the xbatd daemon for a specific AlmaLinux version'
+inputs:
+  version:
+    description: 'Version number (e.g. 1.0.0)'
+    required: true
+  release:
+    description: 'Release tag (e.g. rc0)'
+    required: true
+  distro:
+    description: 'Target distro (el8 or el9)'
+    required: true
+  executor:
+    description: 'Container executor (docker or podman)'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Run build.sh
+      shell: bash
+      run: |
+        cd src/xbatd
+        chmod +x build.sh
+        ./build.sh "${{ inputs.version }}" \
+                   --release "${{ inputs.release }}" \
+                   --distro "${{ inputs.distro }}" \
+                   --executor "${{ inputs.executor }}"
+
+    - name: Upload RPM artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: rpm-${{ inputs.distro }}
+        path: src/xbatd/*.rpm

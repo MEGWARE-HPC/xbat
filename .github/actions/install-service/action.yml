@@ -1,0 +1,62 @@
+name: 'Install & Uninstall xbat service'
+description: Installs and uninstalls the xbat service using setup.sh
+
+inputs:
+  executor:
+    description: Executor to use (docker or podman)
+    required: true
+  workers:
+    description: Number of workers
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache@v3
+      with:
+        path: node_modules
+        key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+
+    - uses: actions/cache@v3
+      with:
+        path: .nuxt/fonts-cache
+        key: ${{ runner.os }}-fonts-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-fonts-
+
+    - name: Install Docker and Docker Compose plugin on Ubuntu runner
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get remove -y containerd docker docker-engine docker.io docker-compose || true
+        sudo apt-get install -y \
+          ca-certificates \
+          curl \
+          gnupg \
+          lsb-release
+        sudo mkdir -p /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        echo \
+          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+          $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+        sudo apt-get update
+        sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+        docker --version
+        docker compose version
+
+    - name: Start Docker daemon and check status
+      shell: bash
+      run: |
+        sudo systemctl start docker || echo "Warning: systemctl start docker failed"
+        sudo systemctl status docker || echo "Warning: Docker service not running"
+        docker info || { echo "Docker info failed - aborting"; exit 1; }
+        docker ps || { echo "Docker ps failed - aborting"; exit 1; }
+
+    - name: Run setup.sh install and uninstall
+      shell: bash
+      run: |
+        sudo chmod +x ./setup.sh
+        sudo env PATH=$PATH ./setup.sh install --home-mnt /home/ --executor ${{ inputs.executor }} --workers ${{ inputs.workers }}
+        sudo env PATH=$PATH ./setup.sh remove --yes
