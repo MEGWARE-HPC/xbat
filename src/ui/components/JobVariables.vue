@@ -48,7 +48,6 @@
                                     : []
                             "
                             hide-details="auto"
-                            autofocus
                         >
                             <template #prepend>
                                 <v-checkbox-btn
