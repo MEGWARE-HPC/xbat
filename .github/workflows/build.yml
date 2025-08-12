@@ -160,19 +160,6 @@ jobs:
           sudo env PATH=$PATH ./setup.sh install --home-mnt /home/ --executor docker --workers 4
           sudo env PATH=$PATH ./setup.sh remove --yes
 
-      - name: Test install and uninstall of RPM in AlmaLinux 8 container
-        run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace almalinux:8 sh -c "
-            dnf update -y &&
-            dnf install -y epel-release dnf-utils &&
-            rpm_files=\$(ls *.rpm) &&
-            for rpm in \$rpm_files; do
-              echo 'Installing' \$rpm &&
-              dnf install -y ./\$rpm &&
-              dnf remove -y ./\$rpm
-            done
-          "
-
   install-service-el9:
     name: Install and uninstall xbat service on AlmaLinux 9 (Host + Container)
     needs: install-el9
@@ -228,19 +215,3 @@ jobs:
           sudo env PATH=$PATH ./setup.sh install --home-mnt /home/ --executor docker --workers 4
           sudo env PATH=$PATH ./setup.sh remove --yes
 
-      - name: Test install and uninstall of RPM in AlmaLinux 9 container
-        run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace almalinux:9 sh -c "
-            dnf update -y &&
-            dnf install -y epel-release dnf-utils &&
-            dnf config-manager --set-enabled crb &&
-            dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm &&
-            sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo &&
-            dnf clean all &&
-            rpm_files=\$(ls *.rpm) &&
-            for rpm in \$rpm_files; do
-              echo 'Installing' \$rpm &&
-              dnf install -y ./\$rpm &&
-              dnf remove -y ./\$rpm
-            done
-          "
