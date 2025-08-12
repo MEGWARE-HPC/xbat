@@ -3,8 +3,10 @@ name: Build and Test xbatd RPM
 on:
   push:
     branches:
-      - main
+      - ci-testing
   pull_request:
+    branches:
+      - ci-testing
 
 jobs:
   build-el8:
