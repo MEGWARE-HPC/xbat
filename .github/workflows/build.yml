@@ -112,10 +112,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install Docker on Ubuntu runner
+    - name: Install Docker and Docker Compose plugin on Ubuntu runner
       run: |
         sudo apt-get update
-        sudo apt-get remove -y containerd docker docker-engine docker.io || true
+        sudo apt-get remove -y containerd docker docker-engine docker.io docker-compose || true
         sudo apt-get install -y \
           ca-certificates \
           curl \
@@ -127,8 +127,9 @@ jobs:
           "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
           $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
         sudo apt-get update
-        sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+        sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
         docker --version
+        docker compose version
 
     - name: Start Docker daemon and check status
       run: |
@@ -163,10 +164,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install Docker on Ubuntu runner
+    - name: Install Docker and Docker Compose plugin on Ubuntu runner
       run: |
         sudo apt-get update
-        sudo apt-get remove -y containerd docker docker-engine docker.io || true
+        sudo apt-get remove -y containerd docker docker-engine docker.io docker-compose || true
         sudo apt-get install -y \
           ca-certificates \
           curl \
@@ -178,8 +179,9 @@ jobs:
           "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
           $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
         sudo apt-get update
-        sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+        sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
         docker --version
+        docker compose version
 
     - name: Start Docker daemon and check status
       run: |
@@ -210,16 +212,3 @@ jobs:
             dnf remove -y ./\$rpm
           done
         "
-
-
-
-
-
-
-
-
-
-
-
-
-

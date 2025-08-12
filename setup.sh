@@ -19,7 +19,7 @@ LIB_BASE_PATH="/var/lib/xbat"
 RUN_PATH="/run/xbat"
 
 EXECUTOR="docker"
-EXECUTOR_COMPOSE="docker-compose"
+EXECUTOR_COMPOSE="docker compose"
 
 HOME_MNT=""
 HELP=false
@@ -258,7 +258,7 @@ while [[ $# -gt 0 ]]; do
     --executor)     
         EXECUTOR="$2"
         if [[ "$EXECUTOR" == "docker" ]]; then
-            EXECUTOR_COMPOSE="docker-compose"
+            EXECUTOR_COMPOSE="docker compose"
         else
             EXECUTOR_COMPOSE="podman-compose"
         fi
