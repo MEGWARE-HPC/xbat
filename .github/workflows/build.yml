@@ -158,7 +158,7 @@ jobs:
         run: |
           sudo chmod +x ./setup.sh
           sudo env PATH=$PATH ./setup.sh install --home-mnt /home/ --executor docker --workers 4
-          sudo env PATH=$PATH ./setup.sh remove
+          sudo env PATH=$PATH ./setup.sh remove --yes
 
       - name: Test install and uninstall of RPM in AlmaLinux 8 container
         run: |
@@ -226,7 +226,7 @@ jobs:
         run: |
           sudo chmod +x ./setup.sh
           sudo env PATH=$PATH ./setup.sh install --home-mnt /home/ --executor docker --workers 4
-          sudo env PATH=$PATH ./setup.sh remove
+          sudo env PATH=$PATH ./setup.sh remove --yes
 
       - name: Test install and uninstall of RPM in AlmaLinux 9 container
         run: |

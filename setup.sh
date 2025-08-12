@@ -17,6 +17,7 @@ CONF_DEST_PATH="/etc/xbat"
 LOG_BASE_PATH="/var/log/xbat"
 LIB_BASE_PATH="/var/lib/xbat"
 RUN_PATH="/run/xbat"
+YES=false
 
 EXECUTOR="docker"
 EXECUTOR_COMPOSE=(docker compose)
@@ -230,12 +231,17 @@ remove_action() {
     echo "Removed directories"
     
     if id "$XBAT_USER" &>/dev/null; then
-        read -rp "Remove user '$XBAT_USER'? [y/N]: " confirm
-        if [[ "$confirm" =~ ^[Yy]$ ]]; then
+        if [[ "$YES" == true ]]; then
             userdel "$XBAT_USER"
             log_info "User '$XBAT_USER' removed."
         else
-            echo "User removal skipped"
+            read -rp "Remove user '$XBAT_USER'? [y/N]: " confirm
+            if [[ "$confirm" =~ ^[Yy]$ ]]; then
+                userdel "$XBAT_USER"
+                log_info "User '$XBAT_USER' removed."
+            else
+                echo "User removal skipped"
+            fi
         fi
     else
         echo "User $XBAT_USER does not exist"
@@ -243,6 +249,7 @@ remove_action() {
     
     log_info "Removal completed successfully."
 }
+
 
 # cleanup() {
 #     # log_info "Cleanup complete."
@@ -261,6 +268,7 @@ show_help() {
     echo -e "\t[--workers <count>] Number of workers (default 8)"
     echo -e "\t[--certificate-dir <dir>] Certificates directory (default /etc/xbat/certs)"
     echo -e "\t[--user <user>] system user to run xbat (default xbat)"
+    echo -e "\t[--yes] Automatically confirm user removal during remove action"
 }
 
 #########################################
@@ -289,6 +297,7 @@ while [[ $# -gt 0 ]]; do
     --certificate-dir) CERT_DIR="$2"; shift; shift;;
     --user) XBAT_USER="$2"; shift; shift;;
     --help) HELP=true; shift;;
+    -y|--yes) YES=true; shift;;
     -*|--*) log_error "Unknown option $1"; exit 1;;
     *) POSITIONAL_ARGS+=("$1"); shift;;
   esac
