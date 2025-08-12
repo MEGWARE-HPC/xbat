@@ -18,8 +18,8 @@ LOG_BASE_PATH="/var/log/xbat"
 LIB_BASE_PATH="/var/lib/xbat"
 RUN_PATH="/run/xbat"
 
-EXECUTOR="podman"
-EXECUTOR_COMPOSE="podman-compose"
+EXECUTOR="docker"
+EXECUTOR_COMPOSE="docker compose"
 
 HOME_MNT=""
 HELP=false
@@ -255,7 +255,14 @@ POSITIONAL_ARGS=()
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --executor) EXECUTOR="$2"; shift; shift;;
+    --executor)     
+        EXECUTOR="$2"
+        if [[ "$EXECUTOR" == "docker" ]]; then
+            EXECUTOR_COMPOSE="docker compose"
+        else
+            EXECUTOR_COMPOSE="podman-compose"
+        fi
+        shift; shift;;
     --home-mnt) HOME_MNT="$2"; shift; shift;;
     --no-db) NODB=true; shift;;
     --expose-questdb) EXPOSE_QUESTDB=true; shift;;
@@ -270,12 +277,6 @@ while [[ $# -gt 0 ]]; do
     *) POSITIONAL_ARGS+=("$1"); shift;;
   esac
 done
-
-#if [[ "$EXECUTOR" == "docker" ]]; then
-#  EXECUTOR_COMPOSE="docker-compose"
-#else
-#  EXECUTOR_COMPOSE="podman-compose"
-#fi
 
 set -- "${POSITIONAL_ARGS[@]}"
 
