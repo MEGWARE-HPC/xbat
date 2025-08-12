@@ -505,13 +505,15 @@
                                                 ></v-icon>
                                             </div>
                                         </template>
-                                        {{
-                                            "configurationName" in
-                                            v.configuration
-                                                ? v.configuration
-                                                      .configurationName
-                                                : id
-                                        }}
+                                        <span class="configuration-name">
+                                            {{
+                                                "configurationName" in
+                                                v.configuration
+                                                    ? v.configuration
+                                                          .configurationName
+                                                    : id
+                                            }}
+                                        </span>
                                         <template #append>
                                             <v-btn-group
                                                 devided
@@ -626,6 +628,11 @@ import { deepClone } from "~/utils/misc";
 import { v4 as uuidv4 } from "uuid";
 const { vNotEmpty, vNumber, vInteger } = useFormValidation();
 const { $authStore, $api, $snackbar, $store } = useNuxtApp();
+
+useSeoMeta({
+    title: "Configurations",
+    description: "Configuration management for xbat"
+});
 
 const validity = reactive({ settings: true, jobscript: true });
 
@@ -924,6 +931,10 @@ watch(
     .list {
         overflow-y: auto;
         max-height: 80vh;
+    }
+    .configuration-name {
+        white-space: normal;
+        word-break: break-all;
     }
 }
 
