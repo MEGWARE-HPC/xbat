@@ -1,0 +1,12 @@
+name: 'Cache Nuxt Fonts Cache'
+description: 'Caches the Nuxt fonts cache directory to improve build performance.'
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/cache@v3
+      with:
+        path: .nuxt/fonts-cache
+        key: ${{ runner.os }}-fonts-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-fonts-
