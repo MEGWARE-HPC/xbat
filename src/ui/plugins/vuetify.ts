@@ -88,6 +88,8 @@ import {
     mdiFolderZip,
     mdiGestureTapButton,
     mdiLightningBoltOutline,
+    mdiDrag,
+    mdiSort,
     mdiSortNumericAscending,
     mdiSortNumericDescending,
     mdiFormatListGroupPlus
@@ -227,6 +229,8 @@ export default defineNuxtPlugin((app) => {
                 info: mdiInformation,
                 gestureTap: mdiGestureTapButton,
                 lightningBolt: mdiLightningBoltOutline,
+                sortDrag: mdiDrag,
+                sortCustom: mdiSort,
                 sortAsc: mdiSortNumericAscending,
                 sortDesc: mdiSortNumericDescending,
                 addArray: mdiFormatListGroupPlus
