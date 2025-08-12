@@ -205,26 +205,42 @@ setup_systemd_service() {
 remove_action() {
     log_info "Starting removal..."
     systemctl stop "$SERVICE_NAME" || true
+    echo "After systemctl stop"
     systemctl disable "$SERVICE_NAME" || true
+    echo "After systemctl disable"
     rm -f "$SERVICE_DEST_PATH/$SERVICE_NAME"
+    echo "After removing service file"
     systemctl daemon-reload
+    echo "After daemon reload"
 
     if [[ -d "$INSTALL_PATH" ]]; then
         pushd "$INSTALL_PATH" > /dev/null
+        echo "Entered $INSTALL_PATH"
+        
         "${EXECUTOR_COMPOSE[@]}" down
+        echo "After docker compose down"
+        
         popd > /dev/null
+        echo "Exited $INSTALL_PATH"
+    else
+        echo "$INSTALL_PATH does not exist"
     fi
-
+    
     rm -rf "$INSTALL_PATH" "$CONF_DEST_PATH" "$RUN_PATH" "$LOG_BASE_PATH" "$LIB_BASE_PATH"
-
+    echo "Removed directories"
+    
     if id "$XBAT_USER" &>/dev/null; then
         read -rp "Remove user '$XBAT_USER'? [y/N]: " confirm
         if [[ "$confirm" =~ ^[Yy]$ ]]; then
             userdel "$XBAT_USER"
             log_info "User '$XBAT_USER' removed."
+        else
+            echo "User removal skipped"
         fi
+    else
+        echo "User $XBAT_USER does not exist"
     fi
-
+    
     log_info "Removal completed successfully."
 }
 
