@@ -50,6 +50,7 @@ All notable changes to this project will be documented in this file.
 -   in-site navigation highlighting (#101)
 -   hydration attribute mismatch problem (#115)
 -   login page error caused by token expiration (#99)
+-   unit mismatch in benchmark comparisons (#50)
 
 ## v1.0.0 - 2025-04-17
 
