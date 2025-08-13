@@ -32,7 +32,17 @@
                 "
             >
                 <template v-slot:item="{ props, item, index: selectIdx }">
-                    <v-list-item v-bind="props" :title="undefined">
+                    <v-list-item
+                        v-bind="props"
+                        :title="undefined"
+                        draggable="true"
+                        @dragstart="handleDragStart($event, idx, selectIdx)"
+                        @dragover.prevent="
+                            handleDragOver($event, idx, selectIdx)
+                        "
+                        @drop="handleDrop($event, idx, selectIdx)"
+                        :class="{ dragging: isDragging(idx, selectIdx) }"
+                    >
                         <v-text-field
                             :model-value="props.value"
                             @update:model-value="
@@ -50,10 +60,18 @@
                             hide-details="auto"
                         >
                             <template #prepend>
+                                <v-icon
+                                    icon="$sortDrag"
+                                    size="small"
+                                    class="mr-2 drag-handle"
+                                    @mousedown.stop=""
+                                    @mouseup.stop=""
+                                ></v-icon>
                                 <v-checkbox-btn
                                     color="primary-light"
                                     v-model="v.selected"
                                     :value="item.value"
+                                    @click.stop=""
                                 />
                             </template>
                             <template #append>
@@ -117,14 +135,12 @@
                             />
                             <v-btn
                                 v-bind:title="'Toggle Sort Order'"
-                                :icon="
-                                    v.sortOrder === 'desc'
-                                        ? '$sortDesc'
-                                        : '$sortAsc'
-                                "
+                                :icon="getSortIcon(v.sortType)"
+                                :color="getSortColor(v.sortType)"
                                 size="small"
                                 variant="plain"
-                                @click="toggleSortOrder(idx)"
+                                @click="toggleSortType(idx)"
+                                class="ml-2"
                             />
                         </template>
                     </v-text-field>
@@ -232,6 +248,7 @@ import type { JobVariable as BaseVariable } from "@/repository/modules/configura
 interface ExtendedVariable extends BaseVariable {
     input: string;
     sortOrder?: "asc" | "desc";
+    sortType: "asc" | "desc" | "custom";
 }
 
 const props = defineProps({
@@ -248,6 +265,12 @@ const variables = ref<ExtendedVariable[]>([]);
 const duplicateState = ref<
     Record<number, { add?: string | false; edit?: string }>
 >({});
+
+const dragState = ref({
+    isDragging: false,
+    sourceVariableIndex: -1,
+    sourceItemIndex: -1
+});
 
 const arrayDialog = ref({
     open: false,
@@ -266,7 +289,12 @@ const getDuplicateState = (idx: number) => {
 
 const propagateChanges = () => {
     if (!deepEqual(variables.value, props.modelValue)) {
-        emit("update:modelValue", variables.value);
+        const toEmit = variables.value.map((v) => {
+            const { input, sortType, sortOrder, ...baseProps } = v;
+
+            return { ...baseProps, sortOrder, sortType } as BaseVariable;
+        });
+        emit("update:modelValue", toEmit);
     }
 };
 
@@ -281,10 +309,12 @@ watch(
         }
         variables.value = deepClone(v).map((x) => {
             const extended = x as Partial<ExtendedVariable>;
+            const sortType = extended.sortType ?? "custom";
             return {
                 ...x,
                 input: extended.input ?? "",
-                sortOrder: extended.sortOrder ?? "asc"
+                sortOrder: extended.sortOrder ?? "asc",
+                sortType: sortType
             };
         });
     },
@@ -293,13 +323,82 @@ watch(
 
 watch(() => variables.value, debounceVariableUpdate, { deep: true });
 
+const handleDragStart = (
+    event: DragEvent,
+    variableIndex: number,
+    itemIndex: number
+) => {
+    dragState.value = {
+        isDragging: true,
+        sourceVariableIndex: variableIndex,
+        sourceItemIndex: itemIndex
+    };
+    event.dataTransfer!.setData("text/plain", `${variableIndex},${itemIndex}`);
+};
+
+const handleDragOver = (
+    event: DragEvent,
+    variableIndex: number,
+    itemIndex: number
+) => {
+    event.preventDefault();
+    if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "move";
+    }
+};
+
+const handleDrop = (
+    event: DragEvent,
+    targetVariableIndex: number,
+    targetItemIndex: number
+) => {
+    event.preventDefault();
+    const { sourceVariableIndex, sourceItemIndex } = dragState.value;
+
+    if (
+        sourceVariableIndex === targetVariableIndex &&
+        sourceItemIndex !== targetItemIndex
+    ) {
+        const v = variables.value[sourceVariableIndex];
+
+        const newValues = [...v.values];
+        const movedItem = newValues[sourceItemIndex];
+        newValues.splice(sourceItemIndex, 1);
+        newValues.splice(targetItemIndex, 0, movedItem);
+
+        const newSelected = newValues.filter((value) =>
+            v.selected.includes(value)
+        );
+
+        v.values = newValues;
+        v.selected = newSelected;
+
+        v.sortType = "custom";
+    }
+
+    dragState.value = {
+        isDragging: false,
+        sourceVariableIndex: -1,
+        sourceItemIndex: -1
+    };
+};
+
+const isDragging = (variableIndex: number, itemIndex: number) => {
+    return (
+        dragState.value.isDragging &&
+        dragState.value.sourceVariableIndex === variableIndex &&
+        dragState.value.sourceItemIndex === itemIndex
+    );
+};
+
 const addVariable = () => {
     variables.value.push({
         key: "",
         values: [],
         selected: [],
         input: "",
-        sortOrder: "asc"
+        sortOrder: "asc",
+        sortType: "custom"
     });
 };
 
@@ -317,17 +416,29 @@ const addNewValue = (idx: number, value: string) => {
         state.add = value;
         if (!v.selected.includes(value)) {
             v.selected.push(value);
-            v.selected = sortValues(v.selected, v.sortOrder);
+            if (v.sortType !== "custom") {
+                v.selected = sortValues(v.selected, v.sortType);
+            } else {
+                const orderedSelected = v.values.filter((val) =>
+                    v.selected.includes(val)
+                );
+                v.selected = orderedSelected;
+            }
         }
         return;
     }
 
     v.values.push(value);
     v.selected.push(value);
-
-    v.values = sortValues(v.values, v.sortOrder);
-    v.selected = sortValues(v.selected, v.sortOrder);
-
+    if (v.sortType !== "custom") {
+        v.values = sortValues(v.values, v.sortType);
+        v.selected = sortValues(v.selected, v.sortType);
+    } else {
+        const orderedSelected = v.values.filter((val) =>
+            v.selected.includes(val)
+        );
+        v.selected = orderedSelected;
+    }
     v.input = "";
     state.add = false;
 };
@@ -350,9 +461,15 @@ const editValue = (idx: number, valIdx: number, newValue: string) => {
         v.selected.splice(selIdx, 1, newValue);
     }
 
-    v.values = sortValues(v.values, v.sortOrder);
-    v.selected = sortValues(v.selected, v.sortOrder);
-
+    if (v.sortType !== "custom") {
+        v.values = sortValues(v.values, v.sortType);
+        v.selected = sortValues(v.selected, v.sortType);
+    } else {
+        const orderedSelected = v.values.filter((val) =>
+            v.selected.includes(val)
+        );
+        v.selected = orderedSelected;
+    }
     state.edit = "";
 };
 
@@ -411,17 +528,53 @@ const confirmArrayValues = () => {
 
     v.values.push(...valuesToAdd);
     v.selected.push(...valuesToAdd);
-    v.values = sortValues(v.values, v.sortOrder ?? "asc");
-    v.selected = sortValues(v.selected, v.sortOrder ?? "asc");
-
+    if (v.sortType !== "custom") {
+        v.values = sortValues(v.values, v.sortType);
+        v.selected = sortValues(v.selected, v.sortType);
+    } else {
+        const orderedSelected = v.values.filter((val) =>
+            v.selected.includes(val)
+        );
+        v.selected = orderedSelected;
+    }
     arrayDialog.value.open = false;
 };
 
-const toggleSortOrder = (idx: number) => {
+const getSortIcon = (sortType: "asc" | "desc" | "custom") => {
+    if (sortType === "custom") return "$sortCustom";
+    if (sortType === "asc") return "$sortAsc";
+    return "$sortDesc";
+};
+
+const getSortColor = (sortType: "asc" | "desc" | "custom") => {
+    return sortType === "asc" || sortType === "desc"
+        ? "primary-light"
+        : undefined;
+};
+
+const toggleSortType = (idx: number) => {
     const v = variables.value[idx];
-    v.sortOrder = v.sortOrder === "asc" ? "desc" : "asc";
-    v.values = sortValues(v.values, v.sortOrder);
-    v.selected = sortValues(v.selected, v.sortOrder);
+    const currentType = v.sortType;
+    let newType: "asc" | "desc" | "custom";
+
+    if (currentType === "custom") {
+        newType = "asc";
+    } else if (currentType === "asc") {
+        newType = "desc";
+    } else {
+        newType = "custom";
+    }
+
+    v.sortType = newType;
+    if (newType !== "custom") {
+        v.sortOrder = newType;
+    }
+
+    if (newType === "custom") {
+    } else {
+        v.values = sortValues([...v.values], newType);
+        v.selected = sortValues([...v.selected], newType);
+    }
 };
 
 const sortValues = (arr: string[], order: "asc" | "desc" = "asc") => {
@@ -463,11 +616,22 @@ watch(
     (newSelections) => {
         newSelections.forEach((selected, idx) => {
             const v = variables.value[idx];
-            const sorted = sortValues(selected, v.sortOrder);
-            if (!deepEqual(selected, sorted)) {
-                nextTick(() => {
-                    v.selected = sorted;
-                });
+            if (v.sortType === "custom") {
+                const orderedSelected = v.values.filter((val) =>
+                    selected.includes(val)
+                );
+                if (!deepEqual(selected, orderedSelected)) {
+                    nextTick(() => {
+                        v.selected = orderedSelected;
+                    });
+                }
+            } else {
+                const sorted = sortValues(selected, v.sortType);
+                if (!deepEqual(selected, sorted)) {
+                    nextTick(() => {
+                        v.selected = sorted;
+                    });
+                }
             }
         });
     },
@@ -484,3 +648,14 @@ const duplicateVariable = computed(() => {
     return variables.value.map((v) => !!v.key && map.get(v.key)! > 1);
 });
 </script>
+
+<style scoped>
+.drag-handle {
+    cursor: move;
+}
+
+.dragging {
+    opacity: 0.5;
+    background-color: #f5f5f5;
+}
+</style>
