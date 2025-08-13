@@ -31,48 +31,61 @@
                         : ''
                 "
             >
-                <template v-slot:item="{ props, item, index: selectIdx }">
-                    <v-list-item v-bind="props" :title="undefined">
-                        <v-text-field
-                            :model-value="props.value"
-                            @update:model-value="
-                                editValue(idx, selectIdx, $event)
-                            "
-                            @click.stop=""
-                            @keydown.stop
-                            @keyup.stop
-                            @keypress.stop
-                            :error-messages="
-                                duplicateState[idx]?.edit === props.value
-                                    ? ['Duplicate Value']
-                                    : []
-                            "
-                            hide-details="auto"
-                        >
-                            <template #prepend>
-                                <v-checkbox-btn
-                                    color="primary-light"
-                                    v-model="v.selected"
-                                    :value="item.value"
-                                />
-                            </template>
-                            <template #append>
-                                <v-btn
-                                    icon="$close"
-                                    size="x-small"
-                                    variant="plain"
-                                    @click="removeValue(idx, item.value)"
-                                />
-                            </template>
-                        </v-text-field>
-                    </v-list-item>
-                </template>
-                <template #chip="{ item }">
-                    <v-chip color="primary-light" style="font-size: 0.875rem">{{
-                        item.title
-                    }}</v-chip>
-                </template>
-                <template #prepend-item>
+                <template v-if="v.sortOrder === 'custom'" v-slot:prepend-item>
+                    <draggable
+                        :list="v.values"
+                        item-key="value"
+                        handle=".drag-handle"
+                        @end="
+                            () => {
+                                v.selected = v.values.filter((val) =>
+                                    v.selected.includes(val)
+                                );
+                            }
+                        "
+                    >
+                        <template #item="{ element, index: dragIdx }">
+                            <v-list-item>
+                                <template #prepend>
+                                    <v-icon class="drag-handle" small
+                                        >$sortDrag</v-icon
+                                    >
+                                </template>
+                                <v-text-field
+                                    :model-value="element"
+                                    @update:model-value="
+                                        editValue(idx, dragIdx, $event)
+                                    "
+                                    @click.stop=""
+                                    @keydown.stop
+                                    @keyup.stop
+                                    @keypress.stop
+                                    :error-messages="
+                                        duplicateState[idx]?.edit === element
+                                            ? ['Duplicate Value']
+                                            : []
+                                    "
+                                    hide-details="auto"
+                                >
+                                    <template #prepend>
+                                        <v-checkbox-btn
+                                            color="primary-light"
+                                            v-model="v.selected"
+                                            :value="element"
+                                        />
+                                    </template>
+                                    <template #append>
+                                        <v-btn
+                                            icon="$close"
+                                            size="x-small"
+                                            variant="plain"
+                                            @click="removeValue(idx, element)"
+                                        />
+                                    </template>
+                                </v-text-field>
+                            </v-list-item>
+                        </template>
+                    </draggable>
                     <v-text-field
                         variant="outlined"
                         label="Add Value"
@@ -120,17 +133,147 @@
                                 :icon="
                                     v.sortOrder === 'desc'
                                         ? '$sortDesc'
-                                        : '$sortAsc'
+                                        : v.sortOrder === 'asc'
+                                        ? '$sortAsc'
+                                        : '$sortCustom'
                                 "
                                 size="small"
                                 variant="plain"
+                                :color="
+                                    v.sortOrder === 'custom'
+                                        ? ''
+                                        : 'primary-light'
+                                "
+                                @click="toggleSortOrder(idx)"
+                            />
+                        </template>
+                    </v-text-field>
+                    <template v-if="v.values.length">
+                        <div class="d-flex justify-center mt-3">
+                            <v-btn
+                                v-bind:title="'Clear All Values'"
+                                icon="$trashCan"
+                                variant="plain"
+                                color="danger"
+                                size="small"
+                                @click="removeAllValues(idx)"
+                            />
+                        </div>
+                    </template>
+                </template>
+                <template
+                    v-else
+                    v-slot:item="{ props, item, index: selectIdx }"
+                >
+                    <v-list-item v-bind="props" :title="undefined">
+                        <v-text-field
+                            :model-value="props.value"
+                            @update:model-value="
+                                editValue(idx, selectIdx, $event)
+                            "
+                            @click.stop=""
+                            @keydown.stop
+                            @keyup.stop
+                            @keypress.stop
+                            :error-messages="
+                                duplicateState[idx]?.edit === props.value
+                                    ? ['Duplicate Value']
+                                    : []
+                            "
+                            hide-details="auto"
+                        >
+                            <template #prepend>
+                                <v-checkbox-btn
+                                    color="primary-light"
+                                    v-model="v.selected"
+                                    :value="item.value"
+                                />
+                            </template>
+                            <template #append>
+                                <v-btn
+                                    icon="$close"
+                                    size="x-small"
+                                    variant="plain"
+                                    @click="removeValue(idx, item.value)"
+                                />
+                            </template>
+                        </v-text-field>
+                    </v-list-item>
+                </template>
+                <template #chip="{ item }">
+                    <v-chip color="primary-light" style="font-size: 0.875rem">{{
+                        item.title
+                    }}</v-chip>
+                </template>
+                <template #prepend-item v-if="v.sortOrder !== 'custom'">
+                    <v-text-field
+                        variant="outlined"
+                        label="Add Value"
+                        class="ml-3 mr-3"
+                        v-model="v.input"
+                        :error-messages="
+                            duplicateState[idx]?.add
+                                ? [
+                                      `Value '${duplicateState[idx].add}' already exists`
+                                  ]
+                                : []
+                        "
+                        @keyup.enter.stop="addNewValue(idx, v.input)"
+                        @keydown.stop
+                        @keyup.stop
+                        @keypress.stop
+                    >
+                        <template #append-inner>
+                            <v-btn
+                                v-bind:title="'Add a value'"
+                                variant="plain"
+                                :color="
+                                    duplicateState[idx]?.add
+                                        ? 'danger'
+                                        : 'primary-light'
+                                "
+                                icon="$plus"
+                                size="small"
+                                :disabled="
+                                    !v.input || !!duplicateState[idx]?.add
+                                "
+                                @click="addNewValue(idx, v.input)"
+                            />
+                            <v-btn
+                                v-bind:title="'Add multiple values'"
+                                icon="$addArray"
+                                color="primary-light"
+                                size="small"
+                                variant="plain"
+                                class="ml-2"
+                                @click="openArrayDialog(idx)"
+                            />
+                            <v-btn
+                                v-bind:title="'Toggle Sort Order'"
+                                :icon="
+                                    v.sortOrder === 'desc'
+                                        ? '$sortDesc'
+                                        : v.sortOrder === 'asc'
+                                        ? '$sortAsc'
+                                        : '$sortCustom'
+                                "
+                                size="small"
+                                variant="plain"
+                                :color="
+                                    v.sortOrder === 'custom'
+                                        ? ''
+                                        : 'primary-light'
+                                "
                                 @click="toggleSortOrder(idx)"
                             />
                         </template>
                     </v-text-field>
                 </template>
 
-                <template #append-item v-if="v.values.length">
+                <template
+                    #append-item
+                    v-if="v.values.length && v.sortOrder !== 'custom'"
+                >
                     <div class="d-flex justify-center mt-3">
                         <v-btn
                             v-bind:title="'Clear All Values'"
@@ -227,11 +370,12 @@
 <script lang="ts" setup>
 import { useDebounceFn } from "@vueuse/core";
 import { deepClone, deepEqual } from "~/utils/misc";
+import draggable from "vuedraggable";
 import type { JobVariable as BaseVariable } from "@/repository/modules/configurations";
 
 interface ExtendedVariable extends BaseVariable {
     input: string;
-    sortOrder?: "asc" | "desc";
+    sortOrder?: "asc" | "desc" | "custom";
 }
 
 const props = defineProps({
@@ -284,7 +428,7 @@ watch(
             return {
                 ...x,
                 input: extended.input ?? "",
-                sortOrder: extended.sortOrder ?? "asc"
+                sortOrder: extended.sortOrder ?? "custom"
             };
         });
     },
@@ -299,7 +443,7 @@ const addVariable = () => {
         values: [],
         selected: [],
         input: "",
-        sortOrder: "asc"
+        sortOrder: "custom"
     });
 };
 
@@ -411,20 +555,29 @@ const confirmArrayValues = () => {
 
     v.values.push(...valuesToAdd);
     v.selected.push(...valuesToAdd);
-    v.values = sortValues(v.values, v.sortOrder ?? "asc");
-    v.selected = sortValues(v.selected, v.sortOrder ?? "asc");
+    v.values = sortValues(v.values, v.sortOrder ?? "custom");
+    v.selected = sortValues(v.selected, v.sortOrder ?? "custom");
 
     arrayDialog.value.open = false;
 };
 
 const toggleSortOrder = (idx: number) => {
     const v = variables.value[idx];
-    v.sortOrder = v.sortOrder === "asc" ? "desc" : "asc";
-    v.values = sortValues(v.values, v.sortOrder);
-    v.selected = sortValues(v.selected, v.sortOrder);
+    if (v.sortOrder === "custom") v.sortOrder = "asc";
+    else if (v.sortOrder === "asc") v.sortOrder = "desc";
+    else if (v.sortOrder === "desc") v.sortOrder = "custom";
+
+    if (v.sortOrder !== "custom") {
+        v.values = sortValues(v.values, v.sortOrder);
+        v.selected = sortValues(v.selected, v.sortOrder);
+    }
 };
 
-const sortValues = (arr: string[], order: "asc" | "desc" = "asc") => {
+const sortValues = (
+    arr: string[],
+    order: "asc" | "desc" | "custom" = "custom"
+) => {
+    if (order === "custom") return arr;
     const collator = new Intl.Collator(undefined, {
         numeric: true,
         sensitivity: "base"
@@ -463,11 +616,13 @@ watch(
     (newSelections) => {
         newSelections.forEach((selected, idx) => {
             const v = variables.value[idx];
-            const sorted = sortValues(selected, v.sortOrder);
-            if (!deepEqual(selected, sorted)) {
-                nextTick(() => {
-                    v.selected = sorted;
-                });
+            if (v.sortOrder !== "custom") {
+                const sorted = sortValues(selected, v.sortOrder);
+                if (!deepEqual(selected, sorted)) {
+                    nextTick(() => {
+                        v.selected = sorted;
+                    });
+                }
             }
         });
     },
