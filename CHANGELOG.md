@@ -12,7 +12,7 @@ All notable changes to this project will be documented in this file.
 -   endpoint for energy consumption (#88)
 -   cpu and gpu energy consumption of jobs to benchmark overview (#51)
 -   tab titles to each page
--   customizable job variable sort of values (#74)
+-   custom drag-and-drop sorting and ascending/descending order sorting for values (#74)
 -   array support to job variables (#76)
 
 ### Changed
