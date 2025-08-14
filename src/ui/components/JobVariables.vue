@@ -539,28 +539,29 @@ const duplicateVariable = computed(() => {
 });
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@use "~/assets/css/colors.scss" as *;
+
 .cursor-move {
     cursor: move;
 }
 
 .drag-ghost {
     opacity: 0.5;
-    background: #c8ebfb;
+    background: $highlight;
 }
 
 .drag-chosen {
     opacity: 0.8;
-    background: #c8ebfb;
+    background: $highlight;
 }
 
 .drag-item {
     opacity: 0.8;
-    background: #c8ebfb;
+    background: $highlight;
 }
 
 .text-grey {
-    color: #888;
-    font-size: 0.9rem;
+    color: $info;
 }
 </style>
