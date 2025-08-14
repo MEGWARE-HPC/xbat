@@ -17,12 +17,13 @@
             <v-select
                 label="Value(s)"
                 style="width: 350px"
-                :items="[]"
+                :items="v.values"
                 v-model="v.selected"
                 :disabled="!v.key"
                 multiple
                 clearable
                 chips
+                no-data-text="No values configured"
                 persistent-hint
                 :hint="
                     v.key && !v.selected?.length
@@ -30,14 +31,72 @@
                         : ''
                 "
             >
-                <template #chip="{ item, index }">
-                    <v-chip color="primary-light" style="font-size: 0.875rem">
-                        {{
-                            typeof item === "object"
-                                ? item?.title ?? item?.value ?? String(item)
-                                : item ?? v.selected[index]
-                        }}
-                    </v-chip>
+                <template v-slot:item="{ props, item }">
+                    <draggable
+                        v-model="v.values"
+                        item-key="value"
+                        tag="div"
+                        :disabled="v.sortOrder !== 'custom'"
+                        @end="onDragEnd(idx)"
+                        :ghost-class="'drag-ghost'"
+                        :chosen-class="'drag-chosen'"
+                        :drag-class="'drag-item'"
+                    >
+                        <template #item="{ element }">
+                            <v-list-item :title="undefined">
+                                <v-text-field
+                                    :model-value="element"
+                                    @update:model-value="
+                                        editValue(
+                                            idx,
+                                            v.values.indexOf(element),
+                                            $event
+                                        )
+                                    "
+                                    @click.stop=""
+                                    @keydown.stop
+                                    @keyup.stop
+                                    @keypress.stop
+                                    :error-messages="
+                                        duplicateState[idx]?.edit === element
+                                            ? ['Duplicate Value']
+                                            : []
+                                    "
+                                    hide-details="auto"
+                                >
+                                    <template #prepend>
+                                        <v-icon
+                                            v-if="v.sortOrder === 'custom'"
+                                            icon="$sortDrag"
+                                            size="small"
+                                            class="mr-2 cursor-move"
+                                            @mousedown="
+                                                $event.stopPropagation()
+                                            "
+                                        />
+                                        <v-checkbox-btn
+                                            color="primary-light"
+                                            v-model="v.selected"
+                                            :value="element"
+                                        />
+                                    </template>
+                                    <template #append>
+                                        <v-btn
+                                            icon="$close"
+                                            size="x-small"
+                                            variant="plain"
+                                            @click="removeValue(idx, element)"
+                                        />
+                                    </template>
+                                </v-text-field>
+                            </v-list-item>
+                        </template>
+                    </draggable>
+                </template>
+                <template #chip="{ item }">
+                    <v-chip color="primary-light" style="font-size: 0.875rem">{{
+                        item.title
+                    }}</v-chip>
                 </template>
 
                 <template #prepend-item>
@@ -86,9 +145,16 @@
                             <v-btn
                                 v-bind:title="'Toggle Sort Order'"
                                 :icon="
-                                    v.sortOrder === 'desc' && !v.manualOrder
+                                    v.sortOrder === 'desc'
                                         ? '$sortDesc'
-                                        : '$sortAsc'
+                                        : v.sortOrder === 'asc'
+                                        ? '$sortAsc'
+                                        : '$sortCustom'
+                                "
+                                :color="
+                                    v.sortOrder !== 'custom'
+                                        ? 'primary-light'
+                                        : undefined
                                 "
                                 size="small"
                                 variant="plain"
@@ -96,83 +162,6 @@
                             />
                         </template>
                     </v-text-field>
-
-                    <div class="px-3 pb-2">
-                        <draggable
-                            v-model="v.values"
-                            :item-key="(x) => x"
-                            handle=".drag-handle"
-                            animation="150"
-                            ghost-class="drag-ghost"
-                            chosen-class="drag-chosen"
-                            drag-class="drag-drag"
-                            @start="onDragStart(idx)"
-                            @end="onDragEnd(idx)"
-                        >
-                            <template
-                                #item="{ element: val, index: selectIdx }"
-                            >
-                                <v-list-item
-                                    :key="val"
-                                    :title="undefined"
-                                    class="d-flex align-center"
-                                    @mousedown.stop
-                                    @click.stop
-                                >
-                                    <template #prepend>
-                                        <div class="d-flex align-center mr-2">
-                                            <v-icon
-                                                class="mr-2 drag-handle"
-                                                icon="$sortDrag"
-                                            />
-                                            <v-checkbox-btn
-                                                color="primary-light"
-                                                v-model="v.selected"
-                                                :value="val"
-                                                @click.stop
-                                            />
-                                        </div>
-                                    </template>
-
-                                    <v-text-field
-                                        class="flex-1"
-                                        :model-value="val"
-                                        @update:model-value="
-                                            editValue(idx, selectIdx, $event)
-                                        "
-                                        @click.stop=""
-                                        @keydown.stop
-                                        @keyup.stop
-                                        @keypress.stop
-                                        :error-messages="
-                                            duplicateState[idx]?.edit === val
-                                                ? ['Duplicate Value']
-                                                : []
-                                        "
-                                        hide-details="auto"
-                                    >
-                                        <template #append>
-                                            <v-btn
-                                                icon="$close"
-                                                size="x-small"
-                                                variant="plain"
-                                                @click="removeValue(idx, val)"
-                                            />
-                                        </template>
-                                    </v-text-field>
-                                </v-list-item>
-                            </template>
-
-                            <template #footer>
-                                <div
-                                    v-if="!v.values.length"
-                                    class="text-medium-emphasis px-4 py-2"
-                                >
-                                    No values configured
-                                </div>
-                            </template>
-                        </draggable>
-                    </div>
                 </template>
 
                 <template #append-item v-if="v.values.length">
@@ -278,8 +267,7 @@ import type { JobVariable as BaseVariable } from "@/repository/modules/configura
 
 interface ExtendedVariable extends BaseVariable {
     input: string;
-    sortOrder?: "asc" | "desc";
-    manualOrder?: boolean;
+    sortOrder?: "asc" | "desc" | "custom";
 }
 
 const props = defineProps({
@@ -332,8 +320,7 @@ watch(
             return {
                 ...x,
                 input: extended.input ?? "",
-                sortOrder: extended.sortOrder ?? "asc",
-                manualOrder: extended.manualOrder ?? false
+                sortOrder: extended.sortOrder ?? "asc"
             };
         });
     },
@@ -348,8 +335,7 @@ const addVariable = () => {
         values: [],
         selected: [],
         input: "",
-        sortOrder: "asc",
-        manualOrder: false
+        sortOrder: "asc"
     });
 };
 
@@ -367,7 +353,7 @@ const addNewValue = (idx: number, value: string) => {
         state.add = value;
         if (!v.selected.includes(value)) {
             v.selected.push(value);
-            applySortIfNeeded(v, "selected");
+            v.selected = sortValues(v.selected, v.sortOrder);
         }
         return;
     }
@@ -375,7 +361,8 @@ const addNewValue = (idx: number, value: string) => {
     v.values.push(value);
     v.selected.push(value);
 
-    applySortIfNeeded(v, "both");
+    v.values = sortValues(v.values, v.sortOrder);
+    v.selected = sortValues(v.selected, v.sortOrder);
 
     v.input = "";
     state.add = false;
@@ -399,7 +386,9 @@ const editValue = (idx: number, valIdx: number, newValue: string) => {
         v.selected.splice(selIdx, 1, newValue);
     }
 
-    applySortIfNeeded(v, "both");
+    v.values = sortValues(v.values, v.sortOrder);
+    v.selected = sortValues(v.selected, v.sortOrder);
+
     state.edit = "";
 };
 
@@ -413,10 +402,8 @@ const removeValue = (idx: number, value: string) => {
 };
 
 const removeAllValues = (idx: number) => {
-    const v = variables.value[idx];
-    v.values = [];
-    v.selected = [];
-    v.manualOrder = false;
+    variables.value[idx].values = [];
+    variables.value[idx].selected = [];
     delete duplicateState.value[idx];
 };
 
@@ -460,20 +447,42 @@ const confirmArrayValues = () => {
 
     v.values.push(...valuesToAdd);
     v.selected.push(...valuesToAdd);
-
-    applySortIfNeeded(v, "both");
+    v.values = sortValues(v.values, v.sortOrder ?? "asc");
+    v.selected = sortValues(v.selected, v.sortOrder ?? "asc");
 
     arrayDialog.value.open = false;
 };
 
 const toggleSortOrder = (idx: number) => {
     const v = variables.value[idx];
-    v.manualOrder = false;
-    v.sortOrder = v.sortOrder === "asc" ? "desc" : "asc";
-    applySortIfNeeded(v, "both", /*force*/ true);
+    if (v.sortOrder === "asc") {
+        v.sortOrder = "desc";
+    } else if (v.sortOrder === "desc") {
+        v.sortOrder = "custom";
+    } else {
+        v.sortOrder = "asc";
+    }
+
+    if (v.sortOrder === "custom") return;
+
+    v.values = sortValues(v.values, v.sortOrder);
+    v.selected = sortValues(v.selected, v.sortOrder);
 };
 
-const sortValues = (arr: string[], order: "asc" | "desc" = "asc") => {
+const onDragEnd = (idx: number) => {
+    const v = variables.value[idx];
+    v.sortOrder = "custom";
+
+    const newSelected = v.values.filter((val) => v.selected.includes(val));
+    v.selected = newSelected;
+};
+
+const sortValues = (
+    arr: string[],
+    order: "asc" | "desc" | "custom" = "asc"
+) => {
+    if (order === "custom") return [...arr];
+
     const collator = new Intl.Collator(undefined, {
         numeric: true,
         sensitivity: "base"
@@ -481,20 +490,6 @@ const sortValues = (arr: string[], order: "asc" | "desc" = "asc") => {
     const sorted = [...arr].sort((a, b) => collator.compare(a, b));
     return order === "asc" ? sorted : sorted.reverse();
 };
-
-function applySortIfNeeded(
-    v: ExtendedVariable,
-    which: "values" | "selected" | "both",
-    force = false
-) {
-    if (v.manualOrder && !force) return;
-    if (which === "values" || which === "both") {
-        v.values = sortValues(v.values, v.sortOrder);
-    }
-    if (which === "selected" || which === "both") {
-        v.selected = sortValues(v.selected, v.sortOrder);
-    }
-}
 
 watch(
     () => variables.value.map((v) => v.input),
@@ -526,7 +521,6 @@ watch(
     (newSelections) => {
         newSelections.forEach((selected, idx) => {
             const v = variables.value[idx];
-            if (v.manualOrder) return;
             const sorted = sortValues(selected, v.sortOrder);
             if (!deepEqual(selected, sorted)) {
                 nextTick(() => {
@@ -547,24 +541,25 @@ const duplicateVariable = computed(() => {
     });
     return variables.value.map((v) => !!v.key && map.get(v.key)! > 1);
 });
-
-const onDragStart = (idx: number) => {
-    const v = variables.value[idx];
-    v.manualOrder = true;
-};
-const onDragEnd = (_idx: number) => {};
 </script>
 
 <style scoped>
-.drag-handle {
-    cursor: grab;
+.cursor-move {
+    cursor: move;
 }
+
 .drag-ghost {
     opacity: 0.5;
+    background: #c8ebfb;
 }
-.drag-chosen,
-.drag-drag {
-    outline: 2px dashed var(--v-theme-primary-light);
-    border-radius: 10px;
+
+.drag-chosen {
+    opacity: 0.8;
+    background: #c8ebfb;
+}
+
+.drag-item {
+    opacity: 0.8;
+    background: #c8ebfb;
 }
 </style>
