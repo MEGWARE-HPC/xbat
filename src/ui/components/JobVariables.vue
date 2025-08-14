@@ -85,11 +85,17 @@
                             <v-btn
                                 title="Toggle Sort Order"
                                 :icon="
-                                    v.sortOrder === 'desc'
+                                    v.sortOrder === 'custom'
+                                        ? '$sortCustom'
+                                        : v.sortOrder === 'desc'
                                         ? '$sortDesc'
                                         : '$sortAsc'
                                 "
-                                :color="'primary-light'"
+                                :color="
+                                    v.sortOrder === 'custom'
+                                        ? undefined
+                                        : 'primary-light'
+                                "
                                 size="small"
                                 variant="plain"
                                 @click="toggleSortOrder(idx)"
