@@ -1,137 +1,20 @@
 <template>
     <div>
-        <v-navigation-drawer
-            permanent
-            :rail="infoCollapsed"
-            location="right"
-            width="350"
-            id="info-drawer"
-        >
-            <template v-slot:append>
-                <div class="d-flex justify-center mt-2">
-                    <v-btn
-                        @click="setInfoDrawer(!infoCollapsed)"
-                        variant="text"
-                        size="small"
-                        style="margin-top: 12px"
-                    >
-                        <v-icon
-                            :icon="
-                                infoCollapsed
-                                    ? '$chevronDoubleLeft'
-                                    : '$chevronDoubleRight'
-                            "
-                        ></v-icon>
-                    </v-btn>
-                </div>
-            </template>
-            <div class="system-info-wrapper" v-show="!infoCollapsed">
-                <InfoColumn
-                    title="benchmark"
-                    :items="sidebarBenchmarkItems"
-                    @update="updateInfo('benchmark', $event)"
-                >
-                    <v-chip
-                        :color="stateColors[benchmark.state] || 'info'"
-                        size="small"
-                        >{{ benchmark.state }}</v-chip
-                    >
-                </InfoColumn>
-                <InfoColumn
-                    title="job"
-                    :items="sidebarJobItems"
-                    @update="updateInfo('job', $event)"
-                >
-                    <div>
-                        <v-chip :color="jobState.color" size="small">
-                            {{ jobState.value }}
-                        </v-chip>
-                        <v-tooltip location="top" v-if="jobRunning">
-                            <template v-slot:activator="{ props }">
-                                <v-chip
-                                    :color="
-                                        refreshPaused ? 'info' : 'secondary'
-                                    "
-                                    size="small"
-                                    class="ml-1"
-                                    v-bind="props"
-                                    @click="
-                                        jobRunning
-                                            ? refreshPaused
-                                                ? pausedRefresh.splice(
-                                                      pausedRefresh.indexOf(
-                                                          jobId
-                                                      ),
-                                                      1
-                                                  )
-                                                : pausedRefresh.push(jobId)
-                                            : null
-                                    "
-                                >
-                                    <v-icon icon="$refresh"></v-icon>
-                                    <v-icon
-                                        v-if="refreshPaused"
-                                        icon="$play"
-                                    ></v-icon>
-                                    <v-icon v-else icon="$pause"></v-icon>
-                                </v-chip>
-                            </template>
-                            <span v-if="refreshPaused"
-                                >Automatic refresh is paused for this job. Click
-                                to resume.</span
-                            >
-                            <span v-else
-                                >Job is still running - output and values are
-                                refreshed automatically every 30 seconds.<br />
-                                Click to pause refresh for this job.
-                            </span>
-                        </v-tooltip>
-                    </div>
-                    <template
-                        #append
-                        v-if="Object.keys(currentJob.variables || {}).length"
-                    >
-                        <JobVariableOverview
-                            :variables="currentJob.variables"
-                        >
-                        </JobVariableOverview>
-                    </template>
-                </InfoColumn>
-                <InfoColumn
-                    title="hardware"
-                    class="mt-3"
-                    :items="sidebarHardwareItems"
-                >
-                    <v-select
-                        style="width: 150px; margin-left: 10px"
-                        :items="participatingNodes?.[jobId] || []"
-                        label="Node"
-                        v-model="nodeInfoSelectedNode"
-                        hide-details
-                        no-data-text="No nodes found for this job"
-                    ></v-select>
-                    <template #append>
-                        <div
-                            class="d-flex justify-center mt-3"
-                            v-if="topologies?.[jobId]?.[nodeInfoSelectedNode]"
-                        >
-                            <v-btn
-                                @click="state.showCpuTopologyDialog = true"
-                                variant="text"
-                                color="light"
-                                prepend-icon="$memory"
-                                >View CPU Topology</v-btn
-                            >
-                        </div>
-                    </template>
-                </InfoColumn>
-
-                <InfoColumn
-                    title="software"
-                    :items="sidebarSoftwareItems"
-                ></InfoColumn>
-            </div>
-        </v-navigation-drawer>
+        <BenchmarkSidebar
+            :benchmark="benchmark"
+            :jobs="jobs"
+            :jobId="jobId"
+            :energy="energy"
+            @update:refreshPaused="
+                jobRunning
+                    ? refreshPaused
+                        ? pausedRefresh.splice(pausedRefresh.indexOf(jobId), 1)
+                        : pausedRefresh.push(jobId)
+                    : null
+            "
+            :refreshPaused="refreshPaused"
+            @refresh="refreshData"
+        ></BenchmarkSidebar>
         <v-container fluid>
             <!-- TODO using v-main here causes hydration mismatch -->
             <div :style="{ 'margin-right': infoCollapsed ? '56px' : '350px' }">
@@ -236,79 +119,23 @@
                         :disabled="invalidBenchmark"
                         >Roofline
                     </v-btn>
-
-                    <v-btn
-                        variant="text"
-                        append-icon="$cog"
-                        :disabled="invalidBenchmark"
-                        @click="state.showSettingsDialog = true"
-                        >Settings
-                    </v-btn>
+                    <BenchmarkSettings>
+                        <v-btn
+                            variant="text"
+                            append-icon="$cog"
+                            :disabled="invalidBenchmark"
+                            @click="state.showSettingsDialog = true"
+                            >Settings
+                        </v-btn>
+                    </BenchmarkSettings>
                 </div>
 
                 <div v-if="state.showOutput">
-                    <v-tabs
-                        v-model="state.outputTab"
-                        style="margin-bottom: 20px"
-                        color="primary-light"
-                    >
-                        <v-tab
-                            v-for="v of [
-                                ...outputTabs.map((x) => x.title),
-                                'Job Script'
-                            ]"
-                            :key="v"
-                        >
-                            {{ v }}
-                        </v-tab>
-                    </v-tabs>
-                    <v-tabs-window v-model="state.outputTab">
-                        <template v-for="outputTab of outputTabs">
-                            <v-tabs-window-item>
-                                <div
-                                    class="text-medium-emphasis text-caption mb-3 ml-6"
-                                    v-if="currentJob.jobInfo?.[outputTab.value]"
-                                >
-                                    <div class="d-flex">
-                                        <v-icon
-                                            icon="$file"
-                                            size="small"
-                                        ></v-icon>
-                                        File available at
-                                        <span class="font-italic ml-1">{{
-                                            currentJob.jobInfo[outputTab.value]
-                                        }}</span>
-                                    </div>
-                                </div>
-                                <Editor
-                                    :model-value="
-                                        outputs?.[jobId]?.[outputTab.value] !==
-                                        null
-                                            ? outputs?.[jobId]?.[
-                                                  outputTab.value
-                                              ]
-                                            : '# No output available (yet)'
-                                    "
-                                    readonly
-                                    height="750"
-                                    :filename="`${jobId}_${outputTab.value}.txt`"
-                                    :loading="outputLoading"
-                                    language="plaintext"
-                                ></Editor>
-                            </v-tabs-window-item>
-                        </template>
-                        <v-tabs-window-item>
-                            <Editor
-                                :readonly="true"
-                                :modelValue="
-                                    currentJob?.userJobscriptFile ||
-                                    '# Job script not available (yet)'
-                                "
-                                :filename="`${jobId}_jobscript.sh`"
-                                height="750"
-                            ></Editor>
-                        </v-tabs-window-item>
-                    </v-tabs-window>
+                    <BenchmarkOutput
+                        ref="benchmarkOutputRef"
+                        :job="currentJob"
+                        :visible="state.showOutput"
+                    ></BenchmarkOutput>
                 </div>
                 <div v-show="!state.showOutput">
                     <div v-if="invalidBenchmark">
@@ -376,29 +203,6 @@
                 </div>
             </div>
         </v-container>
-        <v-dialog v-model="state.showCpuTopologyDialog" max-width="1000">
-            <v-card>
-                <v-card-title> CPU Topology (by LIKWID) </v-card-title>
-                <v-card-text>
-                    <Editor
-                        :readonly="true"
-                        :model-value="
-                            topologies?.[jobId]?.[nodeInfoSelectedNode] || ''
-                        "
-                        :line-numbers="false"
-                        no-wrap
-                    ></Editor>
-                </v-card-text>
-                <v-card-actions>
-                    <v-spacer></v-spacer>
-                    <v-btn
-                        variant="plain"
-                        @click="state.showCpuTopologyDialog = false"
-                        >close</v-btn
-                    ></v-card-actions
-                >
-            </v-card>
-        </v-dialog>
         <v-dialog v-model="state.showRooflineDialog" id="dialog-roofline">
             <v-card>
                 <v-card-title>Roofline Model</v-card-title>
@@ -413,93 +217,6 @@
                 <v-card-actions>
                     <v-spacer></v-spacer>
                     <v-btn @click="state.showRooflineDialog = false"
-                        >close</v-btn
-                    >
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
-        <!-- TODO move to separate component -->
-        <v-dialog v-model="state.showSettingsDialog" eager :max-width="600">
-            <v-card>
-                <v-card-title>Settings</v-card-title>
-                <v-card-text>
-                    <div>
-                        <v-switch
-                            label="Rangeslider on Graph"
-                            :model-value="graphPreferences.rangeslider"
-                            @update:model-value="
-                                graphPreferences.rangeslider = $event;
-                                $graphStore.setPreference(
-                                    'rangeslider',
-                                    $event
-                                );
-                            "
-                        ></v-switch>
-                        <v-switch
-                            label="Show X-Axis Title"
-                            :model-value="graphPreferences.xTitle"
-                            @update:model-value="
-                                $graphStore.setPreference('xTitle', $event)
-                            "
-                        ></v-switch>
-                        <div class="d-flex">
-                            <v-switch
-                                :model-value="
-                                    graphPreferences.hideInactive !== 'none'
-                                "
-                                @update:model-value="
-                                    $graphStore.setPreference(
-                                        'hideInactive',
-                                        $event ? 'disabled' : 'none'
-                                    )
-                                "
-                            >
-                                <template #label>
-                                    Hide inactive
-                                    <v-tooltip
-                                        text="Activate this option to automatically hide traces exclusively reporting zero-values"
-                                        location="right"
-                                    >
-                                        <template v-slot:activator="{ props }">
-                                            <v-icon
-                                                v-bind="props"
-                                                icon="$information"
-                                                class="ml-3"
-                                            ></v-icon>
-                                        </template>
-                                    </v-tooltip>
-                                </template>
-                            </v-switch>
-                            <v-select
-                                class="ml-5"
-                                :model-value="
-                                    graphPreferences.hideInactive == 'none'
-                                        ? 'disabled'
-                                        : graphPreferences.hideInactive
-                                "
-                                @update:model-value="
-                                    graphPreferences.hideInactive = $event;
-                                    $graphStore.setPreference(
-                                        'hideInactive',
-                                        $event
-                                    );
-                                "
-                                style="max-width: 200px"
-                                :disabled="
-                                    graphPreferences.hideInactive == 'none'
-                                "
-                                :items="hideInactiveOptions"
-                                item-props
-                                hide-details
-                            ></v-select>
-                        </div>
-                    </div>
-                </v-card-text>
-                <v-card-actions>
-                    <v-spacer></v-spacer>
-                    <v-btn
-                        variant="text"
-                        @click="state.showSettingsDialog = false"
                         >close</v-btn
                     >
                 </v-card-actions>
@@ -523,8 +240,7 @@
 </template>
 <script setup>
 import { range } from "~/utils/misc";
-import { stateColors } from "~/utils/colors";
-const { $api, $store, $graphStore, $snackbar } = useNuxtApp();
+const { $api, $store, $graphStore } = useNuxtApp();
 
 definePageMeta({
     validate: async (route) => {
@@ -537,33 +253,13 @@ definePageMeta({
 
 const MAX_PLOTS_PER_PAGE = 4;
 
-const hideInactiveOptions = [
-    {
-        title: "disable traces",
-        subtitle:
-            "inactive traces are disabled but shown in the legend and statistics",
-        value: "disabled"
-    },
-    {
-        title: "hide traces",
-        subtitle: "inactive traces are hidden completely",
-        value: "hidden"
-    }
-];
-
 const state = reactive({
     runNr: 0,
     synchronizeGraphs: true,
     showOutput: false,
-    nodesWithMeasurements: {},
     showCompareDialog: false,
-    showCpuTopologyDialog: false,
     showRooflineDialog: false,
-    showSettingsDialog: false,
-    infoCollapsed: false,
-    outputTab: "Slurm",
     selectedJob: null,
-    loading: false,
     noData: false,
     visitedJobs: [],
     refreshHandler: null
@@ -577,6 +273,11 @@ const refreshPaused = computed(
 
 const route = useRoute();
 const { graphPreferences, displayColumns, infoCollapsed } = usePreferences();
+
+useSeoMeta({
+    title: `Benchmark - ${route.params.id}`,
+    description: "xbat benchmark results"
+});
 
 const metrics = ref({});
 const metricsCache = ref({}); // cache raw api responses for metrics call
@@ -644,53 +345,6 @@ const { data: jobMetrics, refresh: refreshMetrics } = await useAsyncData(
     { watch: [() => state.selectedJob] }
 );
 
-const useJobOutputs = ({ jobId, outputShown }) => {
-    const outputs = ref({});
-    const pending = ref(false);
-    const defaultTabs = [{ title: "StdOut & StdErr", value: "standardOutput" }];
-
-    // determine tabs based on whether stdout and stderr are combined
-    const outputTabs = computed(() => {
-        if (!jobId.value || !outputs.value[jobId.value]) return defaultTabs;
-
-        const output = outputs.value[jobId.value];
-
-        if (output.standardOutput !== null)
-            if (output.standardError !== null)
-                return [
-                    { title: "StdOut", value: "standardOutput" },
-                    { title: "StdErr", value: "standardError" }
-                ];
-
-        return defaultTabs;
-    });
-
-    const refresh = async () => {
-        if (!jobId.value) return;
-        pending.value = true;
-        const output = await $api.jobs.getOutput(jobId.value);
-        outputs.value[jobId.value] = output || {};
-        pending.value = false;
-    };
-
-    watch([jobId, outputShown], async ([id, shown]) => {
-        if (!shown || id in outputs.value) return;
-        await refresh();
-    });
-
-    return { outputs, pending, refresh, outputTabs };
-};
-
-const {
-    outputs,
-    pending: outputLoading,
-    refresh: refreshOutput,
-    outputTabs
-} = useJobOutputs({
-    jobId: toRef(() => state.selectedJob),
-    outputShown: toRef(() => state.showOutput)
-});
-
 watch(
     jobMetrics,
     (v) => {
@@ -701,7 +355,6 @@ watch(
 
         metricsCache.value[state.selectedJob] = v;
         metrics.value[state.selectedJob] = v.metrics;
-        state.nodesWithMeasurements[state.selectedJob] = v.nodes;
         state.noData = !Object.keys(v.metrics).length || !v.nodes.length;
 
         // set default graphs if not in refresh mode
@@ -747,43 +400,12 @@ const { jobItems, jobsById, jobIds } = useJobs({
     itemOrder: "asc"
 });
 
-const { jobState, jobId, jobRunning } = useJob(currentJob);
+const { jobState, jobId, jobRunning } = useJob(currentJob, benchmark);
 
-const {
-    nodeInfo,
-    participatingNodes,
-    nodeInfoSelectedNode,
-    topologies,
-    nodeBenchmarks
-} = useNodes({
+const { nodeInfo } = useNodes({
     jobs,
     currentJob
 });
-
-const { powerConsumption, fetch: fetchPower } = usePower();
-
-const {
-    benchmarkItems: sidebarBenchmarkItems,
-    jobItems: sidebarJobItems,
-    hardwareItems: sidebarHardwareItems,
-    softwareItems: sidebarSoftwareItems
-} = useSidebarInfo({
-    benchmark,
-    job: currentJob,
-    nodeInfo: toRef(
-        () => nodeInfo.value?.[jobId.value]?.[nodeInfoSelectedNode.value]
-    ),
-    powerConsumption
-});
-
-const setInfoDrawer = (v) => {
-    infoCollapsed.value = v;
-    nextTick(() => {
-        // delay resize event to wait for sidebar animation to finish
-        // otherwise graph scales incorrectly
-        setTimeout(() => window.dispatchEvent(new Event("resize")), 500);
-    });
-};
 
 const setArrangement = (columns) => {
     displayColumns.value = columns;
@@ -799,23 +421,11 @@ const showRoofline = () => {
     });
 };
 
-const updateInfo = async (type, { key, value, title }) => {
-    if ($store.demo) {
-        $snackbar.show($store.demoMessage);
-        return;
-    }
+const energy = ref({});
 
-    if (type === "benchmark") {
-        await $api.benchmarks.patch(runNr.value, { [key]: value });
-    } else if (type === "job") {
-        await $api.jobs.patch(state.selectedJob, {
-            [key]: value
-        });
-    }
-
-    await refreshData();
-
-    $snackbar.show(`Updated ${title}`);
+const fetchEnergy = async (jobId) => {
+    const energyData = await $api.measurements.getEnergy(jobId);
+    energy.value[jobId] = energyData;
 };
 
 // reset selection and visited jobs
@@ -835,7 +445,7 @@ watch(
     () => state.selectedJob,
     (v) => {
         if (!state.visitedJobs.includes(v) && v) {
-            fetchPower(v);
+            fetchEnergy(v);
             state.visitedJobs.push(v);
         }
     },
@@ -852,22 +462,38 @@ watch(
     { immediate: true }
 );
 
-const refreshAll = async () => {
-    let handlers = [refreshData(), refreshMetrics()];
+const benchmarkOutputRef = ref(null);
 
-    // only fetch output if visited before (and therefore available in outputs)
-    // if not visitied it will be fetched automatically on visit
-    if (jobId.value in outputs.value) handlers.push(refreshOutput());
+const refreshAll = async () => {
+    let handlers = [refreshData(), refreshMetrics(), fetchEnergy(jobId.value)];
+
+    if (benchmarkOutputRef.value)
+        handlers.push(benchmarkOutputRef.value.refresh());
 
     await Promise.all(handlers);
 
-    nextTick(async () => {
-        // bustCache event triggers reload of graphs, load power data afterwards to prevent busting data of power queries
-        // bust cache only for currently viewed job as others may already have finished
-        $graphStore.bustCache([jobId.value]);
-        await fetchPower(jobId.value);
-    });
+    $graphStore.bustCache([jobId.value]);
 };
+
+const terminalStates = ["done", "failed", "canceled", "cancelled", "timeout"];
+
+watch(
+    [() => jobState.value?.value, () => benchmark.value?.state],
+    ([newJobState, newBenchmarkState]) => {
+        if (
+            terminalStates.includes(newJobState) &&
+            terminalStates.includes(newBenchmarkState)
+        ) {
+            clearInterval(state.refreshHandler);
+            clearInterval(state.refreshHandler);
+            state.refreshHandler = null;
+            if (newJobState == "done") refreshAll();
+
+            return;
+        }
+    },
+    { immediate: true }
+);
 
 watch(
     [jobId, refreshPaused],
@@ -897,16 +523,3 @@ onBeforeRouteLeave((to, from, next) => {
     next();
 });
 </script>
-
-<style lang="scss" scoped>
-.variables-tooltip {
-    :deep(&.v-tooltip) {
-        background: red !important;
-    }
-}
-
-.system-info-wrapper {
-    margin-top: 10px;
-    padding: 0 20px;
-}
-</style>

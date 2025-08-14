@@ -106,6 +106,7 @@ class QuestDBAPI:
         logger.info(
             f"Export completed: {success_count} successful, {skip_count} skipped (no data), {failure_count} failed"
         )
+        return success_count
 
     async def import_from_csv(self, table_name, path):
         """
@@ -194,9 +195,10 @@ questapi = QuestDBAPI()
 
 def data_anonymise(collection_db, username):
     target_keys = [
-        'issuer', 'configuration.misc.owner', 'configuration.OUTPUT_DIRECTORY',
-        'configuration.LOG_DIRECTORY', 'jobscriptFile', 'jobInfo.command',
-        'jobInfo.standardError', 'jobInfo.standardOutput', 'jobInfo.userName',
+        'issuer', 'owner', 'configuration.misc.owner',
+        'configuration.OUTPUT_DIRECTORY', 'configuration.LOG_DIRECTORY',
+        'jobscriptFile', 'jobInfo.command', 'jobInfo.standardError',
+        'jobInfo.standardOutput', 'jobInfo.userName',
         'jobInfo.currentWorkingDirectory', 'standardOutput', 'user_name',
         'homedirectory', 'misc.owner', 'members', 'user_type', 'uidnumber',
         'gidnumber', 'last_login'
@@ -255,7 +257,8 @@ async def save_as_csv(job_id, runNr_path):
     if job_id == "()" or not job_id:
         raise httpErrors.NotFound("JobId not found")
     table_names = await get_table_names()
-    await questapi.export_tables(table_names, runNr_path, job_id)
+    csv_count = await questapi.export_tables(table_names, runNr_path, job_id)
+    return csv_count
 
 
 def replace_key_fields(data, target_keys, target_value, replaced_value='demo'):
@@ -271,33 +274,43 @@ def replace_key_fields(data, target_keys, target_value, replaced_value='demo'):
 
     def replace_nested_key(data, keys, target_value, replaced_value):
 
-        if not keys or not isinstance(data, dict):
+        if not keys:
             return
 
         key = keys[0]
-        if key in data:
-            if len(keys) == 1:
-                if key == "members":
-                    data[key] = [replaced_value]
-                # Treat the user type of 'demo' as demo now.
-                elif key == 'user_type':
-                    data[key] = 'demo'
-                elif key == 'uidnumber':
-                    data[key] = "1001"
-                elif key == 'gidnumber':
-                    data[key] = "1001"
-                elif key == 'last_login':
-                    data[key] = ''
-                elif isinstance(data[key], str):
-                    data[key] = data[key].replace(target_value, replaced_value)
-                elif isinstance(data[key], list):
-                    data[key] = [
-                        v.replace(target_value, replaced_value) if isinstance(
-                            v, str) else v for v in data[key]
-                    ]
-            else:
-                replace_nested_key(data[key], keys[1:], target_value,
-                                   replaced_value)
+
+        if isinstance(data, dict):
+            if key in data:
+                if len(keys) == 1:
+                    if key == "members":
+                        data[key] = [replaced_value]
+                    # Treat the user type of 'demo' as demo now.
+                    elif key == 'user_type':
+                        data[key] = 'demo'
+                    elif key == 'owner':
+                        data[key] = 'demo'
+                    elif key == 'uidnumber':
+                        data[key] = "1001"
+                    elif key == 'gidnumber':
+                        data[key] = "1001"
+                    elif key == 'last_login':
+                        data[key] = ''
+                    elif isinstance(data[key], str):
+                        data[key] = data[key].replace(target_value,
+                                                      replaced_value)
+                    elif isinstance(data[key], list):
+                        data[key] = [
+                            v.replace(target_value, replaced_value)
+                            if isinstance(v, str) else v for v in data[key]
+                        ]
+                else:
+                    replace_nested_key(data[key], keys[1:], target_value,
+                                       replaced_value)
+        elif isinstance(data, list):
+            for item in data:
+                replace_nested_key(item, keys, target_value, replaced_value)
+        else:
+            return
 
     for target_key in target_keys:
         key_path = target_key.split('.')
@@ -570,7 +583,7 @@ async def save_benchmarks(runNr, anonymise, folder_path, db):
                         job_db = data_anonymise(job_db, orig_username)
                     with open(file_path, "w") as file:
                         json.dump(sanitize_mongo(job_db), file)
-                    await save_as_csv(job_id, runNr_path)
+                    csv_count = await save_as_csv(job_id, runNr_path)
                 else:
                     save_as_json(file_path, collection,
                                  collections[collection]['filter'],
@@ -581,6 +594,7 @@ async def save_benchmarks(runNr, anonymise, folder_path, db):
                 raise httpErrors.InternalServerError(
                     "Error saving %s for runNr %s to file." %
                     (collection, runNr))
+        return csv_count
 
 
 async def get_import_runNr(data, db, reassignRunNr):
@@ -628,7 +642,7 @@ def get_tablepath_dict(path):
     Get a dictionary mapping table names to their corresponding CSV file paths
 
     """
-    csv_files = path.glob("*.csv")
+    csv_files = list(path.glob("*.csv"))
     if not csv_files:
         logger.error(f"No CSV files found in the directory:{path}")
     table_dict = {}
@@ -704,6 +718,8 @@ def process_collection(collection, data, db, updateColl):
 
 async def process_table(csvs_path, jobId_map):
     table_dict = get_tablepath_dict(csvs_path)
+    # TODO: Consider adding logic to conditionally import data when QuestDB data is absent.
+    # This can be achieved by checking if not table_dict.
     if table_dict:
         jobId_list = []
         try:

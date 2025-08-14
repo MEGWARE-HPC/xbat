@@ -118,6 +118,12 @@ class User():
         return None if user is None else User(
             **filter_dict(user, ["whitelisted"]))
 
+    @staticmethod
+    def load_user_by_uid(uid):
+        user = db.getOne("users", {"uidnumber": str(uid)})
+        return None if user is None else User(
+            **filter_dict(user, ["whitelisted"]))
+
 
 class Client():
     grant_types = ["password", "client_credentials"]

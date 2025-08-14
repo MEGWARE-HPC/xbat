@@ -215,10 +215,13 @@ async def export_benchmark():
     manager_uuid = str(uuid.uuid1())
     folder_path = EXPORT_PATH / manager_uuid
     folder_path.mkdir(parents=True, exist_ok=True)
+    csv_counts = 0
 
     for runNr in runNrs:
         try:
-            await save_benchmarks(runNr, anonymise, folder_path, db)
+            csv_count = await save_benchmarks(runNr, anonymise, folder_path,
+                                              db)
+            csv_counts += csv_count
         except Exception as e:
             app.logger.error("Benchmark export failed: %s" % e)
             raise httpErrors.InternalServerError("Benchmark runNr %s failed." %
@@ -230,13 +233,15 @@ async def export_benchmark():
         raise httpErrors.InternalServerError("Error compressing files")
 
     if compress_status:
-        return send_from_directory(
+        response = send_from_directory(
             directory=EXPORT_PATH,
             path=f"{manager_uuid}.tgz",
             mimetype="application/octet-stream",
             as_attachment=True,
             download_name=f"exported_{manager_uuid}.tgz",
-        ), 200
+        )
+        headers = {"CSV-Counts": csv_counts}
+        return response, 200, headers
     else:
         return {}, 204
 

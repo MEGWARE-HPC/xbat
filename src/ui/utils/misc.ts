@@ -295,6 +295,9 @@ export const getJobState = (
         case states.includes("RUNNING"):
             state = "running";
             break;
+        case states.includes("PENDING"):
+            state = "pending";
+            break;
         case states.includes("FAILED"):
             state = "failed";
             break;

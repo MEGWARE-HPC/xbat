@@ -6,16 +6,50 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+-   dedicated API CSV and JSON file endpoints for graph measurements (#9)
+-   extended API CSV endpoint to export multiple metrics at once (#20)
+-   syntax highlighting support for CSV language in editor (#8)
+-   endpoint for energy consumption (#88)
+-   cpu and gpu energy consumption of jobs to benchmark overview (#51)
+-   tab titles to each page
+
 ### Changed
 
 -   always overwrite valkey.conf on installation
 -   use chrt instead of nice by default for xbatd for more reliable scheduling
 -   temporarily downgrade LIKWID to v5.3.0 due to errors on some architectures with v5.4.1
+-   improved layout of docs on smaller screens
+-   default back to npm instead of bun for frontend and docs
+-   first variant of job configuration can now be deleted (#49)
+-   support for slurm bracket notation in configuration nodelists (#89)
+-   improved file upload component (#93)
+-   made the DocsNavigation loop (#32)
+-   open external links in the document in new tabs (#85)
+-   removed the beta prefix since xbat is released
+-   energy consumption statistics in sidebar (now also includes previously missing entries like DRAM etc.)
+-   selected benchmark overview table page size is now persistent (#62)
+-   improved display of long configuration name (#55)
+-   login expired message changed from dialog to snackbar
+-   removed empty navigation on mobile devices
 
 ### Fixed
 
 -   link to edit page and changelog on GitHub
 -   node info and benchmarks not being registered correctly
+-   misaligned links to Slurm documentation in job script editor (#7)
+-   incorrect CSV headers on graph export
+-   different capitalization of username leading to creation of multiple accounts (#21)
+-   theme and fonts issues in editor (#13, #14)
+-   anonymization of benchmarks exports (#30)
+-   issue with JobOverviewTable loading (#28)
+-   overview table distortion by long names (#41)
+-   some issues related to auto-refresh (#4, #42, #43)
+-   the display of x-axis and y-axis titles in graph export (#48)
+-   missing group/metric and trace identifier in CSV output (#98)
+-   broken links and content in the documentation (#85)
+-   in-site navigation highlighting (#101)
+-   hydration attribute mismatch problem (#115)
+-   login page error caused by token expiration (#99)
 
 ## v1.0.0 - 2025-04-17
 

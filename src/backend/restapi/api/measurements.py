@@ -1,8 +1,11 @@
 import itertools
+import csv
 import re
 import logging
+import asyncio
 import numpy as np
-from flask import request
+from io import StringIO
+from flask import request, Response, jsonify
 from pathlib import Path
 from shared import httpErrors
 from shared import questdb as qdb
@@ -515,6 +518,140 @@ async def get_measurements(jobId,
     # prevent caching of unfinished jobs
     if jobs_cacheable([jobId]):
         valkey.set(valkey_key, result)
+
+    return result, 200
+
+
+async def export_json(jobId,
+                      group="",
+                      metric="",
+                      level="",
+                      node="",
+                      deciles=False):
+    result = await calculate_metrics(jobId, group, metric, level, node,
+                                     deciles)
+    if result is None: raise httpErrors.NotFound()
+    json_content = jsonify(result).data
+    filename = f"{jobId}_{group}.json"
+    return Response(
+        json_content,
+        mimetype="application/json",
+        headers={"Content-disposition": f"attachment; filename={filename}"})
+
+
+async def export_csv(jobId,
+                     group="",
+                     metric="",
+                     level="",
+                     node="",
+                     deciles=False):
+    if not group and not metric:
+        if not level:
+            # Temporarily set the level to job, if level is not given either
+            level = "job"
+
+        all_csv_content = []
+        for group_key in METRICS:
+            for metric_key in METRICS[group_key]:
+                result = await calculate_metrics(jobId, group_key, metric_key,
+                                                 level, node, deciles)
+                if result is None or not result["traces"]:
+                    continue
+
+                csv_content = generate_csv(result)
+                all_csv_content.append(csv_content)
+
+        if not all_csv_content:
+            raise httpErrors.NotFound()
+
+        final_csv_content = "\n".join(all_csv_content)
+        filename = f"{jobId}_all_metrics_{level}.csv"
+
+    else:
+        if not level:
+            raise httpErrors.BadRequest(
+                "Level is required for single metric export")
+        result = await calculate_metrics(jobId, group, metric, level, node,
+                                         deciles)
+        if result is None: raise httpErrors.NotFound()
+
+        final_csv_content = generate_csv(result)
+        filename = f"{jobId}_{group}_{metric}_{level}.csv"
+
+    return Response(
+        final_csv_content,
+        mimetype="text/csv",
+        headers={"Content-disposition": f"attachment; filename={filename}"})
+
+
+def generate_csv(result):
+    output = StringIO()
+    try:
+        value_key = 'rawValues' if 'rawValues' in result["traces"][
+            0] else 'values'
+        if value_key not in result["traces"][0]:
+            return ""
+        fieldnames = ['jobId', 'group', 'metric', 'trace'] + [
+            f'interval {i}' for i in range(len(result["traces"][0][value_key]))
+        ]
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        for item in result["traces"]:
+            row_data = {
+                'jobId': item['jobId'],
+                'group': item['group'],
+                'metric': item['metric'],
+                'trace': item['name']
+            }
+            row_data.update({
+                f'interval {i}': value
+                for i, value in enumerate(item[value_key])
+            })
+            writer.writerow(row_data)
+        csv_content = output.getvalue()
+    finally:
+        output.close()
+
+    return csv_content
+
+
+async def calculate_energy(jobId):
+    """
+    Calculates energy usage metrics for a given job.
+
+    Total energy consumption is an estimate based on the sum of all subsystems excluding core power and the system power itself.
+    This is necessary as, depending on the platform, system power does not include certain subsystems like for example GPU.
+
+    :param jobId: ID of job
+    """
+
+    result = {}
+    energy_metrics = [
+        "CPU Power", "Core Power", "DRAM Power", "FPGA Power", "GPU Power",
+        "System Power"
+    ]
+
+    tasks = [
+        calculate_metrics(jobId, "energy", energy_metric, "job", "", False)
+        for energy_metric in energy_metrics
+    ]
+    responses = await asyncio.gather(*tasks, return_exceptions=True)
+
+    for energy_metric, power_json in zip(energy_metrics, responses):
+        key = energy_metric.split()[0].lower()
+        try:
+            if "traces" in power_json and len(power_json["traces"]) > 0:
+                interval = power_json["traces"][0]["interval"] / 3600 / 1000
+                values = power_json["traces"][0]["values"]
+                energy_usage = round(sum(values) * interval, 3)
+            else:
+                energy_usage = None
+
+        except Exception as e:
+            logger.error(f"Error processing {energy_metric}: {e}")
+            energy_usage = None
+
+        result[key] = energy_usage
 
     return result, 200
 

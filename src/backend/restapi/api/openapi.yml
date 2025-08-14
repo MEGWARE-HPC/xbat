@@ -524,8 +524,11 @@ paths:
       parameters:
         - $ref: "#/components/parameters/JobId"
         - $ref: "#/components/parameters/GroupQuery"
+          required: true
         - $ref: "#/components/parameters/MetricQuery"
+          required: true
         - $ref: "#/components/parameters/LevelQuery"
+          required: true
         - $ref: "#/components/parameters/NodeQuery"
         - $ref: "#/components/parameters/DecilesQuery"
       tags:
@@ -535,6 +538,87 @@ paths:
       responses:
         "200":
           description: Successfully retrieved measurements
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - benchmarks_r
+  /measurements/{jobId}/json:
+   get:
+      operationId: backend.restapi.api.measurements.export_json
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - $ref: "#/components/parameters/GroupQuery"
+          required: true
+        - $ref: "#/components/parameters/MetricQuery"
+          required: true
+        - $ref: "#/components/parameters/LevelQuery"
+          required: true
+        - $ref: "#/components/parameters/NodeQuery"
+        - $ref: "#/components/parameters/DecilesQuery"
+      tags:
+        - measurements
+      summary: Export measurement results in JSON format
+      responses:
+        "200":
+          description: Successfully exported measurement results in JSON format
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              description: Indicates that the response contains an attachment file
+              schema:
+                type: string
+                example: attachment; filename="<jobId>_<group>.json"
+      security:
+        - oauth2:
+            - benchmarks_r
+  /measurements/{jobId}/csv:
+   get:
+      operationId: backend.restapi.api.measurements.export_csv
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - $ref: "#/components/parameters/GroupQuery"
+        - $ref: "#/components/parameters/MetricQuery"
+        - $ref: "#/components/parameters/LevelQuery"
+        - $ref: "#/components/parameters/NodeQuery"
+        - $ref: "#/components/parameters/DecilesQuery"
+      tags:
+        - measurements
+      summary: Export measurement results in CSV format
+      responses:
+        "200":
+          description: Successfully exported measurement results in CSV format
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              description: Indicates that the response contains an attachment file
+              schema:
+                type: string
+                example: attachment; filename="<jobId>_<group>.csv"
+      security:
+        - oauth2:
+            - benchmarks_r
+  /measurements/{jobId}/energy:
+   get:
+      operationId: backend.restapi.api.measurements.calculate_energy
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      tags:
+        - measurements
+      summary: Energy consumption
+      responses:
+        "200":
+          description: Successfully calculated the energy consumption (kWh)
           content:
             application/json:
               schema:
@@ -775,21 +859,18 @@ components:
       name: group
       description: Metric group
       in: query
-      required: true
       schema:
         type: string
     MetricQuery:
       name: metric
       description: Metric name
       in: query
-      required: true
       schema:
         type: string
     LevelQuery:
       name: level
       description: Aggregation level
       in: query
-      required: true
       schema:
         type: string
     NodeQuery:

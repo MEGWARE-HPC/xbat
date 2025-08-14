@@ -306,17 +306,16 @@
                                                         props: activatorProps
                                                     }"
                                                 >
-                                                    <!--  @click="
-                                                                removeVariant(i)
-                                                            " -->
                                                     <v-btn
                                                         size="x-small"
                                                         title="Remove Variant"
                                                         color="danger"
                                                         variant="plain"
                                                         v-show="
-                                                            state.variantTab ==
-                                                                i && i != 0
+                                                            state.variantTab ===
+                                                                i &&
+                                                            form.jobscript
+                                                                .length > 1
                                                         "
                                                         icon="$close"
                                                         v-bind="activatorProps"
@@ -506,13 +505,15 @@
                                                 ></v-icon>
                                             </div>
                                         </template>
-                                        {{
-                                            "configurationName" in
-                                            v.configuration
-                                                ? v.configuration
-                                                      .configurationName
-                                                : id
-                                        }}
+                                        <span class="configuration-name">
+                                            {{
+                                                "configurationName" in
+                                                v.configuration
+                                                    ? v.configuration
+                                                          .configurationName
+                                                    : id
+                                            }}
+                                        </span>
                                         <template #append>
                                             <v-btn-group
                                                 devided
@@ -627,6 +628,11 @@ import { deepClone } from "~/utils/misc";
 import { v4 as uuidv4 } from "uuid";
 const { vNotEmpty, vNumber, vInteger } = useFormValidation();
 const { $authStore, $api, $snackbar, $store } = useNuxtApp();
+
+useSeoMeta({
+    title: "Configurations",
+    description: "Configuration management for xbat"
+});
 
 const validity = reactive({ settings: true, jobscript: true });
 
@@ -783,10 +789,9 @@ const addConfig = (presetId = "") => {
 
 const addVariant = () => {
     let copy = deepClone(form.value.jobscript[state.variantTab]);
-    const prevTabCount = form.value.jobscript.length;
-    copy.variantName = `Variant ${prevTabCount + 1}`;
+    copy.variantName = `${copy.variantName} (copy)`;
     form.value.jobscript.push(copy);
-    state.variantTab = prevTabCount;
+    state.variantTab = form.value.jobscript.length - 1;
 };
 
 const resetForm = () => {
@@ -884,7 +889,7 @@ const executeAction = async (action, target) => {
 };
 
 const removeVariant = (i) => {
-    if (i == 0) return;
+    if (form.value.jobscript.length < 2) return;
     state.variantTab = form.value.jobscript.length - 2;
 
     form.value.jobscript.splice(i, 1);
@@ -926,6 +931,10 @@ watch(
     .list {
         overflow-y: auto;
         max-height: 80vh;
+    }
+    .configuration-name {
+        white-space: normal;
+        word-break: break-all;
     }
 }
 

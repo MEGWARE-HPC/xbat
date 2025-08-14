@@ -3,6 +3,7 @@ import "@mdi/font/css/materialdesignicons.css";
 import "vuetify/styles";
 import { createVuetify } from "vuetify";
 import { aliases, mdi } from "vuetify/iconsets/mdi-svg";
+// TODO wait for stable update and resolution of icon aliases
 import { VFileUpload } from "vuetify/labs/VFileUpload";
 
 import {
@@ -82,13 +83,14 @@ import {
     mdiContentSaveMove,
     mdiDatabaseImportOutline,
     mdiCloudUpload,
-    mdiFileDocument,
     mdiRead,
-    mdiInformation
+    mdiInformation,
+    mdiFolderZip,
+    mdiGestureTapButton,
+    mdiLightningBoltOutline
 } from "@mdi/js";
 
 // TODO remove when out of lab stage
-import { VNumberInput } from "vuetify/labs/VNumberInput";
 import { VTreeview } from "vuetify/labs/VTreeview";
 
 /*
@@ -103,7 +105,6 @@ export default defineNuxtPlugin((app) => {
     const vuetify = createVuetify({
         ssr: true,
         components: {
-            VNumberInput,
             VTreeview,
             VFileUpload
         },
@@ -219,9 +220,10 @@ export default defineNuxtPlugin((app) => {
                 saveMove: mdiContentSaveMove,
                 dataImport: mdiDatabaseImportOutline,
                 cloudUpload: mdiCloudUpload,
-                "mdi-file-document": mdiFileDocument,
                 read: mdiRead,
-                info: mdiInformation
+                info: mdiInformation,
+                gestureTap: mdiGestureTapButton,
+                lightningBolt: mdiLightningBoltOutline
             },
             sets: {
                 mdi
@@ -282,7 +284,10 @@ export default defineNuxtPlugin((app) => {
             },
             VTreeview: {
                 density: "compact"
-            }
+            },
+            VFileUploadItem: {
+                fileIcon: mdiFolderZip
+            },
         }
     });
     app.vueApp.use(vuetify);
