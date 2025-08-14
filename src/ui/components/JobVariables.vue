@@ -24,7 +24,6 @@
                 multiple
                 clearable
                 chips
-                no-data-text="No values configured"
                 persistent-hint
                 :hint="
                     v.key && !v.selected?.length
@@ -32,70 +31,15 @@
                         : ''
                 "
             >
-                <template #prepend-item>
-                    <draggable
-                        v-model="v.values"
-                        item-key="value"
-                        tag="div"
-                        :disabled="false"
-                        @end="onDragEnd(idx)"
-                        :ghost-class="'drag-ghost'"
-                        :chosen-class="'drag-chosen'"
-                        :drag-class="'drag-item'"
-                    >
-                        <template #item="{ element }">
-                            <v-list-item :title="undefined">
-                                <v-text-field
-                                    :model-value="element"
-                                    @update:model-value="
-                                        editValue(
-                                            idx,
-                                            v.values.indexOf(element),
-                                            $event
-                                        )
-                                    "
-                                    hide-details="auto"
-                                    :error-messages="
-                                        duplicateState[idx]?.edit === element
-                                            ? ['Duplicate Value']
-                                            : []
-                                    "
-                                >
-                                    <template #prepend>
-                                        <v-icon
-                                            icon="$sortDrag"
-                                            size="small"
-                                            class="mr-2 cursor-move"
-                                            @mousedown="
-                                                $event.stopPropagation()
-                                            "
-                                        />
-                                        <v-checkbox-btn
-                                            color="primary-light"
-                                            v-model="v.selected"
-                                            :value="element"
-                                        />
-                                    </template>
-                                    <template #append>
-                                        <v-btn
-                                            icon="$close"
-                                            size="x-small"
-                                            variant="plain"
-                                            @click="removeValue(idx, element)"
-                                        />
-                                    </template>
-                                </v-text-field>
-                            </v-list-item>
-                        </template>
-                    </draggable>
-                </template>
+                <template #no-data></template>
+
                 <template #chip="{ item }">
                     <v-chip color="primary-light" style="font-size: 0.875rem">{{
                         item.title
                     }}</v-chip>
                 </template>
 
-                <template #append-item>
+                <template #prepend-item>
                     <v-text-field
                         variant="outlined"
                         label="Add Value"
@@ -152,6 +96,69 @@
                             />
                         </template>
                     </v-text-field>
+                </template>
+
+                <template #append-item>
+                    <div v-if="!v.values.length" class="pa-3 text-grey">
+                        No values configured
+                    </div>
+
+                    <draggable
+                        v-else
+                        v-model="v.values"
+                        item-key="value"
+                        tag="div"
+                        :disabled="false"
+                        @end="onDragEnd(idx)"
+                        :ghost-class="'drag-ghost'"
+                        :chosen-class="'drag-chosen'"
+                        :drag-class="'drag-item'"
+                    >
+                        <template #item="{ element }">
+                            <v-list-item :title="undefined">
+                                <v-text-field
+                                    :model-value="element"
+                                    @update:model-value="
+                                        editValue(
+                                            idx,
+                                            v.values.indexOf(element),
+                                            $event
+                                        )
+                                    "
+                                    hide-details="auto"
+                                    :error-messages="
+                                        duplicateState[idx]?.edit === element
+                                            ? ['Duplicate Value']
+                                            : []
+                                    "
+                                >
+                                    <template #prepend>
+                                        <v-icon
+                                            icon="$sortDrag"
+                                            size="small"
+                                            class="mr-2 cursor-move"
+                                            @mousedown="
+                                                $event.stopPropagation()
+                                            "
+                                        />
+                                        <v-checkbox-btn
+                                            color="primary-light"
+                                            v-model="v.selected"
+                                            :value="element"
+                                        />
+                                    </template>
+                                    <template #append>
+                                        <v-btn
+                                            icon="$close"
+                                            size="x-small"
+                                            variant="plain"
+                                            @click="removeValue(idx, element)"
+                                        />
+                                    </template>
+                                </v-text-field>
+                            </v-list-item>
+                        </template>
+                    </draggable>
 
                     <div
                         v-if="v.values.length"
@@ -544,5 +551,10 @@ const duplicateVariable = computed(() => {
 .drag-item {
     opacity: 0.8;
     background: #c8ebfb;
+}
+
+.text-grey {
+    color: #888;
+    font-size: 0.9rem;
 }
 </style>
