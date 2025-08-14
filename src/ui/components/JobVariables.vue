@@ -14,10 +14,11 @@
                     duplicateVariable[idx] ? ['Duplicate Variable'] : []
                 "
             />
+
             <v-select
                 label="Value(s)"
                 style="width: 350px"
-                :items="v.values"
+                :items="[]"
                 v-model="v.selected"
                 :disabled="!v.key"
                 multiple
@@ -31,12 +32,12 @@
                         : ''
                 "
             >
-                <template v-slot:item="{ props, item }">
+                <template #prepend-item>
                     <draggable
                         v-model="v.values"
                         item-key="value"
                         tag="div"
-                        :disabled="v.sortOrder !== 'custom'"
+                        :disabled="false"
                         @end="onDragEnd(idx)"
                         :ghost-class="'drag-ghost'"
                         :chosen-class="'drag-chosen'"
@@ -53,20 +54,15 @@
                                             $event
                                         )
                                     "
-                                    @click.stop=""
-                                    @keydown.stop
-                                    @keyup.stop
-                                    @keypress.stop
+                                    hide-details="auto"
                                     :error-messages="
                                         duplicateState[idx]?.edit === element
                                             ? ['Duplicate Value']
                                             : []
                                     "
-                                    hide-details="auto"
                                 >
                                     <template #prepend>
                                         <v-icon
-                                            v-if="v.sortOrder === 'custom'"
                                             icon="$sortDrag"
                                             size="small"
                                             class="mr-2 cursor-move"
@@ -99,7 +95,7 @@
                     }}</v-chip>
                 </template>
 
-                <template #prepend-item>
+                <template #append-item>
                     <v-text-field
                         variant="outlined"
                         label="Add Value"
@@ -119,7 +115,7 @@
                     >
                         <template #append-inner>
                             <v-btn
-                                v-bind:title="'Add a value'"
+                                title="Add a value"
                                 variant="plain"
                                 :color="
                                     duplicateState[idx]?.add
@@ -134,7 +130,7 @@
                                 @click="addNewValue(idx, v.input)"
                             />
                             <v-btn
-                                v-bind:title="'Add multiple values'"
+                                title="Add multiple values"
                                 icon="$addArray"
                                 color="primary-light"
                                 size="small"
@@ -143,31 +139,26 @@
                                 @click="openArrayDialog(idx)"
                             />
                             <v-btn
-                                v-bind:title="'Toggle Sort Order'"
+                                title="Toggle Sort Order"
                                 :icon="
                                     v.sortOrder === 'desc'
                                         ? '$sortDesc'
-                                        : v.sortOrder === 'asc'
-                                        ? '$sortAsc'
-                                        : '$sortCustom'
+                                        : '$sortAsc'
                                 "
-                                :color="
-                                    v.sortOrder !== 'custom'
-                                        ? 'primary-light'
-                                        : undefined
-                                "
+                                :color="'primary-light'"
                                 size="small"
                                 variant="plain"
                                 @click="toggleSortOrder(idx)"
                             />
                         </template>
                     </v-text-field>
-                </template>
 
-                <template #append-item v-if="v.values.length">
-                    <div class="d-flex justify-center mt-3">
+                    <div
+                        v-if="v.values.length"
+                        class="d-flex justify-center mt-3"
+                    >
                         <v-btn
-                            v-bind:title="'Clear All Values'"
+                            title="Clear All Values"
                             icon="$trashCan"
                             variant="plain"
                             color="danger"
@@ -177,6 +168,7 @@
                     </div>
                 </template>
             </v-select>
+
             <v-btn
                 variant="plain"
                 size="x-small"
@@ -184,6 +176,7 @@
                 @click="removeVariable(idx)"
             />
         </div>
+
         <div class="d-flex align-center justify-center mt-5">
             <v-btn
                 variant="text"
@@ -259,6 +252,7 @@
         </v-dialog>
     </div>
 </template>
+
 <script lang="ts" setup>
 import { useDebounceFn } from "@vueuse/core";
 import { deepClone, deepEqual } from "~/utils/misc";
@@ -455,16 +449,7 @@ const confirmArrayValues = () => {
 
 const toggleSortOrder = (idx: number) => {
     const v = variables.value[idx];
-    if (v.sortOrder === "asc") {
-        v.sortOrder = "desc";
-    } else if (v.sortOrder === "desc") {
-        v.sortOrder = "custom";
-    } else {
-        v.sortOrder = "asc";
-    }
-
-    if (v.sortOrder === "custom") return;
-
+    v.sortOrder = v.sortOrder === "asc" ? "desc" : "asc";
     v.values = sortValues(v.values, v.sortOrder);
     v.selected = sortValues(v.selected, v.sortOrder);
 };
@@ -472,9 +457,7 @@ const toggleSortOrder = (idx: number) => {
 const onDragEnd = (idx: number) => {
     const v = variables.value[idx];
     v.sortOrder = "custom";
-
-    const newSelected = v.values.filter((val) => v.selected.includes(val));
-    v.selected = newSelected;
+    v.selected = v.values.filter((val) => v.selected.includes(val));
 };
 
 const sortValues = (
