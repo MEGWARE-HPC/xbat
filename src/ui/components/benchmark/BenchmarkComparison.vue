@@ -7,6 +7,15 @@
         <v-card>
             <v-card-title>Compare</v-card-title>
             <v-card-text>
+                <v-alert
+                    v-if="state.missing.length"
+                    type="warning"
+                    density="compact"
+                    variant="tonal"
+                    class="mb-1 text-caption"
+                    >Could not account for the following job(s):
+                    {{ state.missing.join(", ") }}
+                </v-alert>
                 <v-autocomplete
                     v-model="state.selected"
                     label="Jobs"
@@ -15,41 +24,43 @@
                     multiple
                     clearable
                     :items="jobItems"
-                    persistent-hint
+                    item-value="value"
                     class="mb-2"
-                    :hint="
-                        state.missing.length
-                            ? `Could not account for the following job(s): ${state.missing.join(
-                                  ','
-                              )}`
-                            : ''
-                    "
                 >
                     <template v-slot:item="{ props, item }">
                         <v-list-item v-bind="props" :title="item.raw.title">
-                            <v-list-item-subtitle v-html="item.raw.subtitle">
-                            </v-list-item-subtitle>
-                            <template #prepend
-                                ><v-checkbox-btn
-                                    v-model="state.selected"
-                                    :value="item.raw.value"
+                            <template #prepend>
+                                <v-icon
                                     class="mr-2"
-                                ></v-checkbox-btn>
+                                    size="small"
+                                    :color="
+                                        state.selected.includes(item.value)
+                                            ? 'primary-light'
+                                            : 'info'
+                                    "
+                                >
+                                    {{
+                                        state.selected.includes(item.value)
+                                            ? "$checkboxMark"
+                                            : "$checkboxBlank"
+                                    }}
+                                </v-icon>
                             </template>
-                            <template #append
-                                ><div class="d-flex align-center gap-10">
+                            <v-list-item-subtitle v-html="item.raw.subtitle" />
+                            <template #append>
+                                <div class="d-flex align-center gap-10">
                                     <JobVariableOverview
-                                        :variables="item.raw.variables"
                                         v-if="
                                             Object.keys(item.raw.variables)
                                                 .length
                                         "
+                                        :variables="item.raw.variables"
                                     >
                                         <v-btn
                                             icon="$currency"
                                             size="x-small"
                                             variant="text"
-                                        ></v-btn>
+                                        />
                                     </JobVariableOverview>
                                     <v-chip
                                         class="ml-2"
@@ -58,22 +69,24 @@
                                         :color="item.raw.stateColor"
                                         >{{ item.raw.state }}
                                     </v-chip>
-                                </div></template
-                            >
+                                </div>
+                            </template>
                         </v-list-item>
                     </template>
                 </v-autocomplete>
                 <div v-if="state.selected.length">
                     <v-switch
+                        v-if="state.graphCount > 1"
                         label="Synchronize Graphs"
                         v-model="state.synchronizeGraphs"
                         title="Synchronize X-Axis of Graphs"
                         density="compact"
-                        v-if="state.graphCount > 1"
-                    ></v-switch>
+                    />
                     <GraphGroup :synchronize="state.synchronizeGraphs">
                         <template v-slot:default="{ relayout, relayoutData }">
                             <GraphWrapper
+                                v-for="i in state.graphCount"
+                                :key="i"
                                 title="Comparison - Modify Graph"
                                 :job-ids="state.selected"
                                 :metrics="metrics"
@@ -84,7 +97,7 @@
                                 :relayout-data="relayoutData"
                                 comparison-mode
                                 flat
-                            ></GraphWrapper>
+                            />
                         </template>
                     </GraphGroup>
                     <div class="d-flex justify-center">
@@ -177,15 +190,20 @@ watch(
     [() => state.selected, () => props.modelValue],
 
     async ([v, m]) => {
-        if (!v.length || !m) return;
+        if (!v.length) {
+            metrics.value = {};
+            state.missing = [];
+            state.noData = false;
+            return;
+        }
+
+        if (!m) return;
 
         const res = await $api.metrics.get(v, true);
         metrics.value = res.metrics;
         state.noData = !Object.keys(res.metrics).length;
         state.missing = res.missing || [];
     },
-    {
-        immediate: true
-    }
+    { immediate: true }
 );
 </script>

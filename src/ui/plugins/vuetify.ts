@@ -87,7 +87,9 @@ import {
     mdiInformation,
     mdiFolderZip,
     mdiGestureTapButton,
-    mdiLightningBoltOutline
+    mdiLightningBoltOutline,
+    mdiCheckboxMarked,
+    mdiCheckboxBlankOutline
 } from "@mdi/js";
 
 // TODO remove when out of lab stage
@@ -223,7 +225,9 @@ export default defineNuxtPlugin((app) => {
                 read: mdiRead,
                 info: mdiInformation,
                 gestureTap: mdiGestureTapButton,
-                lightningBolt: mdiLightningBoltOutline
+                lightningBolt: mdiLightningBoltOutline,
+                checkboxMark: mdiCheckboxMarked,
+                checkboxBlank: mdiCheckboxBlankOutline
             },
             sets: {
                 mdi
@@ -287,7 +291,7 @@ export default defineNuxtPlugin((app) => {
             },
             VFileUploadItem: {
                 fileIcon: mdiFolderZip
-            },
+            }
         }
     });
     app.vueApp.use(vuetify);
