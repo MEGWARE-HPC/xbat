@@ -54,6 +54,7 @@ All notable changes to this project will be documented in this file.
 -   login page error caused by token expiration (#99)
 -   duplicate selections in benchmark comparison (#95)
 -   action of clear button in benchmark comparison (#105)
+-   unit mismatch in benchmark comparisons (#50)
 
 ## v1.0.0 - 2025-04-17
 
