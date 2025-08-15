@@ -85,6 +85,8 @@
                     <GraphGroup :synchronize="state.synchronizeGraphs">
                         <template v-slot:default="{ relayout, relayoutData }">
                             <GraphWrapper
+                                v-for="i in state.graphCount"
+                                :key="i"
                                 title="Comparison - Modify Graph"
                                 :job-ids="state.selected"
                                 :metrics="metrics"
