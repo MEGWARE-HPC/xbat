@@ -12,6 +12,8 @@ All notable changes to this project will be documented in this file.
 -   endpoint for energy consumption (#88)
 -   cpu and gpu energy consumption of jobs to benchmark overview (#51)
 -   tab titles to each page
+-   custom drag-and-drop sorting and ascending/descending order sorting for values (#74)
+-   array support to job variables (#76)
 
 ### Changed
 
@@ -50,6 +52,7 @@ All notable changes to this project will be documented in this file.
 -   in-site navigation highlighting (#101)
 -   hydration attribute mismatch problem (#115)
 -   login page error caused by token expiration (#99)
+-   job variables duplicate detection false alarms (#75)
 
 ## v1.0.0 - 2025-04-17
 
