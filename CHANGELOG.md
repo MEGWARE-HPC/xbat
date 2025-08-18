@@ -32,7 +32,7 @@ All notable changes to this project will be documented in this file.
 -   login expired message changed from dialog to snackbar
 -   removed empty navigation on mobile devices
 -   error message with missing metrics in benchmark comparison (#105)
--   optimized and refactored metrics endpoint
+-   optimized metrics endpoint
 
 ### Fixed
 
@@ -55,6 +55,7 @@ All notable changes to this project will be documented in this file.
 -   duplicate selections in benchmark comparison (#95)
 -   action of clear button in benchmark comparison (#105)
 -   unit mismatch in benchmark comparisons (#50)
+-   add graph button in benchmark comparison (#114)
 
 ## v1.0.0 - 2025-04-17
 
