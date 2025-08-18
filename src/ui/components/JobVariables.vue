@@ -83,7 +83,7 @@
                                 @click="openArrayDialog(idx)"
                             />
                             <v-btn
-                                title="Toggle Sort Order"
+                                title="Sort or reorder values"
                                 :icon="
                                     v.sortOrder === 'custom'
                                         ? '$sortCustom'
