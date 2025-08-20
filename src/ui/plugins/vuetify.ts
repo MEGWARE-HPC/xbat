@@ -87,7 +87,8 @@ import {
     mdiInformation,
     mdiFolderZip,
     mdiGestureTapButton,
-    mdiLightningBoltOutline
+    mdiLightningBoltOutline,
+    mdiBackupRestore
 } from "@mdi/js";
 
 // TODO remove when out of lab stage
@@ -223,7 +224,8 @@ export default defineNuxtPlugin((app) => {
                 read: mdiRead,
                 info: mdiInformation,
                 gestureTap: mdiGestureTapButton,
-                lightningBolt: mdiLightningBoltOutline
+                lightningBolt: mdiLightningBoltOutline,
+                backupRestore: mdiBackupRestore
             },
             sets: {
                 mdi
