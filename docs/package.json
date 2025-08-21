@@ -14,6 +14,7 @@
     "@nuxt/content": "^3.6.3",
     "@nuxt/fonts": "^0.11.4",
     "@nuxt/image": "^1.11.0",
+    "@nuxt/kit": "^3.18.1",
     "@nuxtjs/robots": "^5.5.0",
     "@nuxtjs/sitemap": "^7.4.3",
     "@pinia/nuxt": "^0.11.2",
