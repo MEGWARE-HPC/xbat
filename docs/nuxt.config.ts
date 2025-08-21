@@ -1,4 +1,8 @@
 import vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
+import { globSync } from "glob";
+const routes = globSync("./content/**/*.md").map((path) =>
+    path.slice(7, -3).replace(/\d+\./g, "")
+);
 
 export default defineNuxtConfig({
     ssr: true,
@@ -21,7 +25,7 @@ export default defineNuxtConfig({
     ],
     nitro: {
         prerender: {
-            crawlLinks: true
+            routes: [...routes]
         }
     },
     image: {
@@ -38,22 +42,22 @@ export default defineNuxtConfig({
         },
         css: {
             preprocessorOptions: {
-                scss: {
-                    api: "modern-compiler"
-                }
+                scss: {}
             }
         }
     },
     content: {
-        highlight: {
-            theme: {
-                default: "github-light",
-                dark: "github-dark"
-            },
-            langs: ["bash", "yml", "json", "javascript", "ini"]
-        },
-        search: {
-            indexed: true
+        build: {
+            markdown: {
+                toc: { depth: 3 },
+                highlight: {
+                    theme: {
+                        default: "github-light",
+                        dark: "github-dark"
+                    },
+                    langs: ["bash", "yaml", "json", "javascript", "ini"]
+                }
+            }
         }
     },
     site: { url: "xbat.dev" },
