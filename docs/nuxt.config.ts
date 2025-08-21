@@ -1,8 +1,4 @@
 import vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
-import { globSync } from "glob";
-const routes = globSync("./content/**/*.md").map((path) =>
-    path.slice(7, -3).replace(/\d+\./g, "")
-);
 
 export default defineNuxtConfig({
     ssr: true,
@@ -25,7 +21,7 @@ export default defineNuxtConfig({
     ],
     nitro: {
         prerender: {
-            routes: [...routes]
+            crawlLinks: true
         }
     },
     image: {
@@ -56,9 +52,8 @@ export default defineNuxtConfig({
             },
             langs: ["bash", "yml", "json", "javascript", "ini"]
         },
-        experimental: {
-            // @ts-expect-error
-            search: true
+        search: {
+            indexed: true
         }
     },
     site: { url: "xbat.dev" },
