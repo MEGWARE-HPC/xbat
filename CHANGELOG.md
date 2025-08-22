@@ -53,9 +53,9 @@ All notable changes to this project will be documented in this file.
 -   hydration attribute mismatch problem (#115)
 -   login page error caused by token expiration (#99)
 -   duplicate selections in benchmark comparison (#95)
--   action of clear button in benchmark comparison (#105)
+-   job selection clear button in benchmark comparison not working (#105)
 -   unit mismatch in benchmark comparisons (#50)
--   add graph button in benchmark comparison (#114)
+-   "add graph" button in benchmark comparison not working (#114)
 
 ## v1.0.0 - 2025-04-17
 
