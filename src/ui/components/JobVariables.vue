@@ -11,7 +11,9 @@
                 v-model="v.key"
                 clearable
                 :error-messages="
-                    duplicateVariable[idx] ? [`Variable '${v.key}' already exists`] : []
+                    duplicateVariable[idx]
+                        ? [`Variable '${v.key}' already exists`]
+                        : []
                 "
             />
 
@@ -134,7 +136,9 @@
                                     hide-details="auto"
                                     :error-messages="
                                         duplicateState[idx]?.edit === element
-                                            ? [`Value '${duplicateState[idx].edit}' already exists`]
+                                            ? [
+                                                  `Value '${duplicateState[idx].edit}' already exists`
+                                              ]
                                             : []
                                     "
                                 >
