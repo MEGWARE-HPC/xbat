@@ -86,7 +86,7 @@ const { data: page } = await useAsyncData(
 if (!page.value) {
     throw createError({ statusCode: 404, statusMessage: "Page not found" });
 }
-console.log("page", page);
+
 const normalizedPath = route.path.endsWith("/")
     ? route.path.slice(0, -1)
     : route.path;
