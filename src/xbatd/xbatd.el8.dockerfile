@@ -2,10 +2,13 @@ FROM almalinux:8.10
 
 RUN dnf -y update && \
     dnf -y install epel-release && \
+    # for ninja-build
+    dnf -y install dnf-plugins-core && \
+    dnf config-manager --set-enabled powertools && \
     dnf clean all
 
 RUN dnf install -y make gcc gcc-c++ wget perl-devel perl-Data-Dumper rpm-devel rpm-build dnf-plugins-core \
-    cmake libatomic rust-toolset git boost-devel libcurl-devel openssl-devel && \
+    cmake libatomic rust-toolset git boost-devel libcurl-devel openssl-devel ninja-build && \
     dnf clean all
 
 RUN mkdir -p ~/rpmbuild/BUILD ~/rpmbuild/BUILDROOT ~/rpmbuild/RPMS ~/rpmbuild/SOURCES ~/rpmbuild/SPECS ~/rpmbuild/SRPMS /usr/local/share/xbatd
@@ -16,7 +19,7 @@ RUN dnf config-manager --add-repo https://developer.download.nvidia.com/compute/
     dnf install --nogpgcheck -y nvidia-driver nvidia-driver-NVML nvidia-driver-devel cuda-nvml-devel-12-2 && dnf clean all
 
 # install rocm
-RUN dnf install -y https://repo.radeon.com/amdgpu-install/6.3/rhel/8.10/amdgpu-install-6.3.60300-1.el8.noarch.rpm && \
+RUN dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/8.10/amdgpu-install-6.4.60401-1.el8.noarch.rpm && \
     dnf install -y amd-smi-lib && \
     dnf clean all
 
