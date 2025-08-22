@@ -31,6 +31,8 @@ All notable changes to this project will be documented in this file.
 -   improved display of long configuration name (#55)
 -   login expired message changed from dialog to snackbar
 -   removed empty navigation on mobile devices
+-   error message with missing metrics in benchmark comparison (#105)
+-   optimized metrics endpoint
 
 ### Fixed
 
@@ -50,6 +52,10 @@ All notable changes to this project will be documented in this file.
 -   in-site navigation highlighting (#101)
 -   hydration attribute mismatch problem (#115)
 -   login page error caused by token expiration (#99)
+-   duplicate selections in benchmark comparison (#95)
+-   job selection clear button in benchmark comparison not working (#105)
+-   unit mismatch in benchmark comparisons (#50)
+-   "add graph" button in benchmark comparison not working (#114)
 
 ## v1.0.0 - 2025-04-17
 
