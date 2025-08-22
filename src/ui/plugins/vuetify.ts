@@ -92,7 +92,9 @@ import {
     mdiSort,
     mdiSortNumericAscending,
     mdiSortNumericDescending,
-    mdiFormatListGroupPlus
+    mdiFormatListGroupPlus,
+    mdiCheckboxMarked,
+    mdiCheckboxBlankOutline
 } from "@mdi/js";
 
 // TODO remove when out of lab stage
@@ -233,7 +235,9 @@ export default defineNuxtPlugin((app) => {
                 sortCustom: mdiSort,
                 sortAsc: mdiSortNumericAscending,
                 sortDesc: mdiSortNumericDescending,
-                addArray: mdiFormatListGroupPlus
+                addArray: mdiFormatListGroupPlus,
+                checkboxMark: mdiCheckboxMarked,
+                checkboxBlank: mdiCheckboxBlankOutline
             },
             sets: {
                 mdi
