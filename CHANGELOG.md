@@ -59,6 +59,7 @@ All notable changes to this project will be documented in this file.
 -   job selection clear button in benchmark comparison not working (#105)
 -   unit mismatch in benchmark comparisons (#50)
 -   "add graph" button in benchmark comparison not working (#114)
+-   "DRAM Used" and GPU "Memory Used" not being aggregated correctly at job level (#61)
 -   xbatd build failing due to rocm install
 
 ## v1.0.0 - 2025-04-17
