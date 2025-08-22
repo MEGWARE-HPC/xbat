@@ -4,7 +4,7 @@ export default defineContentConfig({
     collections: {
         docs: defineCollection({
             source: {
-                include: "content/**/*"
+                include: "docs/**/*"
             },
             type: "page",
             schema: {

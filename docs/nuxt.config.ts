@@ -55,7 +55,7 @@ export default defineNuxtConfig({
                         default: "github-light",
                         dark: "github-dark"
                     },
-                    langs: ["bash", "yaml", "json", "javascript", "ini"]
+                    langs: ["bash", "yml", "json", "javascript", "ini"]
                 }
             }
         }

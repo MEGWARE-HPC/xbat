@@ -66,7 +66,6 @@
         </div>
     </div>
 </template>
-
 <script setup lang="ts">
 import { NuxtImg } from "#components";
 import { getDocType } from "~/helper";
@@ -81,13 +80,13 @@ const { $store } = useNuxtApp();
 
 const { data: page } = await useAsyncData(
     () => `docs:${route.fullPath}`,
-    () => queryCollection("content").path(route.fullPath).first()
+    () => queryCollection("docs").path(route.fullPath).first()
 );
 
 if (!page.value) {
     throw createError({ statusCode: 404, statusMessage: "Page not found" });
 }
-
+console.log("page", page);
 const normalizedPath = route.path.endsWith("/")
     ? route.path.slice(0, -1)
     : route.path;
@@ -95,7 +94,7 @@ const normalizedPath = route.path.endsWith("/")
 const { data: surround } = await useAsyncData(
     () => `docs:${normalizedPath}:surround`,
     () =>
-        queryCollectionItemSurroundings("content", normalizedPath, {
+        queryCollectionItemSurroundings("docs", normalizedPath, {
             fields: ["title", "description", "path"]
         }),
     {
@@ -119,22 +118,23 @@ useSeoMeta({
 });
 
 const editLink = computed(() => {
-    const fileFromSource =
-        (page.value as any)?.source?.filePath ||
-        (page.value as any)?.file ||
-        (page.value as any)?._file;
+    const repoBase = "https://github.com/MEGWARE-HPC/xbat";
+    const branch = "master";
 
-    if (fileFromSource) {
-        return `https://github.com/MEGWARE-HPC/xbat/tree/master/docs/${fileFromSource}`;
+    const stem: string | undefined = (page.value as any)?.stem;
+    const ext: string = ((page.value as any)?.extension || "md") as string;
+
+    if (stem) {
+        return `${repoBase}/blob/${branch}/docs/content/${stem}.${ext}`;
     }
 
-    const guess =
-        "content" +
-        (page.value?.path?.endsWith("/")
-            ? `${page.value?.path}index.md`
-            : `${page.value?.path}.md`);
+    const id: string | undefined = (page.value as any)?.id;
+    if (id) {
+        const normalized = id.replace(/^docs\//, "");
+        return `${repoBase}/blob/${branch}/docs/content/${normalized}`;
+    }
 
-    return `https://github.com/MEGWARE-HPC/xbat/tree/master/docs/${guess}`;
+    return `${repoBase}/blob/${branch}/docs/content/`;
 });
 </script>
 <style scoped lang="scss">
