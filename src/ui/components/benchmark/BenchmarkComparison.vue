@@ -7,15 +7,6 @@
         <v-card>
             <v-card-title>Compare</v-card-title>
             <v-card-text>
-                <v-alert
-                    v-if="state.missing.length"
-                    type="warning"
-                    density="compact"
-                    variant="tonal"
-                    class="mb-1 text-caption"
-                    >Could not account for the following job(s):
-                    {{ state.missing.join(", ") }}
-                </v-alert>
                 <v-autocomplete
                     v-model="state.selected"
                     label="Jobs"
@@ -26,6 +17,7 @@
                     :items="jobItems"
                     item-value="value"
                     class="mb-2"
+                    hide-details
                 >
                     <template v-slot:item="{ props, item }">
                         <v-list-item v-bind="props" :title="item.raw.title">
@@ -74,6 +66,15 @@
                         </v-list-item>
                     </template>
                 </v-autocomplete>
+                <v-alert
+                    v-if="state.missing.length"
+                    type="warning"
+                    density="compact"
+                    variant="tonal"
+                    class="mb-1 text-caption"
+                    >Could not account for the following job(s):
+                    {{ state.missing.join(", ") }}
+                </v-alert>
                 <div v-if="state.selected.length">
                     <v-switch
                         v-if="state.graphCount > 1"
