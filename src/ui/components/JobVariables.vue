@@ -1,7 +1,7 @@
 <template>
     <div>
         <div
-            class="d-flex gap-10 mt-5"
+            class="d-flex gap-10 mt-5 align-start"
             v-for="(v, idx) in variables"
             :key="idx"
         >
