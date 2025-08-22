@@ -88,6 +88,11 @@ import {
     mdiFolderZip,
     mdiGestureTapButton,
     mdiLightningBoltOutline,
+    mdiDrag,
+    mdiSort,
+    mdiSortNumericAscending,
+    mdiSortNumericDescending,
+    mdiFormatListGroupPlus,
     mdiCheckboxMarked,
     mdiCheckboxBlankOutline
 } from "@mdi/js";
@@ -226,6 +231,11 @@ export default defineNuxtPlugin((app) => {
                 info: mdiInformation,
                 gestureTap: mdiGestureTapButton,
                 lightningBolt: mdiLightningBoltOutline,
+                sortDrag: mdiDrag,
+                sortCustom: mdiSort,
+                sortAsc: mdiSortNumericAscending,
+                sortDesc: mdiSortNumericDescending,
+                addArray: mdiFormatListGroupPlus,
                 checkboxMark: mdiCheckboxMarked,
                 checkboxBlank: mdiCheckboxBlankOutline
             },
