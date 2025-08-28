@@ -1,14 +1,16 @@
 <template>
     <ClientOnly>
         <v-navigation-drawer
-            v-if="isClient && (!isMobile || items)"
+            v-if="
+                isClient && (!isMobile || items) && !(isMobile && isAboutOrDemo)
+            "
             v-model="$store.docsDrawerOpen"
             v-model:selected="selectedEntry"
             class="pl-2 pr-2"
             :permanent="!isMobile"
             :temporary="isMobile"
         >
-            <template v-if="items">
+            <template v-if="items && !isAboutOrDemo">
                 <div class="mt-13">
                     <div class="doc-type-head text-medium-emphasis">
                         {{ $store.currentDocType }} Documentation
@@ -64,9 +66,7 @@
                                 <v-list-item
                                     v-bind="props"
                                     :title="item.title"
-                                    :id="`group-${encodeURIComponent(
-                                        item.path
-                                    )}`"
+                                    :id="`group-${encodeURIComponent(item.path)}`"
                                 />
                             </template>
 
@@ -111,6 +111,12 @@ if (import.meta.client) {
     });
 }
 
+const isAboutOrDemo = computed(
+    () =>
+        route.path.startsWith("/docs/about") ||
+        route.path.startsWith("/docs/demo")
+);
+
 const docStartingRoutes: Record<string, string> = {
     user: "/docs/user/introduction",
     admin: "/docs/admin/setup/installation",
@@ -151,14 +157,41 @@ function findNodeByPath(
     return null;
 }
 
+function filterOutAboutDemo(
+    nodes?: ContentNavigationItem[]
+): ContentNavigationItem[] {
+    if (!nodes) return [];
+    const shouldDrop = (p?: string) =>
+        !!p && (p.startsWith("/about") || p.startsWith("/demo"));
+    const walk = (list: ContentNavigationItem[]): ContentNavigationItem[] =>
+        list
+            .filter((n) => !shouldDrop(n.path))
+            .map((n) => ({
+                ...n,
+                children: n.children ? walk(n.children as any) : n.children
+            }));
+    return walk(nodes);
+}
+
 const docsRoot = computed<ContentNavigationItem | null>(() => {
     const root = findNodeByPath(nav.value, "/docs");
-    if (root) return root;
+    if (root) {
+        const cloned: ContentNavigationItem = {
+            ...root,
+            children: filterOutAboutDemo(root.children as any)
+        };
+        return cloned;
+    }
 
     const all: ContentNavigationItem[] = [];
     const walk = (nodes?: ContentNavigationItem[]) => {
         if (!nodes) return;
         for (const n of nodes) {
+            if (
+                n.path?.startsWith("/docs/about") ||
+                n.path?.startsWith("/docs/demo")
+            )
+                continue;
             all.push(n);
             walk(n.children as any);
         }
@@ -168,7 +201,7 @@ const docsRoot = computed<ContentNavigationItem | null>(() => {
     const buckets: Record<string, ContentNavigationItem> = {};
     for (const n of all) {
         if (!n.path?.startsWith("/docs/")) continue;
-        const seg = n.path.split("/")[2]; // /docs/<seg>/...
+        const seg = n.path.split("/")[2];
         if (!seg) continue;
         if (!buckets[seg]) {
             buckets[seg] = {
