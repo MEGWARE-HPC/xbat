@@ -15,27 +15,31 @@
                         prepend-icon="$github"
                         href="https://github.com/MEGWARE-HPC/xbat"
                         target="_blank"
+                        rel="noopener noreferrer"
                         size="large"
                         elevation="0"
                         class="ma-2"
-                        >GitHub</v-btn
                     >
+                        GitHub
+                    </v-btn>
                     <v-btn
                         prepend-icon="$file"
                         to="/docs/user/introduction"
                         elevation="0"
                         size="large"
                         class="ma-2"
-                        >Documentation</v-btn
                     >
+                        Documentation
+                    </v-btn>
                     <v-btn
                         prepend-icon="$play"
                         to="/docs/demo"
                         elevation="0"
                         size="large"
                         class="ma-2"
-                        >Demo</v-btn
                     >
+                        Demo
+                    </v-btn>
                 </div>
             </div>
 
