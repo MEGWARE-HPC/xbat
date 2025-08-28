@@ -12,6 +12,8 @@ All notable changes to this project will be documented in this file.
 -   endpoint for energy consumption (#88)
 -   cpu and gpu energy consumption of jobs to benchmark overview (#51)
 -   tab titles to each page
+-   custom drag-and-drop sorting and ascending/descending order sorting for values (#74)
+-   array support to job variables (#76)
 
 ### Changed
 
@@ -31,6 +33,8 @@ All notable changes to this project will be documented in this file.
 -   improved display of long configuration name (#55)
 -   login expired message changed from dialog to snackbar
 -   removed empty navigation on mobile devices
+-   error message with missing metrics in benchmark comparison (#105)
+-   optimized metrics endpoint
 
 ### Fixed
 
@@ -50,6 +54,13 @@ All notable changes to this project will be documented in this file.
 -   in-site navigation highlighting (#101)
 -   hydration attribute mismatch problem (#115)
 -   login page error caused by token expiration (#99)
+-   job variables duplicate detection false alarms (#75)
+-   duplicate selections in benchmark comparison (#95)
+-   job selection clear button in benchmark comparison not working (#105)
+-   unit mismatch in benchmark comparisons (#50)
+-   "add graph" button in benchmark comparison not working (#114)
+-   "DRAM Used" and GPU "Memory Used" not being aggregated correctly at job level (#61)
+-   xbatd build failing due to rocm install
 
 ## v1.0.0 - 2025-04-17
 

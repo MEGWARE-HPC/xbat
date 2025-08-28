@@ -1,7 +1,7 @@
 /**
  * Array of unit suffixes for general conversion.
  */
-const CONVERSION_SIZES: string[] = ["", "K", "M", "G", "T", "P"];
+export const CONVERSION_SIZES: string[] = ["", "K", "M", "G", "T", "P"];
 
 /**
  * Array of unit suffixes for memory conversion in bytes.
