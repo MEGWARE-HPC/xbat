@@ -11,90 +11,135 @@
             >
             <!-- use click handler instead of "to" because vuetify assumes all entries match the current route
          (which messes up the styling) since the shard is not respected -->
-            <template v-for="link of props.toc">
+            <template v-for="link in props.toc" :key="link.id">
                 <v-list-item
                     class="toc-item"
-                    :class="{ 'toc-sub-item': link.children?.includes(entry) }"
-                    v-for="entry of [link, ...(link?.children || [])]"
-                    :value="`${route.path}#${entry.id}`"
+                    :value="`${route.path}#${link.id}`"
                     active-class="toc-active"
-                    @click="() => router.push(`${route.path}#${entry.id}`)"
-                    >{{ entry.text }}
+                    @click="go(link.id)"
+                >
+                    {{ link.text }}
+                </v-list-item>
+                <v-list-item
+                    v-for="child in link.children || []"
+                    :key="child.id"
+                    class="toc-item toc-sub-item"
+                    :value="`${route.path}#${child.id}`"
+                    active-class="toc-active"
+                    @click="go(child.id)"
+                >
+                    {{ child.text }}
                 </v-list-item>
             </template>
         </v-list>
     </v-navigation-drawer>
 </template>
 <script setup lang="ts">
-import type { TocLink } from "@nuxt/content";
+type TocEntry = { id: string; text: string; children?: TocEntry[] };
+
+const props = defineProps<{ toc: TocEntry[] }>();
+
 const selectedTocEntry = ref<string[] | null>(null);
 const route = useRoute();
-const router = useRouter();
 
-const props = defineProps<{
-    toc: TocLink[];
-}>();
+async function scrollToId(id: string, attempts = 5) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        return true;
+    }
+    if (attempts > 0) {
+        await new Promise((r) => requestAnimationFrame(r));
+        return scrollToId(id, attempts - 1);
+    }
+    return false;
+}
+
+async function go(id: string) {
+    selectedTocEntry.value = [`${route.path}#${id}`];
+    history.replaceState(history.state, "", `${route.path}#${id}`);
+    await scrollToId(id);
+}
+
+const headlinePositions = computed(() => {
+    if (process.server || !props.toc.length) return [];
+    const flat: TocEntry[] = props.toc
+        .map((l) => [l, ...(l.children || [])])
+        .flat();
+    return flat.map((link) => {
+        const el = document.getElementById(link.id);
+        const top = el ? el.getBoundingClientRect().top + window.scrollY : 0;
+        return { id: link.id, top };
+    });
+});
 
 watch(
     () => props.toc,
     () => {
-        if (!selectedTocEntry.value && props.toc.length)
-            selectedTocEntry.value = [`${route.path}#${props.toc[0].id}`];
+        if (!props.toc.length) return;
+        const hash = (route.hash || "").replace(/^#/, "");
+        const firstId = props.toc[0].id;
+        const targetId = hash || firstId;
+        selectedTocEntry.value = [`${route.path}#${targetId}`];
     },
     { immediate: true }
 );
 
-let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
+watch(
+    () => route.hash,
+    (h) => {
+        const id = (h || "").replace(/^#/, "");
+        if (!id) return;
+        selectedTocEntry.value = [`${route.path}#${id}`];
+        scrollToId(id);
+    },
+    { flush: "post" }
+);
 
-const setActiveTocEntry = (hash: string) => {
-    selectedTocEntry.value = [hash];
-};
+let ticking = false;
+const onScroll = () => {
+    if (ticking || process.server) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+        ticking = false;
+        const list = headlinePositions.value;
+        if (!list.length) return;
 
-// TODO use debounce
-const onScroll = (e: Event) => {
-    if (typeof window === "undefined") return;
+        const y = window.scrollY;
+        const cursor = y + 50;
 
-    const yScroll = window.scrollY || (e.target as HTMLElement).scrollTop || 0;
+        let idx = list.findIndex((p) => p.top >= cursor);
+        if (idx === -1) idx = list.length - 1;
 
-    for (let i = 0; i < headlinePositions.value.length; i++) {
-        if (headlinePositions.value[i].y >= yScroll) {
-            // use timeout workaround to prevent all entries from being selected when scrolling to bottom through hash link
-            if (scrollTimeout) clearTimeout(scrollTimeout);
-
-            scrollTimeout = setTimeout(() => {
-                setActiveTocEntry(
-                    `${route.path}#${headlinePositions.value[i].id}`
-                );
-            }, 100);
-
-            break;
+        if (
+            idx > 0 &&
+            Math.abs(list[idx].top - cursor) >
+                Math.abs(list[idx - 1].top - cursor)
+        ) {
+            idx = idx - 1;
         }
-    }
-};
 
-const headlinePositions = computed(() => {
-    if (!props.toc.length) return [];
-
-    const headlines = props.toc
-        .map((link) => [link, ...(link?.children || [])])
-        .flat();
-
-    return headlines.map((link) => {
-        const el = document.getElementById(link.id);
-
-        return {
-            id: link.id,
-            y: el ? el.getBoundingClientRect().y : 0
-        };
+        const id = list[idx]?.id;
+        if (id) {
+            const val = `${route.path}#${id}`;
+            if (selectedTocEntry.value?.[0] !== val) {
+                selectedTocEntry.value = [val];
+            }
+        }
     });
-});
+};
 
 onMounted(() => {
-    window.addEventListener("scroll", onScroll);
+    if (process.server) return;
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    requestAnimationFrame(onScroll);
 });
 
 onBeforeUnmount(() => {
+    if (process.server) return;
     window.removeEventListener("scroll", onScroll);
+    window.removeEventListener("resize", onScroll);
 });
 </script>
 <style scoped lang="scss">
