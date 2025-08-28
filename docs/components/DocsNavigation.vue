@@ -1,16 +1,14 @@
 <template>
     <ClientOnly>
         <v-navigation-drawer
-            v-if="
-                isClient && (!isMobile || items) && !(isMobile && isAboutOrDemo)
-            "
+            v-if="isClient && (!isMobile || items) && !(isMobile && isAbout)"
             v-model="$store.docsDrawerOpen"
             v-model:selected="selectedEntry"
             class="pl-2 pr-2"
             :permanent="!isMobile"
             :temporary="isMobile"
         >
-            <template v-if="items && !isAboutOrDemo">
+            <template v-if="items && !isAbout">
                 <div class="mt-13">
                     <div class="doc-type-head text-medium-emphasis">
                         {{ $store.currentDocType }} Documentation
@@ -38,6 +36,7 @@
                 </div>
                 <v-list
                     v-model:selected="selectedEntry"
+                    :opened="openedGroups"
                     color="primary-light"
                     class="navigation mt-4"
                     mandatory
@@ -111,7 +110,7 @@ if (import.meta.client) {
     });
 }
 
-const isAboutOrDemo = computed(
+const isAbout = computed(
     () =>
         route.path.startsWith("/docs/about") ||
         route.path.startsWith("/docs/demo")
@@ -157,12 +156,12 @@ function findNodeByPath(
     return null;
 }
 
-function filterOutAboutDemo(
+function filterOutAbout(
     nodes?: ContentNavigationItem[]
 ): ContentNavigationItem[] {
     if (!nodes) return [];
     const shouldDrop = (p?: string) =>
-        !!p && (p.startsWith("/about") || p.startsWith("/demo"));
+        !!p && (p.startsWith("/docs/about") || p.startsWith("/docs/demo"));
     const walk = (list: ContentNavigationItem[]): ContentNavigationItem[] =>
         list
             .filter((n) => !shouldDrop(n.path))
@@ -178,7 +177,7 @@ const docsRoot = computed<ContentNavigationItem | null>(() => {
     if (root) {
         const cloned: ContentNavigationItem = {
             ...root,
-            children: filterOutAboutDemo(root.children as any)
+            children: filterOutAbout(root.children as any)
         };
         return cloned;
     }
@@ -223,13 +222,21 @@ const docsRoot = computed<ContentNavigationItem | null>(() => {
 const items = computed<ContentNavigationItem | null>(() => {
     const root = docsRoot.value;
     if (!root?.children?.length) return null;
-    const match = route.path.match(/^\/docs\/([a-zA-Z]+)\//);
+    const match = route.path.match(/^\/docs\/([^/]+)\//);
     const currentCategory = match?.[1];
     if (!currentCategory) return root;
     const hit = root.children!.find((c) =>
         c.path?.startsWith(`/docs/${currentCategory}`)
     );
     return (hit as any) || root;
+});
+
+const openedGroups = computed(() => {
+    if (!items.value?.children) return [];
+    const m = route.path.match(/^\/docs\/([^/]+)\//);
+    const seg = m?.[1];
+    if (!seg) return [];
+    return [`/docs/${seg}`];
 });
 
 const selectedEntry = ref<string[]>([]);
