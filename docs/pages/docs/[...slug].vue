@@ -54,7 +54,7 @@
                 </div>
             </div>
 
-            <TOC :toc="toc" />
+            <TOC v-if="toc && toc.length" :toc="toc" />
 
             <div class="d-flex align-center text-medium-emphasis mt-6">
                 Edit this Page on
@@ -78,35 +78,34 @@ definePageMeta({ layout: "docs" });
 const route = useRoute();
 const { $store } = useNuxtApp();
 
+const purePath = computed(() => {
+    const p = route.path;
+    return p !== "/" && p.endsWith("/") ? p.slice(0, -1) : p;
+});
+
 const { data: page } = await useAsyncData(
-    () => `docs:${route.fullPath}`,
-    () => queryCollection("docs").path(route.fullPath).first()
+    () => `docs:${purePath.value}`,
+    () => queryCollection("docs").path(purePath.value).first()
 );
 
 if (!page.value) {
     throw createError({ statusCode: 404, statusMessage: "Page not found" });
 }
 
-const normalizedPath = route.path.endsWith("/")
-    ? route.path.slice(0, -1)
-    : route.path;
-
-const { data: surround } = await useAsyncData(
-    () => `docs:${normalizedPath}:surround`,
+const { data: rawSurround } = await useAsyncData(
+    () => `docs:${purePath.value}:surround`,
     () =>
-        queryCollectionItemSurroundings("docs", normalizedPath, {
+        queryCollectionItemSurroundings("docs", purePath.value, {
             fields: ["title", "description", "path"]
-        }),
-    {
-        transform(list: Array<any | null>) {
-            return list.map((doc) =>
-                doc && getDocType(doc.path || "") === $store.currentDocType
-                    ? doc
-                    : null
-            );
-        }
-    }
+        })
 );
+
+const surround = computed(() => {
+    const list = (rawSurround.value || []) as Array<any | null>;
+    return list.map((doc) =>
+        doc && getDocType(doc.path || "") === $store.currentDocType ? doc : null
+    );
+});
 
 const toc = computed(() => page.value?.body?.toc?.links || []);
 
@@ -136,6 +135,32 @@ const editLink = computed(() => {
 
     return `${repoBase}/blob/${branch}/docs/content/`;
 });
+
+async function scrollToHash(h?: string, tries = 8) {
+    const raw = (h || route.hash || "").replace(/^#/, "");
+    if (!raw) return;
+    const candidates = [raw, decodeURIComponent(raw)];
+    for (const id of candidates) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+            return;
+        }
+    }
+    if (tries > 0) {
+        await nextTick();
+        requestAnimationFrame(() => scrollToHash(raw, tries - 1));
+    }
+}
+
+onMounted(() => {
+    scrollToHash();
+});
+
+watch(
+    () => route.hash,
+    (h) => scrollToHash(h)
+);
 </script>
 <style scoped lang="scss">
 @use "~/assets/css/colors.scss" as *;

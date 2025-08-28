@@ -1,5 +1,10 @@
 <template>
-    <v-navigation-drawer location="right" floating class="toc">
+    <v-navigation-drawer
+        v-if="props.toc && props.toc.length"
+        location="right"
+        floating
+        class="toc"
+    >
         <v-list
             v-model:selected="selectedTocEntry"
             mandatory
@@ -37,7 +42,7 @@
 <script setup lang="ts">
 type TocEntry = { id: string; text: string; children?: TocEntry[] };
 
-const props = defineProps<{ toc: TocEntry[] }>();
+const props = defineProps<{ toc?: TocEntry[] }>();
 
 const selectedTocEntry = ref<string[] | null>(null);
 const route = useRoute();
@@ -49,8 +54,8 @@ async function scrollToId(id: string, attempts = 5) {
         return true;
     }
     if (attempts > 0) {
-        await new Promise((r) => requestAnimationFrame(r));
-        return scrollToId(id, attempts - 1);
+        await nextTick();
+        requestAnimationFrame(() => scrollToId(id, attempts - 1));
     }
     return false;
 }
@@ -61,8 +66,20 @@ async function go(id: string) {
     await scrollToId(id);
 }
 
+watch(
+    () => props.toc,
+    () => {
+        if (!props.toc || !props.toc.length) return;
+        const hash = (route.hash || "").replace(/^#/, "");
+        const firstId = props.toc[0].id;
+        const targetId = hash || firstId;
+        selectedTocEntry.value = [`${route.path}#${targetId}`];
+    },
+    { immediate: true }
+);
+
 const headlinePositions = computed(() => {
-    if (process.server || !props.toc.length) return [];
+    if (process.server || !props.toc || !props.toc.length) return [];
     const flat: TocEntry[] = props.toc
         .map((l) => [l, ...(l.children || [])])
         .flat();
@@ -72,29 +89,6 @@ const headlinePositions = computed(() => {
         return { id: link.id, top };
     });
 });
-
-watch(
-    () => props.toc,
-    () => {
-        if (!props.toc.length) return;
-        const hash = (route.hash || "").replace(/^#/, "");
-        const firstId = props.toc[0].id;
-        const targetId = hash || firstId;
-        selectedTocEntry.value = [`${route.path}#${targetId}`];
-    },
-    { immediate: true }
-);
-
-watch(
-    () => route.hash,
-    (h) => {
-        const id = (h || "").replace(/^#/, "");
-        if (!id) return;
-        selectedTocEntry.value = [`${route.path}#${id}`];
-        scrollToId(id);
-    },
-    { flush: "post" }
-);
 
 let ticking = false;
 const onScroll = () => {
@@ -106,7 +100,7 @@ const onScroll = () => {
         if (!list.length) return;
 
         const y = window.scrollY;
-        const cursor = y + 50;
+        const cursor = y + 100;
 
         let idx = list.findIndex((p) => p.top >= cursor);
         if (idx === -1) idx = list.length - 1;
