@@ -135,32 +135,6 @@ const editLink = computed(() => {
 
     return `${repoBase}/blob/${branch}/docs/content/`;
 });
-
-async function scrollToHash(h?: string, tries = 8) {
-    const raw = (h || route.hash || "").replace(/^#/, "");
-    if (!raw) return;
-    const candidates = [raw, decodeURIComponent(raw)];
-    for (const id of candidates) {
-        const el = document.getElementById(id);
-        if (el) {
-            el.scrollIntoView({ behavior: "smooth", block: "start" });
-            return;
-        }
-    }
-    if (tries > 0) {
-        await nextTick();
-        requestAnimationFrame(() => scrollToHash(raw, tries - 1));
-    }
-}
-
-onMounted(() => {
-    scrollToHash();
-});
-
-watch(
-    () => route.hash,
-    (h) => scrollToHash(h)
-);
 </script>
 <style scoped lang="scss">
 @use "~/assets/css/colors.scss" as *;

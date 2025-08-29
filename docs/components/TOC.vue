@@ -44,10 +44,21 @@ type TocEntry = { id: string; text: string; children?: TocEntry[] };
 
 const props = defineProps<{ toc?: TocEntry[] }>();
 
-const selectedTocEntry = ref<string[] | null>(null);
 const route = useRoute();
+const router = useRouter();
 
-async function scrollToId(id: string, attempts = 5) {
+const selectedTocEntry = ref<string[]>([]);
+
+const MANUAL_LOCK_MS = 500;
+let lastManualTs = 0;
+function withManualLock(fn: () => void) {
+    lastManualTs = Date.now();
+    fn();
+}
+
+let suppressNextScroll = false;
+
+async function scrollToId(id: string, attempts = 8) {
     const el = document.getElementById(id);
     if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -55,27 +66,53 @@ async function scrollToId(id: string, attempts = 5) {
     }
     if (attempts > 0) {
         await nextTick();
-        requestAnimationFrame(() => scrollToId(id, attempts - 1));
+        await new Promise((r) => requestAnimationFrame(r));
+        return scrollToId(id, attempts - 1);
+    }
+    return false;
+}
+
+async function selectAndScroll(id: string) {
+    withManualLock(() => {
+        selectedTocEntry.value = [`${route.path}#${id}`];
+    });
+    await scrollToId(id);
+}
+
+async function waitForEl(id: string, tries = 20) {
+    while (tries-- > 0) {
+        if (document.getElementById(id)) return true;
+        await nextTick();
+        await new Promise((r) => requestAnimationFrame(r));
     }
     return false;
 }
 
 async function go(id: string) {
-    selectedTocEntry.value = [`${route.path}#${id}`];
-    history.replaceState(history.state, "", `${route.path}#${id}`);
-    await scrollToId(id);
+    await waitForEl(id);
+    suppressNextScroll = true;
+    await router.replace({ path: route.path, hash: `#${id}` });
+    withManualLock(() => {
+        selectedTocEntry.value = [`${route.path}#${id}`];
+    });
 }
 
 watch(
-    () => props.toc,
-    () => {
-        if (!props.toc || !props.toc.length) return;
-        const hash = (route.hash || "").replace(/^#/, "");
-        const firstId = props.toc[0].id;
-        const targetId = hash || firstId;
-        selectedTocEntry.value = [`${route.path}#${targetId}`];
-    },
-    { immediate: true }
+    () => route.hash,
+    async (h) => {
+        const id = (h || "").replace(/^#/, "");
+        if (!id) return;
+
+        if (suppressNextScroll) {
+            suppressNextScroll = false;
+            withManualLock(() => {
+                selectedTocEntry.value = [`${route.path}#${id}`];
+            });
+            return;
+        }
+
+        await selectAndScroll(id);
+    }
 );
 
 const headlinePositions = computed(() => {
@@ -93,14 +130,15 @@ const headlinePositions = computed(() => {
 let ticking = false;
 const onScroll = () => {
     if (ticking || process.server) return;
+    if (Date.now() - lastManualTs < MANUAL_LOCK_MS) return;
+
     ticking = true;
     requestAnimationFrame(() => {
         ticking = false;
         const list = headlinePositions.value;
         if (!list.length) return;
 
-        const y = window.scrollY;
-        const cursor = y + 100;
+        const cursor = window.scrollY + 100;
 
         let idx = list.findIndex((p) => p.top >= cursor);
         if (idx === -1) idx = list.length - 1;
@@ -123,8 +161,17 @@ const onScroll = () => {
     });
 };
 
-onMounted(() => {
+onMounted(async () => {
     if (process.server) return;
+
+    const initialId =
+        (route.hash || "").replace(/^#/, "") ||
+        (props.toc && props.toc[0] ? props.toc[0].id : "");
+
+    if (initialId) {
+        await selectAndScroll(initialId);
+    }
+
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll, { passive: true });
     requestAnimationFrame(onScroll);
