@@ -19,7 +19,7 @@
             <template v-for="link in props.toc" :key="link.id">
                 <v-list-item
                     class="toc-item"
-                    :value="`${route.path}#${link.id}`"
+                    :value="`${basePath}#${link.id}`"
                     active-class="toc-active"
                     @click="go(link.id)"
                 >
@@ -29,7 +29,7 @@
                     v-for="child in link.children || []"
                     :key="child.id"
                     class="toc-item toc-sub-item"
-                    :value="`${route.path}#${child.id}`"
+                    :value="`${basePath}#${child.id}`"
                     active-class="toc-active"
                     @click="go(child.id)"
                 >
@@ -45,75 +45,48 @@ type TocEntry = { id: string; text: string; children?: TocEntry[] };
 const props = defineProps<{ toc?: TocEntry[] }>();
 
 const route = useRoute();
-const router = useRouter();
+const basePath = computed(() => route.path);
 
 const selectedTocEntry = ref<string[]>([]);
 
-const MANUAL_LOCK_MS = 500;
-let lastManualTs = 0;
-function withManualLock(fn: () => void) {
-    lastManualTs = Date.now();
-    fn();
+const HEADER_OFFSET = 70; // Consider the height of the TopBar
+
+function getScrollTopFor(el: Element) {
+    const rect = el.getBoundingClientRect();
+    return rect.top + window.scrollY - HEADER_OFFSET;
 }
 
-let suppressNextScroll = false;
-
-async function scrollToId(id: string, attempts = 8) {
-    const el = document.getElementById(id);
-    if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-        return true;
-    }
-    if (attempts > 0) {
-        await nextTick();
-        await new Promise((r) => requestAnimationFrame(r));
-        return scrollToId(id, attempts - 1);
-    }
-    return false;
-}
-
-async function selectAndScroll(id: string) {
-    withManualLock(() => {
-        selectedTocEntry.value = [`${route.path}#${id}`];
-    });
-    await scrollToId(id);
-}
-
-async function waitForEl(id: string, tries = 20) {
+async function waitForEl(id: string, tries = 40) {
     while (tries-- > 0) {
-        if (document.getElementById(id)) return true;
+        const el = process.client ? document.getElementById(id) : null;
+        if (el) return el;
         await nextTick();
         await new Promise((r) => requestAnimationFrame(r));
     }
-    return false;
+    return null;
+}
+
+async function scrollToIdExact(id: string, smooth = true) {
+    if (process.server) return false;
+    const el = await waitForEl(id);
+    if (!el) return false;
+    const top = getScrollTopFor(el);
+    window.scrollTo({ top, behavior: smooth ? "smooth" : "auto" });
+    return true;
 }
 
 async function go(id: string) {
-    await waitForEl(id);
-    suppressNextScroll = true;
-    await router.replace({ path: route.path, hash: `#${id}` });
-    withManualLock(() => {
-        selectedTocEntry.value = [`${route.path}#${id}`];
-    });
-}
+    selectedTocEntry.value = [`${basePath.value}#${id}`];
 
-watch(
-    () => route.hash,
-    async (h) => {
-        const id = (h || "").replace(/^#/, "");
-        if (!id) return;
+    const url = `${basePath.value}#${id}`;
+    history.replaceState(history.state, "", url);
 
-        if (suppressNextScroll) {
-            suppressNextScroll = false;
-            withManualLock(() => {
-                selectedTocEntry.value = [`${route.path}#${id}`];
-            });
-            return;
-        }
-
-        await selectAndScroll(id);
+    const tries = [0, 50, 160, 320]; // ms
+    for (const t of tries) {
+        if (t) await new Promise((r) => setTimeout(r, t));
+        await scrollToIdExact(id, true); // ALWAYS smooth
     }
-);
+}
 
 const headlinePositions = computed(() => {
     if (process.server || !props.toc || !props.toc.length) return [];
@@ -130,7 +103,6 @@ const headlinePositions = computed(() => {
 let ticking = false;
 const onScroll = () => {
     if (ticking || process.server) return;
-    if (Date.now() - lastManualTs < MANUAL_LOCK_MS) return;
 
     ticking = true;
     requestAnimationFrame(() => {
@@ -138,11 +110,9 @@ const onScroll = () => {
         const list = headlinePositions.value;
         if (!list.length) return;
 
-        const cursor = window.scrollY + 100;
-
+        const cursor = window.scrollY + 50;
         let idx = list.findIndex((p) => p.top >= cursor);
         if (idx === -1) idx = list.length - 1;
-
         if (
             idx > 0 &&
             Math.abs(list[idx].top - cursor) >
@@ -150,10 +120,9 @@ const onScroll = () => {
         ) {
             idx = idx - 1;
         }
-
         const id = list[idx]?.id;
         if (id) {
-            const val = `${route.path}#${id}`;
+            const val = `${basePath.value}#${id}`;
             if (selectedTocEntry.value?.[0] !== val) {
                 selectedTocEntry.value = [val];
             }
@@ -161,19 +130,17 @@ const onScroll = () => {
     });
 };
 
-onMounted(async () => {
+onMounted(() => {
     if (process.server) return;
-
-    const initialId =
-        (route.hash || "").replace(/^#/, "") ||
-        (props.toc && props.toc[0] ? props.toc[0].id : "");
-
-    if (initialId) {
-        await selectAndScroll(initialId);
-    }
-
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll, { passive: true });
+
+    const initId = (location.hash || "").replace(/^#/, "");
+    if (initId) {
+        selectedTocEntry.value = [`${basePath.value}#${initId}`];
+        requestAnimationFrame(() => scrollToIdExact(initId));
+    }
+
     requestAnimationFrame(onScroll);
 });
 

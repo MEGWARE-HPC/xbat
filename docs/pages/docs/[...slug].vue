@@ -11,6 +11,7 @@
 
             <ContentRenderer
                 v-if="page?.body"
+                ref="contentRoot"
                 class="content"
                 :value="page"
                 :components="{ NuxtImg }"
@@ -108,6 +109,87 @@ const surround = computed(() => {
 });
 
 const toc = computed(() => page.value?.body?.toc?.links || []);
+
+const contentRoot = ref<any>(null);
+
+function getContentRootEl(): HTMLElement | null {
+    const r = contentRoot.value;
+    if (!r) {
+        return process.client
+            ? (document.querySelector(".content") as HTMLElement | null)
+            : null;
+    }
+
+    if (r instanceof HTMLElement) return r;
+
+    const el = (r as any)?.$el;
+    if (el instanceof HTMLElement) return el;
+    return process.client
+        ? (document.querySelector(".content") as HTMLElement | null)
+        : null;
+}
+
+async function alignToHashOnce(smoothFirst = true) {
+    if (process.server) return false;
+    const id = (route.hash || "").replace(/^#/, "");
+    if (!id) return false;
+    const el = document.getElementById(id);
+    if (!el) return false;
+    const HEADER_OFFSET = 70;
+    const top = el.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET;
+    window.scrollTo({ top, behavior: smoothFirst ? "smooth" : "auto" });
+    return true;
+}
+
+async function alignToHashWithRetries() {
+    if (process.server) return;
+    const tries = [0, 80, 200, 380];
+    for (let i = 0; i < tries.length; i++) {
+        if (tries[i]) await new Promise((r) => setTimeout(r, tries[i]));
+        const ok = await alignToHashOnce(i === 0);
+        if (ok && i === 0) {
+            requestAnimationFrame(() => alignToHashOnce(false));
+        }
+    }
+}
+
+onMounted(() => {
+    if (process.server) return;
+
+    if (route.hash) {
+        requestAnimationFrame(() => alignToHashWithRetries());
+    }
+
+    const rootEl = getContentRootEl();
+    if (!rootEl) return;
+
+    rootEl.querySelectorAll("img").forEach((img) => {
+        img.addEventListener(
+            "load",
+            () => {
+                if (route.hash) alignToHashWithRetries();
+            },
+            { once: true }
+        );
+    });
+
+    const obs = new MutationObserver(() => {
+        if (route.hash) setTimeout(() => alignToHashWithRetries(), 60);
+    });
+    obs.observe(rootEl, { childList: true, subtree: true });
+    onBeforeUnmount(() => obs.disconnect());
+});
+
+watch(
+    () => route.hash,
+    () => {
+        if (!route.hash) return;
+        nextTick().then(() =>
+            requestAnimationFrame(() => alignToHashWithRetries())
+        );
+    },
+    { flush: "post" }
+);
 
 useSeoMeta({
     title: `${page.value?.title} - ${titleSuffix}`,
