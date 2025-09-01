@@ -10,7 +10,6 @@
                     placeholder="Search..."
                     v-model="searchValue"
                     hide-details
-                    autofocus
                     :loading="searching"
                     clearable
                 />
