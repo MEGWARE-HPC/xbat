@@ -26,6 +26,13 @@ export default defineNuxtConfig({
     nitro: {
         prerender: {
             routes: [...routes]
+        },
+        routeRules: {
+            "/**/*.wasm": {
+                headers: {
+                    "Content-Type": "application/wasm"
+                }
+            }
         }
     },
     image: {
