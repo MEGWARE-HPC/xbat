@@ -94,13 +94,14 @@
                     </div>
                     <v-btn
                         icon="$menu"
+                        class="only-mobile"
                         v-if="
-                            windowWidth <= 992 &&
                             route.path.startsWith('/docs') &&
-                            route.path !== '/docs/about'
+                            !['/docs/about', '/docs/demo'].includes(route.path)
                         "
                         @click="$store.docsDrawerOpen = !$store.docsDrawerOpen"
                         aria-label="Toggle navigation"
+                        title="Open docs navigation"
                     />
                 </div>
             </template>
@@ -109,10 +110,7 @@
     </div>
 </template>
 <script setup lang="ts">
-import { useWindowSize } from "@vueuse/core";
-
 const searchDialog = ref(false);
-const { width: windowWidth } = useWindowSize();
 
 const { $store } = useNuxtApp();
 
@@ -134,6 +132,15 @@ const route = useRoute();
 @media (max-width: 992px) {
     .hide-sm {
         display: none;
+    }
+}
+
+.only-mobile {
+    display: none;
+}
+@media (max-width: 992px) {
+    .only-mobile {
+        display: inline-flex;
     }
 }
 </style>
