@@ -201,13 +201,12 @@ def post():
 
 def backup_mongoDB():
     """
-    Backup the entire MongoDB database (manager and admin only).
+    Backup the entire MongoDB database (admin only).
     """
     user = get_user_from_token()
-    if user is None or user["user_type"] not in ["admin", "manager"]:
+    if user is None or user["user_type"] != "admin":
         raise httpErrors.Forbidden(
-            "Only managers and administrators are allowed to perform this action"
-        )
+            "Only administrators are allowed to perform this action")
 
     backup_uuid = str(uuid.uuid1())
     folder_path = EXPORT_PATH / backup_uuid
