@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 -   tab titles to each page
 -   custom drag-and-drop sorting and ascending/descending order sorting for values (#74)
 -   array support to job variables (#76)
+-   API endpoint and frontend button to backup entire MongoDB database (admin only) (#131)
 
 ### Changed
 
