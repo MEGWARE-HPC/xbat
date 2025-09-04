@@ -109,13 +109,15 @@ http {
         # proxy initial questdb request to xbat-questdb
         # to make questdb UI accessible through same port as xbat
         location /questdb/ {
+            proxy_set_header Host $host;
+            rewrite ^ /index.html break;
+
             proxy_pass http://docker-xbat-questdb/;
-
             proxy_redirect http://docker-xbat-questdb/ $scheme://$http_host/questdb/;
-
             proxy_redirect ~^(/.*)$ /questdb$1;
 
-            proxy_set_header Host $host;
+            proxy_redirect ~^/index\.html$ /questdb/;
+            proxy_redirect / /questdb/;
 
             # proxy_buffering off;
             # add_header Cache-Control "no-store";
