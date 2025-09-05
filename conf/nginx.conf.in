@@ -45,10 +45,10 @@ http {
         server #QUESTDB_ADDRESS#;
     }
 
-    # map $http_referer $is_questdb_referer {
-    #     default 0;
-    #     "~*questdb" 1;
-    # }
+    map $http_referer $is_questdb_referer {
+        default 0;
+        "~*questdb" 1;
+    }
 
     server {
         listen 7000 ssl;
@@ -74,9 +74,9 @@ http {
         location / {
 
             # pass all subsequent questdb request with "questdb" in referer to xbat-questdb
-            # if ($is_questdb_referer) {
-            #     proxy_pass http://docker-xbat-questdb;
-            # }
+            if ($is_questdb_referer) {
+                proxy_pass http://docker-xbat-questdb;
+            }
 
             proxy_pass http://docker-xbat-ui;
             proxy_redirect http://docker-xbat-ui/ $scheme://$http_host/;
@@ -112,27 +112,7 @@ http {
             return 301 /questdb/;
         }
 
-        location = /questdb/ {
-            proxy_set_header Host $host;
-            proxy_intercept_errors on;
-
-            proxy_pass http://docker-xbat-questdb/questdb/index.html;
-
-            error_page 404 = @qdb_index_fallback;
-
-            proxy_redirect ~^/questdb/index\.html$ /questdb/;
-            proxy_redirect ~^/index\.html$        /questdb/;
-        }
-
-        location @qdb_index_fallback {
-            proxy_set_header Host $host;
-            proxy_pass http://docker-xbat-questdb/index.html;
-
-            proxy_redirect ~^/index\.html$ /questdb/;
-        }
-
         location /questdb/ {
-            proxy_set_header Host $host;
             proxy_pass http://docker-xbat-questdb/;
 
             proxy_redirect / /questdb/;
