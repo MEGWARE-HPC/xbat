@@ -114,12 +114,21 @@ http {
 
         location = /questdb/ {
             proxy_set_header Host $host;
+            proxy_intercept_errors on;
 
-            rewrite ^ /questdb/index.html break;
+            proxy_pass http://docker-xbat-questdb/questdb/index.html;
 
-            proxy_pass http://docker-xbat-questdb;
+            error_page 404 = @qdb_index_fallback;
 
             proxy_redirect ~^/questdb/index\.html$ /questdb/;
+            proxy_redirect ~^/index\.html$        /questdb/;
+        }
+
+        location @qdb_index_fallback {
+            proxy_set_header Host $host;
+            proxy_pass http://docker-xbat-questdb/index.html;
+
+            proxy_redirect ~^/index\.html$ /questdb/;
         }
 
         location /questdb/ {
