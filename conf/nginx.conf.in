@@ -112,7 +112,18 @@ http {
             return 301 /questdb/;
         }
 
+        location = /questdb/ {
+            proxy_set_header Host $host;
+
+            rewrite ^ /questdb/index.html break;
+
+            proxy_pass http://docker-xbat-questdb;
+
+            proxy_redirect ~^/questdb/index\.html$ /questdb/;
+        }
+
         location /questdb/ {
+            proxy_set_header Host $host;
             proxy_pass http://docker-xbat-questdb/;
 
             proxy_redirect / /questdb/;
