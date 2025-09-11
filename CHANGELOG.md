@@ -35,6 +35,7 @@ All notable changes to this project will be documented in this file.
 -   removed empty navigation on mobile devices
 -   error message with missing metrics in benchmark comparison (#105)
 -   optimized metrics endpoint
+-   upgraded Nuxt/Content from v2 to v3 (#82)
 
 ### Fixed
 
