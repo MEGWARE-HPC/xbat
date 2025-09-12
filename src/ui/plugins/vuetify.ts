@@ -233,8 +233,8 @@ export default defineNuxtPlugin((app) => {
                 lightningBolt: mdiLightningBoltOutline,
                 sortDrag: mdiDrag,
                 sortCustom: mdiSort,
-                sortAsc: mdiSortNumericAscending,
-                sortDesc: mdiSortNumericDescending,
+                sortNumAsc: mdiSortNumericAscending,
+                sortNumDesc: mdiSortNumericDescending,
                 addArray: mdiFormatListGroupPlus,
                 checkboxMark: mdiCheckboxMarked,
                 checkboxBlank: mdiCheckboxBlankOutline
