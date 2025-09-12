@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 -   automatic subgroup opening and collapsing in docs navigation
 -   match highlighting to the search function in docs
+-   documentation about backup the MongoDB database (#86)
 
 ### Changed
 
