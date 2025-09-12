@@ -6,6 +6,18 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+-   API endpoint and frontend button to backup entire MongoDB database (admin only) (#131)
+
+### Changed
+
+### Fixed
+
+-   x-axis titles in roofline (#117)
+
+## v1.1.0 - 2025-09-12
+
+### Added
+
 -   dedicated API CSV and JSON file endpoints for graph measurements (#9)
 -   extended API CSV endpoint to export multiple metrics at once (#20)
 -   syntax highlighting support for CSV language in editor (#8)
@@ -14,7 +26,6 @@ All notable changes to this project will be documented in this file.
 -   tab titles to each page
 -   custom drag-and-drop sorting and ascending/descending order sorting for values (#74)
 -   array support to job variables (#76)
--   API endpoint and frontend button to backup entire MongoDB database (admin only) (#131)
 
 ### Changed
 
