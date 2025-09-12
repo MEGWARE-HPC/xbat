@@ -7,8 +7,9 @@
             :href="props.href"
             :target="props.target"
             rel="noopener noreferrer"
-            ><ContentSlot :use="$slots.default"
-        /></v-btn>
+        >
+            <slot mdc-unwrap="p" />
+        </v-btn>
     </div>
 </template>
 <script setup lang="ts">

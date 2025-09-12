@@ -9,7 +9,9 @@
                 title="Copy to Clipboard"
                 ><v-icon icon="$copy"></v-icon
             ></v-btn>
-            <ContentSlot :use="$slots.default" />
+            <div ref="contentRef">
+                <slot mdc-unwrap="p" />
+            </div>
         </v-card-text>
     </v-card>
 </template>

@@ -7,7 +7,8 @@ export const copyToClipboard = (text: string) => {
     );
 };
 
-export const getDocType = (path: string): string | null => {
+export const getDocType = (path?: string | null): string | null => {
+    if (!path) return null;
     const regex = new RegExp(`^/docs/([a-zA-Z]+)/.*$`);
     return path.match(regex)?.[1] || null;
 };
