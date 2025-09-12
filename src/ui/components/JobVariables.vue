@@ -90,8 +90,8 @@
                                     v.sortOrder === 'custom'
                                         ? '$sortCustom'
                                         : v.sortOrder === 'desc'
-                                        ? '$sortDesc'
-                                        : '$sortAsc'
+                                        ? '$sortNumDesc'
+                                        : '$sortNumAsc'
                                 "
                                 :color="
                                     v.sortOrder === 'custom'
