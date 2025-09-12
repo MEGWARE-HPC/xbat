@@ -1,15 +1,26 @@
 <template>
-    <span class="headline-wrapper d-flex aligin-center">
+    <span class="headline-wrapper d-flex align-center">
         <div>
+            <a
+                v-if="anchorId"
+                class="headline-link"
+                :class="{ visible: hovered }"
+                :href="`#${anchorId}`"
+                aria-label="Copy link to this section"
+            >
+                <v-icon icon="$link" size="small" />
+            </a>
             <v-icon
+                v-else
                 class="headline-link"
                 :class="{ visible: hovered }"
                 icon="$link"
                 size="small"
-            ></v-icon>
+            />
         </div>
+
         <div ref="contentRef">
-            <ContentSlot :use="$slots.default" />
+            <slot mdc-unwrap="p" />
         </div>
     </span>
 </template>
@@ -18,12 +29,21 @@ import { useElementHover } from "@vueuse/core";
 
 const contentRef = ref<HTMLElement | null>(null);
 const hovered = useElementHover(contentRef);
+const anchorId = ref<string | null>(null);
+
+onMounted(() => {
+    const host = contentRef.value;
+    if (!host) return;
+    const heading = host.closest("h1,h2,h3,h4,h5,h6") as HTMLElement | null;
+    anchorId.value = heading?.id || null;
+});
 </script>
 <style scoped lang="scss">
 @use "~/assets/css/colors.scss" as *;
 
 .headline-wrapper {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     position: relative;
     margin: 20px 0;
 
@@ -33,6 +53,7 @@ const hovered = useElementHover(contentRef);
         position: absolute;
         left: -25px;
         top: 8px;
+        text-decoration: none;
         &.visible {
             opacity: 1;
         }
