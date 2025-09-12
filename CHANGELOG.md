@@ -6,6 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+### Changed
+
+### Fixed
+
+-   x-axis titles in roofline (#117)
+
+## v1.1.0 - 2025-09-12
+
+### Added
+
 -   dedicated API CSV and JSON file endpoints for graph measurements (#9)
 -   extended API CSV endpoint to export multiple metrics at once (#20)
 -   syntax highlighting support for CSV language in editor (#8)
@@ -61,7 +71,6 @@ All notable changes to this project will be documented in this file.
 -   "add graph" button in benchmark comparison not working (#114)
 -   "DRAM Used" and GPU "Memory Used" not being aggregated correctly at job level (#61)
 -   xbatd build failing due to rocm install
--   x-axis titles in roofline (#117)
 
 ## v1.0.0 - 2025-04-17
 
