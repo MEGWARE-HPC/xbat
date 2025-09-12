@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+-   x-axis titles in roofline (#117)
+
 ## v1.1.0 - 2025-09-12
 
 ### Added
