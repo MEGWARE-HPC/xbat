@@ -656,7 +656,7 @@ paths:
     get:
       operationId: backend.restapi.api.measurements.get_roofline
       parameters:
-        - $ref: "#/components/parameters/JobIdsQuery"
+        - $ref: "#/components/parameters/JobIdsCommaQuery"
       tags:
         - measurements
       summary: Roofline model
@@ -943,6 +943,17 @@ components:
         items:
           type: integer
       description: Job IDs
+    JobIdsCommaQuery:
+      name: jobIds
+      in: query
+      description: Comma-separated Job IDs
+      required: true
+      style: form
+      explode: false
+      schema:
+        type: array
+        items:
+          type: integer
     NodeHash:
       name: node_hash
       in: path
