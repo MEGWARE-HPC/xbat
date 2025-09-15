@@ -872,3 +872,8 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
         valkey.set(valkey_key, response)
 
     return response, 200
+
+
+async def get_roofline(jobIds=None):
+    response = "Roofline model placeholder function"
+    return response, 200
