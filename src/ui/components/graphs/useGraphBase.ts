@@ -161,7 +161,7 @@ export const useGraphBase = () => {
 
             layout.xaxis.nticks = 7;
             layout.xaxis.autorange = autorange;
-            layout.xaxis.title = xTitle;
+            layout.xaxis.title = xTitle ? { text: xTitle } : undefined;
             if (xType) layout.xaxis.type = xType;
             if (xAutotick) layout.xaxis.autotick = true;
 
