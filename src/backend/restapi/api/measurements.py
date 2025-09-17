@@ -875,5 +875,140 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
 
 
 async def get_roofline(jobIds=None):
-    response = "Roofline model placeholder function"
+    """
+    Returns Roofline metrics for jobIds
+
+    Each job returns Peak Memory_bandwidth
+    and Peak, Median, Average of:
+    operational_intensity (SP/DP)
+    """
+
+    ids_args = request.args.get("jobIds") if jobIds is None else jobIds
+    if not ids_args:
+        return {"error": "jobIds is required"}, 400
+
+    if isinstance(ids_args, str):
+        job_Ids = [s.strip() for s in ids_args.split(",") if s.strip()]
+    else:
+        job_Ids = [str(x) for x in ids_args]
+
+    valkey_key = get_request_uri()
+    cache = valkey.get(valkey_key)
+    if cache is not None:
+        return cache, 200
+
+    def _stat3(array):
+        if not array:
+            return {"peak": 0.0, "median": 0.0, "average": 0.0}
+        a = np.asarray(array, dtype=float)
+        return {
+            "peak": float(np.max(a)),
+            "median": float(np.median(a)),
+            "average": float(np.mean(a)),
+        }
+
+    def _gflops_from_flops(stats):
+        return {k: (float(v) / 1e9) for k, v in stats.items()}
+
+    def _pick_trace(traces, want_name):
+        for t in traces or []:
+            n = t.get("name")
+            if n == want_name:
+                return t
+        for t in traces or []:
+            rn = t.get("rawName")
+            if rn == want_name:
+                return t
+        return None
+
+    def _pick_raw_values(trace):
+        if not trace:
+            return []
+        rawValues = trace.get("rawValues")
+        if isinstance(rawValues, list) and rawValues:
+            return [float(v) for v in rawValues]
+        no_rawValue = trace.get("values")
+        if isinstance(no_rawValue, list) and no_rawValue:
+            return [float(v) for v in no_rawValue]
+        return []
+
+    data = {}
+    missing = []
+
+    for job_Id in job_Ids:
+        try:
+            jobId = int(job_Id)
+        except ValueError:
+            missing.append(job_Id)
+            continue
+
+        job_db = mongodb.getOne("jobs", {"jobId": jobId})
+        if job_db is None:
+            missing.append(job_Id)
+            continue
+
+        try:
+            cpu_res = await calculate_metrics(jobId, "cpu", "FLOPS", "job", "",
+                                              False)
+            traces = cpu_res.get("traces", []) if isinstance(cpu_res,
+                                                             dict) else []
+
+            sp_trace = _pick_trace(traces, "SP")
+            dp_trace = _pick_trace(traces, "DP")
+
+            sp_series = _pick_raw_values(sp_trace)
+            dp_series = _pick_raw_values(dp_trace)
+
+            if not sp_series and not dp_series:
+                missing.append(job_Id)
+                continue
+
+            sp_stats_flops = _stat3(sp_series) if sp_series else {
+                "peak": 0.0,
+                "median": 0.0,
+                "average": 0.0
+            }
+            dp_stats_flops = _stat3(dp_series) if dp_series else {
+                "peak": 0.0,
+                "median": 0.0,
+                "average": 0.0
+            }
+
+            sp_stats_gflops = _gflops_from_flops(sp_stats_flops)
+            dp_stats_gflops = _gflops_from_flops(dp_stats_flops)
+
+            data[job_Id] = {
+                "operational_intensity": {
+                    "sp": sp_stats_gflops,
+                    "dp": dp_stats_gflops
+                }
+            }
+
+        except httpErrors.BadRequest as e:
+            logger.error("roofline: bad request for job %s: %s", job_Id, e)
+            return {
+                "error": "bad request while fetching metrics",
+                "detail": str(e)
+            }, 400
+        except httpErrors.NotFound as e:
+            logger.error("roofline: not found for job %s: %s", job_Id, e)
+            missing.append(job_Id)
+        except Exception as e:
+            logger.error("roofline: compute failed for job %s: %s", job_Id, e)
+            missing.append(job_Id)
+
+    if missing:
+        return {
+            "error": "some jobs missing metrics",
+            "missing": list(set(missing))
+        }, 404
+
+    response = {"data": data}
+    try:
+        numeric_ids = [int(x) for x in job_Ids if x.isdigit()]
+        if numeric_ids and jobs_cacheable(numeric_ids):
+            valkey.set(valkey_key, response)
+    except Exception:
+        pass
+
     return response, 200
