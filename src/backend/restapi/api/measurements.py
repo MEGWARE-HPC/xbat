@@ -907,7 +907,22 @@ async def get_roofline(jobIds=None):
             "average": float(np.mean(a)),
         }
 
-    def _gflops_from_flops(stats):
+    def _safe_float(v):
+        if v is None:
+            return None
+        if isinstance(v, (int, float)):
+            return float(v)
+        if isinstance(v, str):
+            s = v.strip()
+            if not s:
+                return None
+            try:
+                return float(s)
+            except Exception:
+                return None
+        return None
+
+    def _to_gflops(stats):
         return {k: (float(v) / 1e9) for k, v in stats.items()}
 
     def _pick_trace(traces, want_name):
@@ -931,6 +946,34 @@ async def get_roofline(jobIds=None):
         if isinstance(no_rawValue, list) and no_rawValue:
             return [float(v) for v in no_rawValue]
         return []
+
+    def _extract_node_hashes(job_db):
+        node_list = job_db.get("nodes")
+        if not isinstance(node_list, dict) or not node_list:
+            return []
+        seen = set()
+        hash = []
+        for v in node_list.values():
+            if isinstance(v, dict):
+                h = v.get("hash")
+                if h and h not in seen:
+                    seen.add(h)
+                    hash.append(h)
+        return hash
+
+    def _extract_bm_data(node_db):
+        result = {}
+        for node_data in node_db or []:
+            bm = node_data.get("benchmarks")
+            if not isinstance(bm, dict):
+                continue
+
+            for k, v in bm.items():
+                if k == "bandwidth_mem" or "peakflops" in k.lower():
+                    val = _safe_float(v)
+                    if val is not None and val > 0:
+                        result[k] = max(val, result.get(k, val))
+        return result
 
     data = {}
     missing = []
@@ -974,15 +1017,8 @@ async def get_roofline(jobIds=None):
                 "average": 0.0
             }
 
-            sp_stats_gflops = _gflops_from_flops(sp_stats_flops)
-            dp_stats_gflops = _gflops_from_flops(dp_stats_flops)
-
-            data[job_Id] = {
-                "operational_intensity": {
-                    "sp": sp_stats_gflops,
-                    "dp": dp_stats_gflops
-                }
-            }
+            sp_stats_gflops = _to_gflops(sp_stats_flops)
+            dp_stats_gflops = _to_gflops(dp_stats_flops)
 
         except httpErrors.BadRequest as e:
             logger.error("roofline: bad request for job %s: %s", job_Id, e)
@@ -997,6 +1033,34 @@ async def get_roofline(jobIds=None):
             logger.error("roofline: compute failed for job %s: %s", job_Id, e)
             missing.append(job_Id)
 
+        benchmarks = {}
+        try:
+            node_hashes = _extract_node_hashes(job_db)
+            if node_hashes:
+                node_db = list(
+                    mongodb.getMany("nodes", {"hash": {
+                        "$in": node_hashes
+                    }}))
+                if node_db:
+                    raw_bm = _extract_bm_data(node_db)
+                    benchmarks = _to_gflops(raw_bm)
+            if "bandwidth_mem" not in benchmarks:
+                benchmarks["bandwidth_mem"] = None
+        except Exception as e:
+            logger.warning(
+                "roofline: nodes lookup/parse failed for job %s: %s", job_Id,
+                e)
+            if "bandwidth_mem" not in benchmarks:
+                benchmarks["bandwidth_mem"] = None
+
+        data[job_Id] = {
+            "benchmarks": benchmarks,
+            "operational_intensity": {
+                "sp": sp_stats_gflops,
+                "dp": dp_stats_gflops
+            }
+        }
+
     if missing:
         return {
             "error": "some jobs missing metrics",
@@ -1004,6 +1068,7 @@ async def get_roofline(jobIds=None):
         }, 404
 
     response = {"data": data}
+
     try:
         numeric_ids = [int(x) for x in job_Ids if x.isdigit()]
         if numeric_ids and jobs_cacheable(numeric_ids):
