@@ -886,26 +886,17 @@ async def get_roofline(jobIds=None):
     ids_args = request.args.get("jobIds") if jobIds is None else jobIds
     if not ids_args:
         return {"error": "jobIds is required"}, 400
-
-    if isinstance(ids_args, str):
-        job_Ids = [s.strip() for s in ids_args.split(",") if s.strip()]
-    else:
-        job_Ids = [str(x) for x in ids_args]
+    job_Ids = [
+        s.strip()
+        for s in (ids_args.split(",")
+                  if isinstance(ids_args, str) else [str(x) for x in ids_args])
+        if s.strip()
+    ]
 
     valkey_key = get_request_uri()
     cache = valkey.get(valkey_key)
     if cache is not None:
         return cache, 200
-
-    def _stat3(array):
-        if not array:
-            return {"peak": 0.0, "median": 0.0, "average": 0.0}
-        a = np.asarray(array, dtype=float)
-        return {
-            "peak": float(np.max(a)),
-            "median": float(np.median(a)),
-            "average": float(np.mean(a)),
-        }
 
     def _safe_float(v):
         if v is None:
@@ -922,61 +913,139 @@ async def get_roofline(jobIds=None):
                 return None
         return None
 
-    def _to_gflops(stats):
-        return {k: (float(v) / 1e9) for k, v in stats.items()}
-
     def _pick_trace(traces, want_name):
         for t in traces or []:
-            n = t.get("name")
-            if n == want_name:
+            if t.get("name") == want_name:
                 return t
         for t in traces or []:
-            rn = t.get("rawName")
-            if rn == want_name:
+            if t.get("rawName") == want_name:
                 return t
         return None
 
     def _pick_raw_values(trace):
         if not trace:
             return []
-        rawValues = trace.get("rawValues")
-        if isinstance(rawValues, list) and rawValues:
-            return [float(v) for v in rawValues]
-        no_rawValue = trace.get("values")
-        if isinstance(no_rawValue, list) and no_rawValue:
-            return [float(v) for v in no_rawValue]
-        return []
+        vals = trace.get("rawValues")
+        if not isinstance(vals, list):
+            vals = trace.get("values", [])
+        out = []
+        for v in vals:
+            fv = _safe_float(v)
+            if fv is not None:
+                out.append(fv)
+        return out
 
-    def _extract_node_hashes(job_db):
-        node_list = job_db.get("nodes")
-        if not isinstance(node_list, dict) or not node_list:
+    def _pick_volume_raw_values(trace):
+        if not trace:
             return []
-        seen = set()
-        hash = []
-        for v in node_list.values():
-            if isinstance(v, dict):
-                h = v.get("hash")
-                if h and h not in seen:
-                    seen.add(h)
-                    hash.append(h)
-        return hash
+        if isinstance(trace.get("rawValues"), list):
+            return _pick_raw_values(trace)
+        vals = _pick_raw_values(trace)
+        unit = (trace.get("unit") or "").strip().lower()
+        if unit in ("gb", "gbytes", "gbyte", "gib", "gibibyte"):
+            return [v * 1e9 for v in vals]
+        return vals
 
-    def _extract_bm_data(node_db):
-        result = {}
-        for node_data in node_db or []:
-            bm = node_data.get("benchmarks")
-            if not isinstance(bm, dict):
+    def _get_interval(*traces):
+        for tr in traces:
+            if not tr:
                 continue
+            iv = _safe_float(tr.get("interval"))
+            if iv is not None and iv > 0.0:
+                return iv
+        return None
 
-            for k, v in bm.items():
-                if k == "bandwidth_mem" or "peakflops" in k.lower():
-                    val = _safe_float(v)
-                    if val is not None and val > 0:
-                        result[k] = max(val, result.get(k, val))
-        return result
+    def _get_stats(flop_series, bytes_series, interval_s):
+        if not flop_series or not bytes_series:
+            zero = {"operational_intensity": 0.0, "performance": 0.0}
+            return {
+                "peak": zero,
+                "median": zero,
+                "average": zero,
+                "total": zero
+            }
 
-    data = {}
-    missing = []
+        n = min(len(flop_series), len(bytes_series))
+        if not interval_s or interval_s <= 0.0:
+            zero = {"operational_intensity": 0.0, "performance": 0.0}
+            return {
+                "peak": zero,
+                "median": zero,
+                "average": zero,
+                "total": zero
+            }
+
+        points = []
+        total_flops = 0.0
+        total_bytes = 0.0
+
+        for i in range(n):
+            f = flop_series[i]  # FLOPS/s
+            byt = bytes_series[i]  # bytes per interval
+            if f and byt and f > 0.0 and byt > 0.0:
+                y = f / 1e9  # GFLOPS/s
+                flops_i = f * interval_s  # FLOPs in interval
+                x = flops_i / byt  # FLOPs/byte
+                points.append((x, y))
+                total_flops += flops_i
+                total_bytes += byt
+
+        if not points:
+            zero = {"operational_intensity": 0.0, "performance": 0.0}
+            return {
+                "peak": zero,
+                "median": zero,
+                "average": zero,
+                "total": zero
+            }
+
+        xs = np.fromiter((p[0] for p in points), dtype=float)
+        ys = np.fromiter((p[1] for p in points), dtype=float)
+
+        # peak by y
+        peak_idx = int(np.argmax(ys))
+        peak = {
+            "operational_intensity": float(xs[peak_idx]),
+            "performance": float(ys[peak_idx])
+        }
+
+        # median by y (closest to median(y))
+        y_med = float(np.median(ys))
+        med_idx = int(np.argmin(np.abs(ys - y_med)))
+        median = {
+            "operational_intensity": float(xs[med_idx]),
+            "performance": float(ys[med_idx])
+        }
+
+        # average (component-wise)
+        average = {
+            "operational_intensity": float(np.mean(xs)),
+            "performance": float(np.mean(ys))
+        }
+
+        # aggregate / total (global OI & global Performance)
+        if total_bytes > 0.0:
+            total_time = interval_s * len(points)  # seconds
+            global_oi = total_flops / total_bytes  # FLOPs/byte
+            global_perf = (total_flops / total_time) / 1e9  # GFLOPS/s
+            aggregate = {
+                "operational_intensity": float(global_oi),
+                "performance": float(global_perf)
+            }
+        else:
+            aggregate = {
+                "operational_intensity": float(np.mean(xs)),
+                "performance": float(np.mean(ys))
+            }
+
+        return {
+            "peak": peak,
+            "median": median,
+            "average": average,
+            "total": aggregate
+        }
+
+    data, missing = {}, []
 
     for job_Id in job_Ids:
         try:
@@ -985,89 +1054,49 @@ async def get_roofline(jobIds=None):
             missing.append(job_Id)
             continue
 
-        job_db = mongodb.getOne("jobs", {"jobId": jobId})
-        if job_db is None:
+        try:
+            cpu_res = await calculate_metrics(jobId, "cpu", "FLOPS", "job", "",
+                                              False)
+            cpu_traces = cpu_res.get("traces", []) if isinstance(
+                cpu_res, dict) else []
+            sp_trace = _pick_trace(cpu_traces, "SP")
+            dp_trace = _pick_trace(cpu_traces, "DP")
+            sp_flops = _pick_raw_values(sp_trace)
+            dp_flops = _pick_raw_values(dp_trace)
+
+            if not sp_flops and not dp_flops:
+                missing.append(job_Id)
+        except Exception as e:
+            logger.error("roofline_punkt: cpu FLOPS failed for job %s: %s",
+                         job_Id, e)
+            data[job_Id] = {"points": {"sp": {}, "dp": {}}}
             missing.append(job_Id)
             continue
 
         try:
-            cpu_res = await calculate_metrics(jobId, "cpu", "FLOPS", "job", "",
-                                              False)
-            traces = cpu_res.get("traces", []) if isinstance(cpu_res,
-                                                             dict) else []
-
-            sp_trace = _pick_trace(traces, "SP")
-            dp_trace = _pick_trace(traces, "DP")
-
-            sp_series = _pick_raw_values(sp_trace)
-            dp_series = _pick_raw_values(dp_trace)
-
-            if not sp_series and not dp_series:
-                missing.append(job_Id)
-                continue
-
-            sp_stats_flops = _stat3(sp_series) if sp_series else {
-                "peak": 0.0,
-                "median": 0.0,
-                "average": 0.0
-            }
-            dp_stats_flops = _stat3(dp_series) if dp_series else {
-                "peak": 0.0,
-                "median": 0.0,
-                "average": 0.0
-            }
-
-            sp_stats_gflops = _to_gflops(sp_stats_flops)
-            dp_stats_gflops = _to_gflops(dp_stats_flops)
-
-        except httpErrors.BadRequest as e:
-            logger.error("roofline: bad request for job %s: %s", job_Id, e)
-            return {
-                "error": "bad request while fetching metrics",
-                "detail": str(e)
-            }, 400
-        except httpErrors.NotFound as e:
-            logger.error("roofline: not found for job %s: %s", job_Id, e)
-            missing.append(job_Id)
+            mem_res = await calculate_metrics(jobId, "memory", "Data Volume",
+                                              "job", "", False)
+            mem_traces = mem_res.get("traces", []) if isinstance(
+                mem_res, dict) else []
+            mem_total_trace = _pick_trace(mem_traces, "total")
+            mem_bytes = _pick_volume_raw_values(mem_total_trace)
         except Exception as e:
-            logger.error("roofline: compute failed for job %s: %s", job_Id, e)
-            missing.append(job_Id)
+            logger.error(
+                "roofline_punkt: memory Data Volume failed for job %s: %s",
+                job_Id, e)
+            mem_total_trace = None
+            mem_bytes = []
 
-        benchmarks = {}
-        try:
-            node_hashes = _extract_node_hashes(job_db)
-            if node_hashes:
-                node_db = list(
-                    mongodb.getMany("nodes", {"hash": {
-                        "$in": node_hashes
-                    }}))
-                if node_db:
-                    raw_bm = _extract_bm_data(node_db)
-                    benchmarks = _to_gflops(raw_bm)
-            if "bandwidth_mem" not in benchmarks:
-                benchmarks["bandwidth_mem"] = None
-        except Exception as e:
-            logger.warning(
-                "roofline: nodes lookup/parse failed for job %s: %s", job_Id,
-                e)
-            if "bandwidth_mem" not in benchmarks:
-                benchmarks["bandwidth_mem"] = None
+        interval_s = _get_interval(sp_trace, dp_trace, mem_total_trace)
 
-        data[job_Id] = {
-            "benchmarks": benchmarks,
-            "operational_intensity": {
-                "sp": sp_stats_gflops,
-                "dp": dp_stats_gflops
-            }
-        }
+        sp_pts4 = _get_stats(sp_flops, mem_bytes, interval_s)
+        dp_pts4 = _get_stats(dp_flops, mem_bytes, interval_s)
 
-    if missing:
-        return {
-            "error": "some jobs missing metrics",
-            "missing": list(set(missing))
-        }, 404
+        data[job_Id] = {"sp": sp_pts4, "dp": dp_pts4}
 
     response = {"data": data}
+    if missing:
+        response["missing"] = sorted(set(missing))
 
     try:
         numeric_ids = [int(x) for x in job_Ids if x.isdigit()]
