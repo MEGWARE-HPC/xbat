@@ -437,15 +437,29 @@ const confirmArrayValues = () => {
 
     const valuesToAdd: string[] = [];
     if (manual) {
-        manualInput
-            .split(",")
-            .map((s) => s.trim())
-            .filter((s) => s !== "")
-            .forEach((val) => {
-                if (!v.values.includes(val)) {
-                    valuesToAdd.push(val);
+        const uniqueInput = Array.from(
+            new Set(
+                manualInput
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter((s) => s !== "")
+            )
+        );
+
+        const toSelectOnly: string[] = [];
+        uniqueInput.forEach((val) => {
+            if (v.values.includes(val)) {
+                if (!v.selected.includes(val)) {
+                    toSelectOnly.push(val);
                 }
-            });
+            } else {
+                valuesToAdd.push(val);
+            }
+        });
+
+        if (toSelectOnly.length) {
+            v.selected.push(...toSelectOnly);
+        }
     } else {
         if (step === 0) return;
         for (let i = start; step > 0 ? i <= end : i >= end; i += step) {
@@ -457,7 +471,9 @@ const confirmArrayValues = () => {
     }
 
     v.values.push(...valuesToAdd);
+    v.values = Array.from(new Set(v.values));
     v.selected.push(...valuesToAdd);
+    v.selected = Array.from(new Set(v.selected));
     v.values = sortValues(v.values, v.sortOrder ?? "asc");
     v.selected = sortValues(v.selected, v.sortOrder ?? "asc");
 
