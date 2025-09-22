@@ -306,6 +306,62 @@ const arrayDialog = ref({
     manualInput: ""
 });
 
+const decimalPlaces = (x: number | string): number => {
+    const s = typeof x === "number" ? String(x) : String(x ?? "");
+    if (!s) return 0;
+    const m = s.match(/e-([0-9]+)/i);
+    const exp = m ? parseInt(m[1]!, 10) : 0;
+    const dot = s.indexOf(".");
+    const frac = dot >= 0 ? s.length - dot - 1 : 0;
+    return Math.max(exp, frac);
+};
+
+const normalizeNumber = (x: number, decimals: number): string => {
+    const fixed = x.toFixed(Math.max(0, decimals));
+    const n = Number(fixed);
+    return Object.is(n, -0) ? "0" : n.toString();
+};
+
+const generateRange = (start: number, end: number, step: number): string[] => {
+    if (
+        !Number.isFinite(start) ||
+        !Number.isFinite(end) ||
+        !Number.isFinite(step) ||
+        step <= 0
+    )
+        return [];
+    const dir = end >= start ? 1 : -1;
+    const decimals = Math.max(
+        decimalPlaces(start),
+        decimalPlaces(end),
+        decimalPlaces(step)
+    );
+    const eps = Math.pow(10, -decimals) / 2;
+    const distance = Math.abs(end - start);
+    const steps = Math.floor(distance / step + eps) + 1;
+
+    const out: string[] = [];
+    for (let i = 0; i < steps; i++) {
+        const raw = start + dir * i * step;
+        out.push(normalizeNumber(raw, decimals));
+    }
+    out.push(normalizeNumber(end, decimals));
+    return Array.from(new Set(out));
+};
+
+const toNumber = (s: unknown): number | null => {
+    const t = String(s ?? "").trim();
+    if (t === "") return null;
+    const n = Number(t);
+    if (!Number.isFinite(n)) return null;
+    return Object.is(n, -0) ? 0 : n;
+};
+
+const normalizeString = (s: string): string => {
+    const n = toNumber(s);
+    return n === null ? s.trim() : n === 0 ? "0" : n.toString();
+};
+
 const getDuplicateState = (idx: number) => {
     if (!duplicateState.value[idx]) duplicateState.value[idx] = {};
     return duplicateState.value[idx];
@@ -360,17 +416,23 @@ const addNewValue = (idx: number, value: string) => {
     const v = variables.value[idx];
     const state = getDuplicateState(idx);
 
-    if (v.values.includes(value)) {
-        state.add = value;
-        if (!v.selected.includes(value)) {
-            v.selected.push(value);
+    const val = normalizeString(value);
+
+    if (v.values.includes(val)) {
+        state.add = val;
+        if (!v.selected.includes(val)) {
+            v.selected.push(val);
+            v.selected = Array.from(new Set(v.selected));
             v.selected = sortValues(v.selected, v.sortOrder);
         }
         return;
     }
 
-    v.values.push(value);
-    v.selected.push(value);
+    v.values.push(val);
+    v.selected.push(val);
+
+    v.values = Array.from(new Set(v.values));
+    v.selected = Array.from(new Set(v.selected));
 
     v.values = sortValues(v.values, v.sortOrder);
     v.selected = sortValues(v.selected, v.sortOrder);
@@ -383,19 +445,23 @@ const editValue = (idx: number, valIdx: number, newValue: string) => {
     const v = variables.value[idx];
     const oldValue = v.values[valIdx];
     const state = getDuplicateState(idx);
+    const normNew = normalizeString(newValue);
 
     const existsElsewhere =
-        v.values.includes(newValue) && v.values.indexOf(newValue) !== valIdx;
-    state.edit = existsElsewhere ? newValue : "";
+        v.values.includes(normNew) && v.values.indexOf(normNew) !== valIdx;
+    state.edit = existsElsewhere ? normNew : "";
 
     if (existsElsewhere) return;
 
-    v.values[valIdx] = newValue;
+    v.values[valIdx] = normNew;
 
     const selIdx = v.selected.indexOf(oldValue);
     if (selIdx !== -1) {
-        v.selected.splice(selIdx, 1, newValue);
+        v.selected.splice(selIdx, 1, normNew);
     }
+
+    v.values = Array.from(new Set(v.values));
+    v.selected = Array.from(new Set(v.selected));
 
     v.values = sortValues(v.values, v.sortOrder);
     v.selected = sortValues(v.selected, v.sortOrder);
@@ -436,12 +502,13 @@ const confirmArrayValues = () => {
     const v = variables.value[index];
 
     const valuesToAdd: string[] = [];
+
     if (manual) {
         const uniqueInput = Array.from(
             new Set(
                 manualInput
                     .split(",")
-                    .map((s) => s.trim())
+                    .map((s) => normalizeString(s))
                     .filter((s) => s !== "")
             )
         );
@@ -461,13 +528,27 @@ const confirmArrayValues = () => {
             v.selected.push(...toSelectOnly);
         }
     } else {
-        if (step === 0) return;
-        for (let i = start; step > 0 ? i <= end : i >= end; i += step) {
-            const strVal = String(i);
-            if (!v.values.includes(strVal)) {
-                valuesToAdd.push(strVal);
+        if (
+            !Number.isFinite(start) ||
+            !Number.isFinite(end) ||
+            !Number.isFinite(step) ||
+            step === 0
+        )
+            return;
+
+        const rangeValues = generateRange(
+            Number(start),
+            Number(end),
+            Number(step)
+        );
+
+        rangeValues.forEach((val) => {
+            if (!v.values.includes(val)) {
+                valuesToAdd.push(val);
+            } else if (!v.selected.includes(val)) {
+                v.selected.push(val);
             }
-        }
+        });
     }
 
     v.values.push(...valuesToAdd);
@@ -499,11 +580,22 @@ const sortValues = (
 ) => {
     if (order === "custom") return [...arr];
 
-    const collator = new Intl.Collator(undefined, {
-        numeric: true,
-        sensitivity: "base"
+    const sorted = [...arr].sort((a, b) => {
+        const na = toNumber(a);
+        const nb = toNumber(b);
+        const aNum = na !== null;
+        const bNum = nb !== null;
+
+        if (aNum && bNum) return na! - nb!;
+        if (aNum && !bNum) return -1;
+        if (!aNum && bNum) return 1;
+
+        return String(a).localeCompare(String(b), undefined, {
+            numeric: true,
+            sensitivity: "base"
+        });
     });
-    const sorted = [...arr].sort((a, b) => collator.compare(a, b));
+
     return order === "asc" ? sorted : sorted.reverse();
 };
 
