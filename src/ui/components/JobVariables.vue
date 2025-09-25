@@ -215,19 +215,37 @@
                             label="Start"
                             type="number"
                             @keydown="onNumberKeydown($event, true)"
+                            :error-messages="
+                                arrayDialog.startError
+                                    ? [arrayDialog.startError]
+                                    : []
+                            "
+                            @input="validateField('start')"
                         />
                         <v-text-field
                             v-model.number="arrayDialog.end"
                             label="End"
                             type="number"
                             @keydown="onNumberKeydown($event, true)"
+                            :error-messages="
+                                arrayDialog.endError
+                                    ? [arrayDialog.endError]
+                                    : []
+                            "
+                            @input="validateField('end')"
                         />
                         <v-text-field
                             v-model.number="arrayDialog.step"
                             label="Step"
                             type="number"
                             :min="0"
+                            :error-messages="
+                                arrayDialog.stepError
+                                    ? [arrayDialog.stepError]
+                                    : []
+                            "
                             @keydown="onNumberKeydown($event, false)"
+                            @input="validateField('step')"
                         />
                     </div>
                     <div v-else>
@@ -307,7 +325,10 @@ const arrayDialog = ref({
     end: 0,
     step: 1,
     manual: false,
-    manualInput: ""
+    manualInput: "",
+    startError: "",
+    endError: "",
+    stepError: ""
 });
 
 const onNumberKeydown = (evt: KeyboardEvent, allowSign: boolean) => {
@@ -348,6 +369,27 @@ const onNumberKeydown = (evt: KeyboardEvent, allowSign: boolean) => {
     }
 
     evt.preventDefault();
+};
+
+const validateField = (field: "start" | "end" | "step"): boolean => {
+    const val = (arrayDialog.value as any)[field];
+    let ok = Number.isFinite(val);
+    if (field === "step") ok = ok && Number(val) > 0;
+
+    if (field === "start") {
+        (arrayDialog.value as any).startError = ok
+            ? ""
+            : "Start must be an integer or decimal";
+    } else if (field === "end") {
+        (arrayDialog.value as any).endError = ok
+            ? ""
+            : "End must be an integer or decimal";
+    } else {
+        (arrayDialog.value as any).stepError = ok
+            ? ""
+            : "Step must be positive";
+    }
+    return ok;
 };
 
 const decimalPlaces = (x: number | string): number => {
@@ -536,12 +578,26 @@ const openArrayDialog = (idx: number) => {
         end: 0,
         step: 1,
         manual: false,
-        manualInput: ""
+        manualInput: "",
+        startError: "",
+        endError: "",
+        stepError: ""
     };
 };
 
 const confirmArrayValues = () => {
     const { index, start, end, step, manual, manualInput } = arrayDialog.value;
+    if (!manual) {
+        const okStart = validateField("start");
+        const okEnd = validateField("end");
+        const okStep = validateField("step");
+        if (!okStart || !okEnd || !okStep) {
+            if (typeof step === "number" && step <= 0)
+                (arrayDialog.value as any).step = null;
+            return;
+        }
+    }
+
     if (
         !Number.isFinite(start) ||
         !Number.isFinite(end) ||
