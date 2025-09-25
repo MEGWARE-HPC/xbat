@@ -214,16 +214,20 @@
                             v-model.number="arrayDialog.start"
                             label="Start"
                             type="number"
+                            @keydown="onNumberKeydown($event, true)"
                         />
                         <v-text-field
                             v-model.number="arrayDialog.end"
                             label="End"
                             type="number"
+                            @keydown="onNumberKeydown($event, true)"
                         />
                         <v-text-field
                             v-model.number="arrayDialog.step"
                             label="Step"
                             type="number"
+                            :min="0"
+                            @keydown="onNumberKeydown($event, false)"
                         />
                     </div>
                     <div v-else>
@@ -305,6 +309,46 @@ const arrayDialog = ref({
     manual: false,
     manualInput: ""
 });
+
+const onNumberKeydown = (evt: KeyboardEvent, allowSign: boolean) => {
+    const k = evt.key;
+    const allowedNav = [
+        "Backspace",
+        "Delete",
+        "ArrowLeft",
+        "ArrowRight",
+        "Home",
+        "End",
+        "Tab"
+    ];
+    if (allowedNav.includes(k)) return;
+
+    const el = evt.target as HTMLInputElement;
+    const val = el.value;
+    const selStart = el.selectionStart ?? 0;
+    const selEnd = el.selectionEnd ?? 0;
+    const hasSel = selEnd > selStart;
+
+    if (k >= "0" && k <= "9") return;
+
+    if (k === ".") {
+        const replacingHasDot =
+            hasSel && val.slice(selStart, selEnd).includes(".");
+        if (!val.includes(".") || replacingHasDot) return;
+        evt.preventDefault();
+        return;
+    }
+
+    if ((k === "+" || k === "-") && allowSign) {
+        const atStart = selStart === 0;
+        const noSignYet = !/^[+-]/.test(val);
+        if (atStart && noSignYet) return;
+        evt.preventDefault();
+        return;
+    }
+
+    evt.preventDefault();
+};
 
 const decimalPlaces = (x: number | string): number => {
     const s = typeof x === "number" ? String(x) : String(x ?? "");
@@ -498,7 +542,15 @@ const openArrayDialog = (idx: number) => {
 
 const confirmArrayValues = () => {
     const { index, start, end, step, manual, manualInput } = arrayDialog.value;
-    if (step === 0 || index < 0) return;
+    if (
+        !Number.isFinite(start) ||
+        !Number.isFinite(end) ||
+        !Number.isFinite(step) ||
+        step <= 0 ||
+        index < 0
+    )
+        return;
+
     const v = variables.value[index];
 
     const valuesToAdd: string[] = [];
