@@ -592,8 +592,9 @@ const confirmArrayValues = () => {
         const okEnd = validateField("end");
         const okStep = validateField("step");
         if (!okStart || !okEnd || !okStep) {
-            if (typeof step === "number" && step <= 0)
-                (arrayDialog.value as any).step = null;
+            if (!okStart) (arrayDialog.value as any).start = null;
+            if (!okEnd) (arrayDialog.value as any).end = null;
+            if (!okStep) (arrayDialog.value as any).step = null;
             return;
         }
     }
