@@ -199,6 +199,31 @@ paths:
       security:
         - oauth2:
             - benchmarks_w
+  /benchmarks/backup:
+    post:
+      operationId: backend.restapi.api.benchmarks.backup_mongoDB
+      tags:
+        - maintenance
+      summary: Backup the entire mongodb database
+      responses:
+        "200":
+          description: Successfully created MongoDB backup
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              description: Indicates that the response contains an attachment file
+              schema:
+                type: string
+                example: attachment; filename="MongoDB_backup_<timestamp>.tgz"
+        "204":
+          description: No benchmark data available for backup
+      security:
+        - oauth2:
+            - benchmarks_r
   /jobs:
     get:
       operationId: backend.restapi.api.jobs.get_all
