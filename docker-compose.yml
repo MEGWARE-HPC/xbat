@@ -86,7 +86,7 @@ services:
             - "#FRONTEND_NETWORK#:27017:27017"
 
     xbat-questdb:
-        image: docker.io/questdb/questdb:8.1.4
+        image: docker.io/questdb/questdb:9.0.3
         restart: unless-stopped
         container_name: xbat-questdb
         user: "#XBAT_UID#:#XBAT_GID#"

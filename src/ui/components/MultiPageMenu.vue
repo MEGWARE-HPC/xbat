@@ -61,7 +61,7 @@
                     </v-list-item>
                     <v-list-item
                         v-bind:title.attr="'Visit web console of metric database'"
-                        :href="`${$authStore.backendUrl}/questdb/`"
+                        :href="`${$authStore.backendUrl}/questdb/index.html`"
                         target="_blank"
                     >
                         <template #prepend
