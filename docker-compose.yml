@@ -70,10 +70,11 @@ services:
         expose:
             - 7003
     xbat-mongodb:
-        image: xbat_mongodb
+        image: docker.io/mongo:6
         restart: unless-stopped
         container_name: xbat-mongodb
         user: "#XBAT_UID#:#XBAT_GID#"
+        command: ["--config", "/etc/mongod.conf"]
         volumes:
             -  #VAR_LIB#/mongodb/:/var/lib/mongodb/
             -  #VAR_LOG#/mongodb/mongod.log:/var/log/mongodb/mongod.log
