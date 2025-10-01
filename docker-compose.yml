@@ -74,6 +74,7 @@ services:
         restart: unless-stopped
         container_name: xbat-mongodb
         user: "#XBAT_UID#:#XBAT_GID#"
+        entrypoint: ["mongod"]
         command: ["--config", "/etc/mongod.conf"]
         volumes:
             -  #VAR_LIB#/mongodb/:/var/lib/mongodb/
