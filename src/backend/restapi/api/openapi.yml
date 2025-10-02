@@ -571,7 +571,7 @@ paths:
         - oauth2:
             - benchmarks_r
   /measurements/{jobId}/json:
-   get:
+    get:
       operationId: backend.restapi.api.measurements.export_json
       parameters:
         - $ref: "#/components/parameters/JobId"
@@ -604,7 +604,7 @@ paths:
         - oauth2:
             - benchmarks_r
   /measurements/{jobId}/csv:
-   get:
+    get:
       operationId: backend.restapi.api.measurements.export_csv
       parameters:
         - $ref: "#/components/parameters/JobId"
@@ -634,7 +634,7 @@ paths:
         - oauth2:
             - benchmarks_r
   /measurements/{jobId}/energy:
-   get:
+    get:
       operationId: backend.restapi.api.measurements.calculate_energy
       parameters:
         - $ref: "#/components/parameters/JobId"
@@ -674,6 +674,24 @@ paths:
             application/json:
               schema:
                 type: object
+      security:
+        - oauth2:
+            - benchmarks_r
+  /metrics/roofline:
+    get:
+      operationId: backend.restapi.api.measurements.get_roofline
+      parameters:
+        - $ref: "#/components/parameters/JobIdsCommaQuery"
+      tags:
+        - measurements
+      summary: Roofline model
+      responses:
+        "200":
+          description: Successfully obtained roofline model data
+          content:
+              application/json:
+                schema:
+                  type: object
       security:
         - oauth2:
             - benchmarks_r
@@ -950,6 +968,17 @@ components:
         items:
           type: integer
       description: Job IDs
+    JobIdsCommaQuery:
+      name: jobIds
+      in: query
+      description: Comma-separated Job IDs
+      required: true
+      style: form
+      explode: false
+      schema:
+        type: array
+        items:
+          type: integer
     NodeHash:
       name: node_hash
       in: path
