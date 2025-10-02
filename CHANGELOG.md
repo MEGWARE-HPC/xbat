@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+-   API endpoint and frontend button to backup entire MongoDB database (admin only) (#131)
+
 ### Changed
 
 -   upgraded QuestDB from v8 to v9 (#135)

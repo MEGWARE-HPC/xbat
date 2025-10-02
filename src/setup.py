@@ -35,7 +35,8 @@ class GenerateProtoCommand(Command):
             grpc_file = f"{directory}/{proto_file.replace('.proto', '')}_pb2_grpc.py"
             with open(grpc_file, "r") as file:
                 content = file.read()
-            content = content.replace("import xbat_pb2", "from . import xbat_pb2")
+            content = content.replace("import xbat_pb2",
+                                      "from . import xbat_pb2")
             with open(grpc_file, "w") as file:
                 file.write(content)
 
@@ -59,7 +60,7 @@ class CustomDevelop(develop):
 
 setup(
     name="xbat",
-    version="1.0.0",
+    version="1.1.0",
     packages=["xbatctld", "backend", "shared"],
     cmdclass={
         "build_proto": GenerateProtoCommand,
