@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 -   API endpoint and frontend button to backup entire MongoDB database (admin only) (#131)
 
 ### Changed
+-   upgraded MongoDB from v5 to v8 (#90)
 
 ### Fixed
 
