@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+-   migrated MongoDB from v5 to v8 (to retain data from the previous database, please follow the migration guide.) (#90)
+
 ### Fixed
 
 -   x-axis titles in roofline (#117)
