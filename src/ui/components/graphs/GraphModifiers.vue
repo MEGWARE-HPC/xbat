@@ -262,6 +262,40 @@ const filterByAvailable = computed(() => {
     );
 });
 
+type PeakItem = { value: string; title: string };
+
+const currentBenchmarkItems = computed<PeakItem[]>(() => {
+    if (!systemBenchmarksAvailable.value) return [];
+    if (query.value.metric === "FLOPS") {
+        return flopItems as PeakItem[];
+    }
+    if (query.value.metric === "Bandwidth") {
+        return query.value.group === "memory"
+            ? (dramItems as PeakItem[])
+            : (cacheItems as PeakItem[]);
+    }
+    return [];
+});
+
+const allowedBenchmarkValues = computed<Set<string>>(
+    () => new Set(currentBenchmarkItems.value.map((i) => i.value))
+);
+
+watch(
+    [() => query.value.metric, () => query.value.group, currentBenchmarkItems],
+    () => {
+        if (!systemBenchmarksAvailable.value) {
+            state.modifiers.systemBenchmarks = [];
+            return;
+        }
+        const allowed = allowedBenchmarkValues.value;
+        state.modifiers.systemBenchmarks = (
+            state.modifiers.systemBenchmarks || []
+        ).filter((v) => allowed.has(String(v)));
+    },
+    { immediate: true }
+);
+
 const currentNodeInfo = computed(() => {
     if (query.value.level === "job" || !query.value.node) return {};
     return (
