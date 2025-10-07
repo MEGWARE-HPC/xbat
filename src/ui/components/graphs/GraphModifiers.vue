@@ -193,6 +193,13 @@ const enableBenchmarks = computed(() => {
     );
 });
 
+onMounted(() => {
+    const saved = storeGraph?.modifiers?.value;
+    if (saved && typeof saved === "object") {
+        Object.assign(state.modifiers, saved);
+    }
+});
+
 const modifiers = computed(() => [
     {
         title: "System Benchmarks",
@@ -229,6 +236,15 @@ const modifiers = computed(() => [
 const debounceModifiers = useDebounceFn(() => {
     storeGraph.modifiers.value = { ...state.modifiers };
 }, 1000);
+
+onBeforeUnmount(() => {
+    const dm: any = debounceModifiers;
+    if (dm && typeof dm.flush === "function") {
+        dm.flush();
+    } else {
+        storeGraph.modifiers.value = { ...state.modifiers };
+    }
+});
 
 watch(
     Object.keys(state.modifiers).map(
