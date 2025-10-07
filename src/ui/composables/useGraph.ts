@@ -391,11 +391,12 @@ export const useGraph = () => {
 
                 const uid = `${query.node}-peak-${benchmark}`;
                 const paletteColor = palette[traceCount % palette.length];
+                const overrideName = overrides.traces?.[uid]?.name || null;
 
                 const scaledPeak = humanSizeFixed(peak, baseUnit);
                 traces.push(
                     createTrace({
-                        name: `Peak ${benchmarkTitles.value[benchmark]}`,
+                        name: overrideName || `Peak ${benchmarkTitles.value[benchmark]}`,
                         y: new Array(xMax).fill(scaledPeak),
                         interval,
                         legendgroup: "benchmarks",
