@@ -376,49 +376,55 @@ export const useGraph = () => {
 
         {
             const { flopItems, dramItems, cacheItems } = useNodeBenchmarks();
-            const allowedPeaks = (() => {
-                if (query.metric === "FLOPS") {
-                    return new Set(flopItems.map((i: any) => i.value));
-                }
-                if (query.metric === "Bandwidth") {
-                    const items =
-                        query.group === "memory" ? dramItems : cacheItems;
-                    return new Set(items.map((i: any) => i.value));
-                }
-                return new Set<string>();
+            const supportedPeaks =
+                query.metric === "FLOPS" ||
+                (query.metric === "Bandwidth" &&
+                    (query.group === "memory" || query.group === "cache"));
+
+            const allowed = (() => {
+                if (!supportedPeaks) return new Set<string>();
+                const arr =
+                    query.metric === "FLOPS"
+                        ? Array.isArray(flopItems)
+                            ? flopItems
+                            : []
+                        : query.group === "memory"
+                        ? Array.isArray(dramItems)
+                            ? dramItems
+                            : []
+                        : Array.isArray(cacheItems)
+                        ? cacheItems
+                        : [];
+                return new Set<string>(arr.map((i: any) => i.value));
             })();
 
-            const origPeaks = Array.isArray(modifiers.systemBenchmarks)
+            const prevSel: string[] = Array.isArray(modifiers.systemBenchmarks)
                 ? modifiers.systemBenchmarks
                 : [];
-            const cleanedPeaks = origPeaks.filter((b: string) =>
-                allowedPeaks.has(b)
-            );
+            const nextSel = supportedPeaks
+                ? prevSel.filter((b) => allowed.has(b))
+                : [];
 
-            if (cleanedPeaks.length !== origPeaks.length) {
-                storeGraph.modifiers.value = {
-                    ...storeGraph.modifiers.value,
-                    systemBenchmarks: cleanedPeaks
-                };
+            if (nextSel.length !== prevSel.length) {
+                modifiers.systemBenchmarks = nextSel;
             }
 
-            const prevVisible = Array.isArray(storeGraph.settings.value.visible)
+            const prevVis: string[] = Array.isArray(
+                storeGraph.settings.value.visible
+            )
                 ? storeGraph.settings.value.visible
                 : [];
-            const peakPrefix = `${query.node}-peak-`;
+            const prefix = `${query.node}-peak-`;
 
-            const cleanedVisible = prevVisible.filter((uid: any) => {
-                if (typeof uid !== "string") return true;
-                if (!uid.startsWith(peakPrefix)) return true;
-                const bench = uid.slice(peakPrefix.length);
-                return allowedPeaks.has(bench);
+            const nextVis = prevVis.filter((uid) => {
+                if (typeof uid !== "string" || !uid.startsWith(prefix))
+                    return true;
+                const bench = uid.slice(prefix.length);
+                return supportedPeaks && allowed.has(bench);
             });
 
-            if (cleanedVisible.length !== prevVisible.length) {
-                storeGraph.settings.value = {
-                    ...storeGraph.settings.value,
-                    visible: cleanedVisible
-                };
+            if (nextVis.length !== prevVis.length) {
+                storeGraph.settings.value.visible = nextVis;
             }
         }
 
