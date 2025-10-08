@@ -435,6 +435,22 @@ export const useGraph = () => {
                     .filter((u: any): u is string => typeof u === "string")
             );
 
+            const scaleRaw = modifiers.systemBenchmarksScalingFactor ?? 1;
+            const formatScale = (v: number) => {
+                const n = Number(v);
+                if (!isFinite(n) || n <= 0) return "1";
+                if (n >= 1) return String(n);
+                if (n < 0.01) return n.toExponential(2);
+                return n.toFixed(2);
+            };
+            // The display format of the scaling factor can be customized
+            // The current format is 'peak* (x factor)'
+            const scaleSuffix = ` (×${formatScale(scaleRaw)})`;
+            const stripScaleSuffix = (name: string) =>
+                (name || "")
+                    .replace(/\s*[\(\[]\s*×[^)\]]*[\)\]]\s*$/u, "")
+                    .replace(/\s*×[0-9.+\-eE]+\s*$/u, "");
+
             modifiers.systemBenchmarks.forEach((benchmark) => {
                 const nodeNames = Object.keys(nodes[query.jobIds[0]]);
                 const node =
@@ -471,12 +487,15 @@ export const useGraph = () => {
                     }
                 }
 
+                const baseName =
+                    overrideName || `Peak ${benchmarkTitles.value[benchmark]}`;
+                const nameWithScale = `${stripScaleSuffix(
+                    baseName
+                )}${scaleSuffix}`;
                 const scaledPeak = humanSizeFixed(peak, baseUnit);
                 traces.push(
                     createTrace({
-                        name:
-                            overrideName ||
-                            `Peak ${benchmarkTitles.value[benchmark]}`,
+                        name: nameWithScale,
                         y: new Array(xMax).fill(scaledPeak),
                         interval,
                         legendgroup: "benchmarks",
