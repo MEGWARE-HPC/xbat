@@ -374,6 +374,54 @@ export const useGraph = () => {
 
         const nodes = storeGraph.nodes.value;
 
+        {
+            const { flopItems, dramItems, cacheItems } = useNodeBenchmarks();
+            const allowedPeaks = (() => {
+                if (query.metric === "FLOPS") {
+                    return new Set(flopItems.map((i: any) => i.value));
+                }
+                if (query.metric === "Bandwidth") {
+                    const items =
+                        query.group === "memory" ? dramItems : cacheItems;
+                    return new Set(items.map((i: any) => i.value));
+                }
+                return new Set<string>();
+            })();
+
+            const origPeaks = Array.isArray(modifiers.systemBenchmarks)
+                ? modifiers.systemBenchmarks
+                : [];
+            const cleanedPeaks = origPeaks.filter((b: string) =>
+                allowedPeaks.has(b)
+            );
+
+            if (cleanedPeaks.length !== origPeaks.length) {
+                storeGraph.modifiers.value = {
+                    ...storeGraph.modifiers.value,
+                    systemBenchmarks: cleanedPeaks
+                };
+            }
+
+            const prevVisible = Array.isArray(storeGraph.settings.value.visible)
+                ? storeGraph.settings.value.visible
+                : [];
+            const peakPrefix = `${query.node}-peak-`;
+
+            const cleanedVisible = prevVisible.filter((uid: any) => {
+                if (typeof uid !== "string") return true;
+                if (!uid.startsWith(peakPrefix)) return true;
+                const bench = uid.slice(peakPrefix.length);
+                return allowedPeaks.has(bench);
+            });
+
+            if (cleanedVisible.length !== prevVisible.length) {
+                storeGraph.settings.value = {
+                    ...storeGraph.settings.value,
+                    visible: cleanedVisible
+                };
+            }
+        }
+
         if (modifiers.systemBenchmarks?.length) {
             const existUids = new Set<string>(
                 (storeGraph.graph.value?.traces ?? [])
@@ -403,15 +451,18 @@ export const useGraph = () => {
                 const uid = `${query.node}-peak-${benchmark}`;
                 const paletteColor = palette[traceCount % palette.length];
                 const overrideName = overrides.traces?.[uid]?.name || null;
-
-                const prev = Array.isArray(storeGraph.settings.value.visible)
-                    ? storeGraph.settings.value.visible
-                    : [];
-                if (!prev.includes(uid) && !existUids.has(uid)) {
-                    storeGraph.settings.value = {
-                        ...storeGraph.settings.value,
-                        visible: Array.from(new Set([...prev, uid]))
-                    };
+                {
+                    const prev = Array.isArray(
+                        storeGraph.settings.value.visible
+                    )
+                        ? storeGraph.settings.value.visible
+                        : [];
+                    if (!prev.includes(uid) && !existUids.has(uid)) {
+                        storeGraph.settings.value = {
+                            ...storeGraph.settings.value,
+                            visible: Array.from(new Set([...prev, uid]))
+                        };
+                    }
                 }
 
                 const scaledPeak = humanSizeFixed(peak, baseUnit);
