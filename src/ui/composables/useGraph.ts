@@ -375,6 +375,12 @@ export const useGraph = () => {
         const nodes = storeGraph.nodes.value;
 
         if (modifiers.systemBenchmarks?.length) {
+            const existUids = new Set<string>(
+                (storeGraph.graph.value?.traces ?? [])
+                    .map((t: any) => t?.uid)
+                    .filter((u: any): u is string => typeof u === "string")
+            );
+
             modifiers.systemBenchmarks.forEach((benchmark) => {
                 const nodeNames = Object.keys(nodes[query.jobIds[0]]);
                 const node =
@@ -398,6 +404,16 @@ export const useGraph = () => {
                 const paletteColor = palette[traceCount % palette.length];
                 const overrideName = overrides.traces?.[uid]?.name || null;
 
+                const prev = Array.isArray(storeGraph.settings.value.visible)
+                    ? storeGraph.settings.value.visible
+                    : [];
+                if (!prev.includes(uid) && !existUids.has(uid)) {
+                    storeGraph.settings.value = {
+                        ...storeGraph.settings.value,
+                        visible: Array.from(new Set([...prev, uid]))
+                    };
+                }
+
                 const scaledPeak = humanSizeFixed(peak, baseUnit);
                 traces.push(
                     createTrace({
@@ -410,7 +426,7 @@ export const useGraph = () => {
                         width: 3,
                         auxiliary: true,
                         color: paletteColor,
-                        uid: uid
+                        uid
                     })
                 );
                 traceCount += 1;
