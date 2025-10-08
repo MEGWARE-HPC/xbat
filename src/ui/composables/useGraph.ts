@@ -146,6 +146,11 @@ export const useGraph = () => {
             all.traces.forEach((x: Partial<Trace>) => {
                 x.visible = x.uid && filteredVisibleTraces.includes(x.uid);
             });
+        } else {
+            const vis = new Set(storeGraph.settings.value.visible);
+            all.traces.forEach((x: Partial<Trace>) => {
+                x.visible = x.uid ? vis.has(x.uid) : true;
+            });
         }
 
         const layout = createLayout({
@@ -396,7 +401,9 @@ export const useGraph = () => {
                 const scaledPeak = humanSizeFixed(peak, baseUnit);
                 traces.push(
                     createTrace({
-                        name: overrideName || `Peak ${benchmarkTitles.value[benchmark]}`,
+                        name:
+                            overrideName ||
+                            `Peak ${benchmarkTitles.value[benchmark]}`,
                         y: new Array(xMax).fill(scaledPeak),
                         interval,
                         legendgroup: "benchmarks",
