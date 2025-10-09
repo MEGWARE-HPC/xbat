@@ -32,8 +32,9 @@
                     :disabled="!systemBenchmarksAvailable"
                 >
                 </v-autocomplete>
-                <v-number-input
+                <v-text-field
                     label="Scaling Factor"
+                    type="number"
                     v-model="state.modifiers.systemBenchmarksScalingFactor"
                     :min="0"
                     :max="1"
@@ -41,8 +42,7 @@
                     hide-details
                     :disabled="!systemBenchmarksAvailable"
                     v-if="query.level == 'job' || query.level == 'node'"
-                >
-                </v-number-input>
+                />
             </div>
             <div class="d-flex align-center modifier-header mb-2">
                 Range Filter
