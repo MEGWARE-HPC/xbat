@@ -35,7 +35,9 @@
                 <v-text-field
                     label="Scaling Factor"
                     type="number"
-                    v-model="state.modifiers.systemBenchmarksScalingFactor"
+                    v-model="scalingFactor"
+                    @update:modelValue="onScalingInput"
+                    @blur="commitScaling"
                     :min="0"
                     :max="1"
                     :step="0.05"
@@ -356,6 +358,38 @@ watch(
         immediate: true
     }
 );
+
+const scalingFactor = ref(
+    String(state.modifiers.systemBenchmarksScalingFactor ?? 1)
+);
+
+watch(
+    () => state.modifiers.systemBenchmarksScalingFactor,
+    (v) => {
+        scalingFactor.value = String(v ?? 1);
+    }
+);
+
+const onScalingInput = (val: string) => {
+    const raw = String(val ?? "");
+    const stripped = raw.replace(/[^0-9.]/g, "");
+    const parts = stripped.split(".");
+    const normalized =
+        parts.length > 2 ? parts[0] + "." + parts.slice(1).join("") : stripped;
+
+    scalingFactor.value = normalized;
+};
+
+const commitScaling = () => {
+    let v = parseFloat(scalingFactor.value);
+    if (!Number.isFinite(v)) v = 1;
+    v = Math.min(1, Math.max(0, v));
+    v = Number(v.toFixed(2));
+
+    state.modifiers.systemBenchmarksScalingFactor = v;
+
+    scalingFactor.value = String(v);
+};
 </script>
 <style lang="scss" scoped>
 @use "~/assets/css/colors.scss" as *;
