@@ -445,7 +445,11 @@ export const useGraph = () => {
             };
             // The display format of the scaling factor can be customized
             // The current format is 'peak* (x factor)'
-            const scaleSuffix = ` (×${formatScale(scaleRaw)})`;
+            const formattedScale = formatScale(scaleRaw);
+            const scaleSuffix =
+                formattedScale !== "1" && formattedScale !== "1.0"
+                    ? ` (×${formattedScale})`
+                    : "";
             const stripScaleSuffix = (name: string) =>
                 (name || "")
                     .replace(/\s*[\(\[]\s*×[^)\]]*[\)\]]\s*$/u, "")
