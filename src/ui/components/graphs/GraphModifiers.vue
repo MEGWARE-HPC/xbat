@@ -38,6 +38,7 @@
                     v-model="scalingFactor"
                     @update:modelValue="onScalingInput"
                     @blur="commitScaling"
+                    @keydown="blockLeadingSign"
                     :min="0"
                     :max="1"
                     :step="0.05"
@@ -371,11 +372,34 @@ watch(
 );
 
 const onScalingInput = (val: string) => {
-    const raw = String(val ?? "");
-    const stripped = raw.replace(/[^0-9.]/g, "");
-    const parts = stripped.split(".");
+    let raw = typeof val === "string" ? val : String(val ?? "");
+    raw = raw.replace(/[^0-9eE+.\-]/g, "");
+    raw = raw.replace(/E/g, "e");
+
+    const eParts = raw.split("e");
+    let mantRaw = eParts[0] ?? "";
+    let expRaw = eParts.length > 1 ? eParts[1] ?? "" : undefined;
+    mantRaw = mantRaw.replace(/[+\-]/g, "");
+
+    const mParts = mantRaw.split(".");
+    if (mParts.length > 2) {
+        mantRaw = mParts[0] + "." + mParts.slice(1).join("");
+    }
+
+    let expNorm: string | undefined;
+    if (typeof expRaw === "string") {
+        expRaw = expRaw.replace(/[^0-9+\-]/g, "");
+        let sign = "";
+        if (expRaw.startsWith("+") || expRaw.startsWith("-")) {
+            sign = expRaw[0];
+            expRaw = expRaw.slice(1);
+        }
+        expRaw = expRaw.replace(/[+\-]/g, "");
+        expNorm = sign + expRaw;
+    }
+
     const normalized =
-        parts.length > 2 ? parts[0] + "." + parts.slice(1).join("") : stripped;
+        typeof expNorm === "string" ? `${mantRaw}e${expNorm}` : mantRaw;
 
     scalingFactor.value = normalized;
 };
@@ -389,6 +413,15 @@ const commitScaling = () => {
     state.modifiers.systemBenchmarksScalingFactor = v;
 
     scalingFactor.value = String(v);
+};
+
+const blockLeadingSign = (e: KeyboardEvent) => {
+    const el = e.target as HTMLInputElement | null;
+    const pos = el?.selectionStart ?? 0;
+    const key = e.key;
+    if (pos === 0 && (key === "+" || key === "-")) {
+        e.preventDefault();
+    }
 };
 </script>
 <style lang="scss" scoped>
