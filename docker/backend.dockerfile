@@ -21,7 +21,7 @@ COPY ./src/backend /home/backend
 COPY ./src/shared /home/shared
 COPY ./src/xbatctld /home/xbatctld
 
-RUN python3.12 -m pip3 install --no-cache-dir -e .
+RUN python3.12 -m pip install --no-cache-dir -e .
 
 EXPOSE 7001
 WORKDIR /home/backend

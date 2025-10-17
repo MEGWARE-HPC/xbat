@@ -18,7 +18,7 @@ COPY ./src/xbatctld/requirements.txt /home/xbatctld/requirements.txt
 RUN python3.12 -m pip install -r /home/xbatctld/requirements.txt
 
 COPY ./src /home/
-RUN python3.12 -m pip3 install --no-cache-dir -e .
+RUN python3.12 -m pip install --no-cache-dir -e .
 
 
 WORKDIR /home/xbatctld
