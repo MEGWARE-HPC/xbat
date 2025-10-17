@@ -3,21 +3,25 @@ FROM almalinux:9.6-minimal
 # temporary fix for conflict with openssl v3 breaking changes
 ENV NODE_OPTIONS=--openssl-legacy-provider
 
-RUN yum update -y \
-    && yum install -y make gcc python3.12-devel python3.12-pip python3.12-setuptools sssd-client pam openldap-devel python-devel openssl-devel libffi-devel wget zlib-devel pigz \
-    && yum clean -y all
+RUN sed -i 's/enabled=0/enabled=1/' /etc/yum.repos.d/almalinux-crb.repo || true \
+    && microdnf -y update \
+    && microdnf -y install \
+    make gcc \
+    python3.12 python3.12-devel python3.12-pip python3.12-setuptools \
+    sssd-client pam pam-devel openldap-devel \
+    openssl-devel libffi-devel wget zlib-devel pigz \
+    && microdnf -y clean all
+
+WORKDIR /home/
+COPY ./src/backend/requirements.txt /home/backend/requirements.txt
+RUN python3.12 -m pip install --no-cache-dir --trusted-host pypi.org --trusted-host files.pythonhosted.org -r /home/backend/requirements.txt
 
 COPY ./src/setup.py /home/
 COPY ./src/backend /home/backend
 COPY ./src/shared /home/shared
 COPY ./src/xbatctld /home/xbatctld
 
-WORKDIR /home/
-
-RUN ln -fs /usr/bin/python3.12 /usr/bin/python3 && ln -fs /usr/bin/python3.12 /usr/bin/python \
-    && ln -fs /usr/bin/pip3.12 /usr/bin/pip3 && ln -fs /usr/bin/pip3.12 /usr/bin/pip
-
-RUN pip3 install --no-cache-dir --trusted-host pypi.org --trusted-host files.pythonhosted.org -r backend/requirements.txt && pip3 install -e .
+RUN python3.12 -m pip3 install --no-cache-dir -e .
 
 EXPOSE 7001
 WORKDIR /home/backend
