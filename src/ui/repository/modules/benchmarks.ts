@@ -96,6 +96,21 @@ class BenchmarkModule extends FetchFactory {
         return this.call<void>("POST", `${this.RESOURCE}/import`, formData);
     }
 
+    async backup() {
+        const response = await this.call<Blob>(
+            "POST",
+            `${this.RESOURCE}/backup`,
+            undefined,
+            {
+                responseType: "blob"
+            }
+        );
+        if (response && response.size === 0) {
+            return null;
+        }
+        return response;
+    }
+
     async purge() {
         return this.call<void>("POST", `${this.RESOURCE}/purge`, undefined);
     }
