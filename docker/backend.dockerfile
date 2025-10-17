@@ -1,4 +1,4 @@
-FROM docker.io/almalinux:9.4
+FROM almalinux:9.6-minimal
 
 # temporary fix for conflict with openssl v3 breaking changes
 ENV NODE_OPTIONS=--openssl-legacy-provider

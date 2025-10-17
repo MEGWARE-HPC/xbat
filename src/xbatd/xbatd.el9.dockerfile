@@ -1,4 +1,4 @@
-FROM almalinux:9.6
+FROM almalinux:9.6-minimal
 
 RUN dnf -y update && \
     dnf -y install epel-release && \

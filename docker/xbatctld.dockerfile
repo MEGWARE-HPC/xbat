@@ -1,4 +1,4 @@
-FROM docker.io/almalinux:9.4
+FROM almalinux:9.6-minimal
 
 WORKDIR /home/
 
