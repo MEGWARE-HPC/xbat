@@ -5,11 +5,7 @@ ENV NODE_OPTIONS=--openssl-legacy-provider
 
 RUN sed -i 's/enabled=0/enabled=1/' /etc/yum.repos.d/almalinux-crb.repo || true \
     && microdnf -y update \
-    && microdnf -y install \
-    make gcc \
-    python3.12 python3.12-devel python3.12-pip python3.12-setuptools \
-    sssd-client pam pam-devel openldap-devel \
-    openssl-devel libffi-devel wget zlib-devel pigz \
+    && microdnf -y install make gcc python3.12 python3.12-devel python3.12-pip python3.12-setuptools sssd-client pam openldap libffi zlib wget pigz \
     && microdnf -y clean all
 
 COPY ./src/setup.py /home/

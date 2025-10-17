@@ -8,10 +8,7 @@ WORKDIR /home/
 
 RUN sed -i 's/enabled=0/enabled=1/' /etc/yum.repos.d/almalinux-crb.repo || true \
     && microdnf -y update \
-    && microdnf -y install \
-    python3.12 python3.12-pip python3.12-setuptools \
-    openssl bzip2 \
-    openssh-clients rsync \
+    && microdnf -y install python3.12 python3.12-pip python3.12-setuptools openssl bzip2 openssh-clients rsync \
     && microdnf -y clean all
 
 COPY ./src /home/
