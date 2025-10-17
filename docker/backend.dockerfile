@@ -12,16 +12,17 @@ RUN sed -i 's/enabled=0/enabled=1/' /etc/yum.repos.d/almalinux-crb.repo || true 
     openssl-devel libffi-devel wget zlib-devel pigz \
     && microdnf -y clean all
 
-WORKDIR /home/
-COPY ./src/backend/requirements.txt /home/backend/requirements.txt
-RUN python3.12 -m pip install --no-cache-dir --trusted-host pypi.org --trusted-host files.pythonhosted.org -r /home/backend/requirements.txt
-
 COPY ./src/setup.py /home/
 COPY ./src/backend /home/backend
 COPY ./src/shared /home/shared
 COPY ./src/xbatctld /home/xbatctld
 
-RUN python3.12 -m pip install --no-cache-dir -e .
+WORKDIR /home/
+
+RUN ln -fs /usr/bin/python3.12 /usr/bin/python3 && ln -fs /usr/bin/python3.12 /usr/bin/python \
+    && ln -fs /usr/bin/pip3.12 /usr/bin/pip3 && ln -fs /usr/bin/pip3.12 /usr/bin/pip
+
+RUN pip3 install --no-cache-dir --trusted-host pypi.org --trusted-host files.pythonhosted.org -r backend/requirements.txt && pip3 install -e .
 
 EXPOSE 7001
 WORKDIR /home/backend
