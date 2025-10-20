@@ -26,6 +26,13 @@ export default defineNuxtConfig({
     nitro: {
         prerender: {
             routes: [...routes]
+        },
+        routeRules: {
+            "/**/*.wasm": {
+                headers: {
+                    "Content-Type": "application/wasm"
+                }
+            }
         }
     },
     image: {
@@ -42,23 +49,22 @@ export default defineNuxtConfig({
         },
         css: {
             preprocessorOptions: {
-                scss: {
-                    api: "modern-compiler"
-                }
+                scss: {}
             }
         }
     },
     content: {
-        highlight: {
-            theme: {
-                default: "github-light",
-                dark: "github-dark"
-            },
-            langs: ["bash", "yml", "json", "javascript", "ini"]
-        },
-        experimental: {
-            // @ts-expect-error
-            search: true
+        build: {
+            markdown: {
+                toc: { depth: 3 },
+                highlight: {
+                    theme: {
+                        default: "github-light",
+                        dark: "github-dark"
+                    },
+                    langs: ["bash", "yml", "json", "javascript", "ini"]
+                }
+            }
         }
     },
     site: { url: "xbat.dev" },
