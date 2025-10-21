@@ -278,9 +278,7 @@ async def calculate_metrics(jobId, group, metric, level, node, deciles):
             parts.append(f"AND timestamp <= '{capture_end.isoformat()}'")
         queries.append(" ".join(parts))
 
-    all_levels = await questdb.execute_queries(queries,
-                                               concurrency=4,
-                                               inter_batch_delay=50)
+    all_levels = await questdb.execute_queries(queries)
 
     queries = []
     available_metric_tables = []
@@ -311,9 +309,7 @@ async def calculate_metrics(jobId, group, metric, level, node, deciles):
         logger.debug("Unable to find entries for %s", metric)
         return {"traces": [], "statistics": {}}
 
-    all_records = await questdb.execute_queries(queries,
-                                                concurrency=4,
-                                                inter_batch_delay=50)
+    all_records = await questdb.execute_queries(queries)
 
     unit = metricMeta["unit"] if "unit" in metricMeta else ""
 
@@ -774,9 +770,7 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
 
         logger.debug(f"QUERIES: {queries}")
 
-        jobResult = await questdb.execute_queries(queries,
-                                                  concurrency=4,
-                                                  inter_batch_delay=50)
+        jobResult = await questdb.execute_queries(queries)
 
         result.append([x for xs in jobResult for x in xs])
 
