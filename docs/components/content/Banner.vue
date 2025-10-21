@@ -8,10 +8,10 @@
         <v-card-text>
             <div class="d-flex align-center">
                 <div class="font-weight-bold mr-3">
-                    <v-icon size="large" :icon="settings.icon"></v-icon>
+                    <v-icon size="large" :icon="settings.icon" />
                 </div>
                 <div class="banner-content">
-                    <ContentSlot :use="$slots.default" />
+                    <slot mdc-unwrap="p" />
                 </div>
             </div>
         </v-card-text>
