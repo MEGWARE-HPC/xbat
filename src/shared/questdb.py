@@ -9,8 +9,7 @@ from shared.helpers import format_error
 from shared.configuration import get_logger, get_config
 
 CONCURRENT_TABLE_PURGE_LIMIT = 3  # Limit concurrent purges to prevent overloading the database or exhausting the RAM
-CONCURRENT_QUERY_LIMIT = 16  # Limit concurrent queries to prevent exhausting the database connections
-QUERY_TIMEOUT = 1800
+CONCURRENT_QUERY_LIMIT = 64  # Limit concurrent queries to prevent exhausting the database connections
 
 logger = logging.getLogger(get_logger())
 
@@ -45,34 +44,11 @@ class QuestDB:
             async with await pg.AsyncConnection.connect(self.conninfo) as conn:
                 async with conn.cursor(row_factory=dict_row) as cursor:
                     logger.debug(query)
-                    try:
-                        async with conn.transaction():
-                            try:
-                                await cursor.execute(
-                                    f"SET LOCAL statement_timeout = {QUERY_TIMEOUT * 1000}"
-                                )
-                            except Exception as e:
-                                logger.debug(
-                                    "SET LOCAL statement_timeout unsupported, continue: %s",
-                                    e)
-                            await asyncio.wait_for(cursor.execute(query),
-                                                   timeout=QUERY_TIMEOUT)
-                            result = await asyncio.wait_for(
-                                cursor.fetchall(), timeout=QUERY_TIMEOUT)
-                    except Exception as e:
-                        logger.debug(
-                            "transaction wrapper failed, running without SET LOCAL: %s",
-                            e)
-                        await asyncio.wait_for(cursor.execute(query),
-                                               timeout=QUERY_TIMEOUT)
-                        result = await asyncio.wait_for(cursor.fetchall(),
-                                                        timeout=QUERY_TIMEOUT)
-        except asyncio.TimeoutError:
-            logger.error("Query timeout after %ss: %s", QUERY_TIMEOUT,
-                         query[:512])
+                    await cursor.execute(query)
+                    result = await cursor.fetchall()
         except pg.OperationalError as e:
             logger.error("Connection error: %s", format_error(e))
-        except pg.ProgrammingError:
+        except pg.ProgrammingError as e:
             # no result present, e.g. no returning statement
             pass
         except pg.DatabaseError as e:
@@ -85,9 +61,8 @@ class QuestDB:
 
     async def execute_queries(self,
                               queries,
-                              concurrency=CONCURRENT_QUERY_LIMIT,
-                              inter_batch_delay=0):
-        """Execute multiple queries (with concurrency limit + optional inter-batch delay)"""
+                              concurrency=CONCURRENT_QUERY_LIMIT):
+        """Execute multiple queries (with concurrency limit)"""
         self.setup()
 
         semaphore = asyncio.Semaphore(concurrency)
@@ -101,8 +76,6 @@ class QuestDB:
             batch = queries[i:i + concurrency]
             results.extend(
                 await asyncio.gather(*[_execute_concurrent(q) for q in batch]))
-            if inter_batch_delay > 0 and i + concurrency < len(queries):
-                await asyncio.sleep(inter_batch_delay / 1000.0)
         return results
 
     async def execute_query(self, query):
