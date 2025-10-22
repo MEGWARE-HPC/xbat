@@ -38,6 +38,7 @@
                     v-model="scalingFactor"
                     @update:modelValue="onScalingInput"
                     @blur="commitScaling"
+                    @keydown.enter.prevent="commitScaling"
                     @keydown="blockLeadingSign"
                     :min="0"
                     :max="1"
