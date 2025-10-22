@@ -444,7 +444,7 @@ export const useGraph = () => {
                 return n.toFixed(2);
             };
             // The display format of the scaling factor can be customized
-            // The current format is 'peak* (x factor)'
+            // The current format is 'peak* x factor'
             const formattedScale = formatScale(scaleRaw);
             const scaleSuffix =
                 formattedScale !== "1" && formattedScale !== "1.0"
@@ -474,7 +474,9 @@ export const useGraph = () => {
                     unit.length - (isBandwidth ? "B/s".length : "FLOPS".length)
                 );
 
-                const uid = `${query.node}-peak-${benchmark}`;
+                const uidNode =
+                    query.level === "job" ? nodeNames[0] : query.node;
+                const uid = `${uidNode}-peak-${benchmark}`;
                 const paletteColor = palette[traceCount % palette.length];
                 const overrideName = overrides.traces?.[uid]?.name || null;
                 {
