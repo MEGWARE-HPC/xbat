@@ -448,7 +448,7 @@ export const useGraph = () => {
             const formattedScale = formatScale(scaleRaw);
             const scaleSuffix =
                 formattedScale !== "1" && formattedScale !== "1.0"
-                    ? ` (×${formattedScale})`
+                    ? ` × ${formattedScale}`
                     : "";
             const stripScaleSuffix = (name: string) =>
                 (name || "")
