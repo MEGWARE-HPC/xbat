@@ -342,18 +342,14 @@ const nodeLevelSettings = computed(() => {
 watch(
     () => query.value.level,
     (v) => {
-        if (v == "job" || v == "node") {
-            state.modifiers.systemBenchmarksScalingFactor = 1;
-            return;
-        }
+        if (!(v == "job" || v == "node")) {
+            if (state.modifiers.systemBenchmarksScalingFactor !== 1) {
+                state.modifiers.systemBenchmarksScalingFactor = 1;
+            }
 
-        const levelKey = v as keyof typeof nodeLevelSettings.value;
-
-        if (nodeLevelSettings.value[levelKey] !== undefined) {
-            state.modifiers.systemBenchmarksScalingFactor =
-                1 / nodeLevelSettings.value[levelKey]!;
-        } else {
-            state.modifiers.systemBenchmarksScalingFactor = 1;
+            if (typeof scalingFactor !== "undefined") {
+                scalingFactor.value = "1";
+            }
         }
     },
     {
