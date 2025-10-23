@@ -7,13 +7,20 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 -   API endpoint and frontend button to backup entire MongoDB database (admin only) (#131)
+-   automatic subgroup opening and collapsing in docs navigation
+-   match highlighting to the search function in docs
 
 ### Changed
+
+-   upgraded Nuxt/Content from v2 to v3 (#82)
+-   upgraded QuestDB from v8 to v9 (#135)
+-   optimized queries for accessing QuestDB
 
 ### Fixed
 
 -   x-axis titles in roofline (#117)
 -   show x-axis title in the graph (#137)
+-   optimized the docs mobile experience
 
 ## v1.1.0 - 2025-09-12
 

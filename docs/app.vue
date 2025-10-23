@@ -2,12 +2,14 @@
     <v-app>
         <TopBar />
         <NuxtLayout>
-            <NuxtLoadingIndicator></NuxtLoadingIndicator>
+            <NuxtLoadingIndicator />
             <NuxtPage />
         </NuxtLayout>
     </v-app>
 </template>
 <script lang="ts" setup>
+import type { ContentNavigationItem } from "@nuxt/content";
+
 useHead({
     htmlAttrs: {
         lang: "en",
@@ -15,8 +17,26 @@ useHead({
     }
 });
 
-const { data: nav } = await useAsyncData("navigation", () =>
-    fetchContentNavigation()
+async function fetchNavOf(collection: "docs" | "content") {
+    try {
+        return await queryCollectionNavigation(collection);
+    } catch {
+        return [];
+    }
+}
+
+const { data: navDocs } = await useAsyncData<ContentNavigationItem[]>(
+    "navigation-docs",
+    () => fetchNavOf("docs")
+);
+
+const { data: navContent } = await useAsyncData<ContentNavigationItem[]>(
+    "navigation-content",
+    () => (navDocs.value?.length ? [] : fetchNavOf("content"))
+);
+
+const nav = computed<ContentNavigationItem[]>(
+    () => (navDocs.value?.length ? navDocs.value : navContent.value) || []
 );
 
 provide("navigation", nav.value);
