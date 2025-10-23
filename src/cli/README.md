@@ -10,8 +10,8 @@
 ## Development
 
 + Upgrade dependencies by running `uv sync --upgrade` and `uv lock --upgrade`.
-+ Run `uvx isort .` and `uvx black .` reformat the code.
-+ Use `uv run mypy ./src` to perform static code analysis.
++ Run `uvx isort .` and `uvx black .` to reformat the code.
++ Use `uv run mypy ./src` to perform static type checking.
 
 ## Installation
 
@@ -32,3 +32,17 @@ Host xbat-host
 
 Before using the CLI, export the environment variable `XBAT_SSH_FORWARDING_TARGET="xbat-host"`.  
 Optionally, you can also export `XBAT_SSH_FORWARDING_PORT=1234`, if the remote port is not available locally.
+
+## Non-interactive Use
+
+When running in a CI pipeline, such as GitHub Actions,
+you can provide the credentials through the environment:
+
+```bash
+export XBAT_ACCESS_TOKEN=$(
+    XBAT_USER=${{ secrets.XbatUser }} \
+    XBAT_PASS=${{ secrets.XbatPassword }} \
+    xbat login --ci
+)
+xbat pull $JOB_ID measurements.csv
+```

@@ -63,6 +63,10 @@ def main(
     ] = "https://demo.xbat.dev",
     api_version: Annotated[str, typer.Option(envvar="XBAT_API_VERSION")] = "v1",
     client_id: Annotated[str, typer.Option(envvar="XBAT_API_CLIENT_ID")] = "demo",
+    access_token: Annotated[
+        str | None,
+        typer.Option(envvar="XBAT_ACCESS_TOKEN", help="Alternative to keyring."),
+    ] = None,
 ):
     app.base_url = base_url
     show_help = "-h" in sys.argv or "--help" in sys.argv
@@ -83,15 +87,24 @@ def main(
 
 
 @app.command(help="Update the xbat API access token.")
-def login():
-    user = typer.prompt("User")
-    password = typer.prompt("Password", hide_input=True)
+def login(
+    user: Annotated[str | None, typer.Option(envvar="XBAT_USER")] = None,
+    password: Annotated[str | None, typer.Option(envvar="XBAT_PASS")] = None,
+    output_access_token: Annotated[
+        bool, typer.Option("--ci", help="Output access token.")
+    ] = False,
+):
+    user = user if user else typer.prompt("User")
+    password = password if password else typer.prompt("Password", hide_input=True)
     try:
-        app.api.authorize(user, password)
+        access_token = app.api.authorize(user, password)
+        if output_access_token:
+            print(access_token)
+        else:
+            print("Access token was updated.")
     except Exception as e:
         print("[bold red]Error![/bold red]", e)
         raise typer.Exit(code=1)
-    print("Access token was updated.")
 
 
 def validate_access_token() -> Callable:
@@ -130,7 +143,7 @@ def pull(
         str | None, typer.Option("--node", "-n", help="Node of measurements.")
     ] = None,
     quiet: Annotated[
-        bool, typer.Option("--quiet", "-q", help="Do not output on success")
+        bool, typer.Option("--quiet", "-q", help="Do not output on success.")
     ] = False,
 ):
     if output_path.suffix.lower() != ".csv":

@@ -1,4 +1,5 @@
 import http
+import os
 import warnings
 from enum import Enum
 from functools import wraps
@@ -92,11 +93,19 @@ class Api(object):
             raise AccessTokenError("Invalid credentials provided.")
         token_response.raise_for_status()
         access_token = token_response.json()["access_token"]
-        keyring.set_password(self.__keyring_system, self.__host, access_token)
+        try:
+            keyring.set_password(self.__keyring_system, self.__host, access_token)
+        except keyring.errors.NoKeyringError:
+            pass
+        return access_token
 
     @property
     def access_token(self):
-        access_token = keyring.get_password(self.__keyring_system, self.__host)
+        try:
+            access_token = keyring.get_password(self.__keyring_system, self.__host)
+        except keyring.errors.NoKeyringError:
+            # Fall back on environment
+            access_token = os.getenv("XBAT_ACCESS_TOKEN")
         if not access_token:
             raise AccessTokenError("No access token found.")
         return access_token
