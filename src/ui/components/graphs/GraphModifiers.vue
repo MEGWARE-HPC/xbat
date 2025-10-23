@@ -339,6 +339,17 @@ const nodeLevelSettings = computed(() => {
     };
 });
 
+const scalingFactor = ref(
+    String(state.modifiers.systemBenchmarksScalingFactor ?? 1)
+);
+
+watch(
+    () => state.modifiers.systemBenchmarksScalingFactor,
+    (v) => {
+        scalingFactor.value = String(v ?? 1);
+    }
+);
+
 watch(
     () => query.value.level,
     (v) => {
@@ -354,17 +365,6 @@ watch(
     },
     {
         immediate: true
-    }
-);
-
-const scalingFactor = ref(
-    String(state.modifiers.systemBenchmarksScalingFactor ?? 1)
-);
-
-watch(
-    () => state.modifiers.systemBenchmarksScalingFactor,
-    (v) => {
-        scalingFactor.value = String(v ?? 1);
     }
 );
 
