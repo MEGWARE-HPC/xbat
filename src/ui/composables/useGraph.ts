@@ -21,6 +21,8 @@ const parseGeneralUnit = (unit: string) => {
     };
 };
 
+let __lastLevel: string | null = null;
+
 export const useGraph = () => {
     const { createLayout, createTrace, calculateTimestamps } = useGraphBase();
 
@@ -513,6 +515,21 @@ export const useGraph = () => {
                 );
                 traceCount += 1;
             });
+        }
+
+        {
+            const curLevel = query.level;
+            if (__lastLevel !== curLevel) {
+                __lastLevel = curLevel;
+                const allUids: string[] = (traces ?? [])
+                    .map((t: any) => t?.uid)
+                    .filter((u: any): u is string => typeof u === "string");
+                const prev = storeGraph.settings.value ?? {};
+                storeGraph.settings.value = {
+                    ...prev,
+                    visible: allUids
+                };
+            }
         }
 
         return {
