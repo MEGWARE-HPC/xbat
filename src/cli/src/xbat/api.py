@@ -1,10 +1,10 @@
+import http
+import warnings
 from enum import Enum
 from functools import wraps
-import http
 from pathlib import Path
 from typing import Any, Callable, Dict, TypeVar, cast
 from urllib.parse import urlparse
-import warnings
 
 import keyring
 import requests

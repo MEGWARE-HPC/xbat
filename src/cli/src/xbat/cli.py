@@ -1,18 +1,38 @@
-from functools import wraps
+import contextlib
 import os
-from pathlib import Path
 import sys
+import time
+import webbrowser
+from functools import wraps
+from pathlib import Path
 from typing import Callable
+from urllib.parse import urlparse
+
 import pandas as pd
-from typing_extensions import Annotated
 import typer
+from fabric import Connection  # type: ignore[import-untyped]
 from rich import print
 from rich.progress import Progress
+from typing_extensions import Annotated
+
 from .api import AccessTokenError, Api, MeasurementLevel, MeasurementType
 
 
 class App(typer.Typer):
+    base_url: str
+    local_port: int
     api: Api
+    connection: Connection | None = None
+    forward_ctx: contextlib.ExitStack | None = None
+
+    def __call__(self, *args, **kwargs):
+        try:
+            return super().__call__(*args, **kwargs)
+        finally:
+            if self.forward_ctx:
+                self.forward_ctx.close()
+            if self.connection:
+                self.connection.close()
 
 
 app = App(
@@ -24,13 +44,42 @@ app = App(
 
 @app.callback()
 def main(
+    ssh_forwarding_target: Annotated[
+        str | None,
+        typer.Option(
+            envvar="XBAT_SSH_FORWARDING_TARGET",
+            help="SSH target for proxying xbat CLI through.",
+        ),
+    ] = None,
+    ssh_forwarding_port: Annotated[
+        int | None,
+        typer.Option(
+            envvar="XBAT_SSH_FORWARDING_PORT",
+            help="Local port being forwarded. (Otherwise, use remote port.))",
+        ),
+    ] = None,
     base_url: Annotated[
         str, typer.Option(envvar="XBAT_BASE_URL")
     ] = "https://demo.xbat.dev",
     api_version: Annotated[str, typer.Option(envvar="XBAT_API_VERSION")] = "v1",
     client_id: Annotated[str, typer.Option(envvar="XBAT_API_CLIENT_ID")] = "demo",
 ):
-    app.api = Api(base_url, api_version, client_id)
+    app.base_url = base_url
+    show_help = "-h" in sys.argv or "--help" in sys.argv
+    parsed_url = urlparse(app.base_url)
+    remote_port = parsed_url.port
+    if not remote_port:
+        remote_port = 443 if parsed_url.scheme.lower() == "https" else 80
+    app.local_port = ssh_forwarding_port if ssh_forwarding_port else remote_port
+    if ssh_forwarding_target and not show_help:
+        app.connection = Connection(ssh_forwarding_target)
+        remote_host = app.connection.run("hostname", hide=True).stdout.strip()
+        app.forward_ctx = contextlib.ExitStack()
+        forward = app.connection.forward_local(
+            app.local_port, remote_port=remote_port, remote_host=remote_host
+        )
+        app.forward_ctx.enter_context(forward)
+    app.api = Api(app.base_url, api_version, client_id)
 
 
 @app.command(help="Update the xbat API access token.")
@@ -105,6 +154,36 @@ def pull(
     if not quiet:
         df = pd.read_csv(output_path)
         print(df)
+
+
+@app.command(help="Open the xbat web UI.")
+def ui():
+    url = f"http://localhost:{app.local_port}"
+
+    def can_open_url() -> bool:
+        if sys.platform.startswith("linux"):
+            display = os.environ.get("DISPLAY")
+            wayland = os.environ.get("WAYLAND_DISPLAY")
+            if not (display or wayland):
+                # No GUI environment detected
+                return False
+        try:
+            browser = webbrowser.get()
+            if isinstance(browser, webbrowser.BackgroundBrowser):
+                # BackgroundBrowser may fail in headless mode
+                return False
+            return True
+        except webbrowser.Error as e:
+            return False
+
+    if can_open_url():
+        webbrowser.open(url)
+        time.sleep(1)
+        print("Web UI opened at", url)
+    else:
+        print("Web UI running at", url)
+    if app.connection:
+        input("(Press enter to shut down)")
 
 
 if __name__ == "__main__":
