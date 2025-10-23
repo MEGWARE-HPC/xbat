@@ -79,7 +79,7 @@ def calculate_interval(records):
 def filter_interval(records, capture_start, capture_end):
     """
     Filters out all records that are not within the specified timestamps.
-    
+
     :param records: measurement records
     :param capture_start: starting timestamp
     :param capture_end: end timestamp
@@ -110,7 +110,7 @@ def filter_interval(records, capture_start, capture_end):
 def aggregate(records, level, type):
     """
     Aggregates all records on the specified level as sum or average.
-    
+
     :param records: measurement records
     :param level: aggregation level
     :param type: sum or average
@@ -177,7 +177,9 @@ def _create_query(jobId: int,
                   level: str,
                   filter_level: str,
                   node: str | None = None,
-                  type: str = "avg") -> str:
+                  type: str = "avg",
+                  capture_start=None,
+                  capture_end=None) -> str:
 
     value_calculation = "SUM(value)"
 
@@ -189,6 +191,10 @@ def _create_query(jobId: int,
     filters = [f"jobId='{jobId}'", f"level='{filter_level}'"]
     if level != "job" and node:
         filters.append(f"node='{node}'")
+    if capture_start:
+        filters.append(f"timestamp >= '{capture_start.isoformat()}'")
+    if capture_end:
+        filters.append(f"timestamp <= '{capture_end.isoformat()}'")
 
     columns = [f"{value_calculation} as val", "timestamp"]
     groups = ["timestamp"]
@@ -219,7 +225,7 @@ def _sanitize_uid(s):
 async def calculate_metrics(jobId, group, metric, level, node, deciles):
     """
     Retrieves and calculates metrics based on the provided parameters.
-    
+
     :param jobId: ID of job
     :param group: group of metric
     :param metric: metric name
@@ -261,12 +267,16 @@ async def calculate_metrics(jobId, group, metric, level, node, deciles):
     # check which aggregation levels are available
     for metric_table in metric_tables:
 
-        query = f"SELECT level FROM {metric_table} where jobId='{jobId}'"
+        parts = [
+            f"SELECT DISTINCT level FROM {metric_table} WHERE jobId='{jobId}'"
+        ]
         if level != "job" and node:
-            query += f" and node='{node}'"
-
-        query += " GROUP BY level"
-        queries.append(query)
+            parts.append(f"AND node='{node}'")
+        if capture_start:
+            parts.append(f"AND timestamp >= '{capture_start.isoformat()}'")
+        if capture_end:
+            parts.append(f"AND timestamp <= '{capture_end.isoformat()}'")
+        queries.append(" ".join(parts))
 
     all_levels = await questdb.execute_queries(queries)
 
@@ -291,7 +301,7 @@ async def calculate_metrics(jobId, group, metric, level, node, deciles):
 
         queries.append(
             _create_query(jobId, metric_table, level, filter_level, node,
-                          aggregation_type))
+                          aggregation_type, capture_start, capture_end))
 
         available_metric_tables.append(metric_table)
 
@@ -673,12 +683,7 @@ def jobs_cacheable(jobIds):
             cacheable = False
             break
         state = job["jobInfo"]["jobState"]
-        cacheable_job_states = [
-            "FAILED",
-            "COMPLETED",
-            "CANCELLED",
-            "TIMEOUT",
-        ]
+        cacheable_job_states = ["FAILED", "COMPLETED", "CANCELLED", "TIMEOUT"]
         if not any(cacheable_state in state
                    for cacheable_state in cacheable_job_states):
             cacheable = False
@@ -726,28 +731,47 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
 
     result = []
     for jobId in jobIds:
+        job = mongodb.getOne("jobs", {"jobId": jobId})
+        raw_cs = job.get("captureStart") if job else None
+        raw_ce = job.get("captureEnd") if job else None
+        capture_start = iso8601_to_datetime(raw_cs) if isinstance(
+            raw_cs, str) else raw_cs
+        capture_end = iso8601_to_datetime(raw_ce) if isinstance(
+            raw_ce, str) else raw_ce
+
         tableQueries = []
         # query all present tables that are also part of the metric specification
         for table in METRIC_TABLES:
-            if not (table in available_tables): continue
-            tableQueries.append(
-                f"SELECT '{table}' as table_name, node, level FROM {table} where jobId='{jobId}' GROUP by node, level"
-            )
-        # instead of using single large query split into multiple smaller queries due to problems with questdb sometimes only returning partial results for very large queries
-        queryLength = int(len(tableQueries) / MAX_QUERY_COUNT)
-        remainder = len(tableQueries) % MAX_QUERY_COUNT
-        queries = []
+            if table not in available_tables:
+                continue
 
-        slice = 0
-        while (slice + 1) * queryLength < len(tableQueries):
-            start = slice * queryLength
-            stop = start + queryLength
-            if len(tableQueries) - stop < queryLength:
-                stop += remainder
-            queries.append(" UNION ALL ".join(tableQueries[start:stop]))
-            slice += 1
+            time_filters = []
+            if capture_start:
+                time_filters.append(
+                    f"timestamp >= '{capture_start.isoformat()}'")
+            if capture_end:
+                time_filters.append(
+                    f"timestamp <= '{capture_end.isoformat()}'")
+            time_clause = (" AND " +
+                           " AND ".join(time_filters)) if time_filters else ""
+
+            tableQueries.append(
+                f"SELECT DISTINCT '{table}' as table_name, node, level "
+                f"FROM {table} "
+                f"WHERE jobId='{jobId}'{time_clause}")
+        # instead of using single large query split into multiple smaller queries due to problems with questdb sometimes only returning partial results for very large queries
+        queries = []
+        for i in range(0, len(tableQueries), MAX_QUERY_COUNT):
+            chunk = tableQueries[i:i + MAX_QUERY_COUNT]
+            if len(chunk) == 1:
+                queries.append(chunk[0])
+            else:
+                queries.append(" UNION ALL ".join(chunk))
+
         logger.debug(f"QUERIES: {queries}")
+
         jobResult = await questdb.execute_queries(queries)
+
         result.append([x for xs in jobResult for x in xs])
 
     aggregated = {}
@@ -760,11 +784,12 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
         # aggregate all tables containing measurements for <jobId>
         for table in tables:
             if not table or not ("table_name" in table): continue
-            if not table["table_name"] in available_job_tables:
+            if table["table_name"] not in available_job_tables:
                 available_job_tables[table["table_name"]] = {"levels": []}
             available_job_tables[table["table_name"]]["levels"].append(
                 table["level"])
-            if not (table["node"] in nodes): nodes.append(table["node"])
+            if table["node"] not in nodes:
+                nodes.append(table["node"])
 
         # create custom metrics.json specific to <jobId>
         for group in METRICS:
@@ -774,7 +799,8 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
                 available_metrics = []
                 available_levels = []
                 for table in metricInfo["metrics"]:
-                    if not (table in available_job_tables): continue
+                    if table not in available_job_tables:
+                        continue
 
                     available_metrics.append(table)
 
@@ -782,16 +808,14 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
                         available_levels.append(level)
 
                 if len(available_metrics):
-                    if not (group) in available:
+                    if group not in available:
                         available[group] = {}
                     available_min_level = min(
                         [LEVEL_MAPPING[x] for x in available_levels])
                     available[group][metricName] = {
-                        **metricInfo,
-                        "metrics": {
+                        **metricInfo, "metrics": {
                             k: v
                             for k, v in metricInfo["metrics"].items()
-                            # if k in available_metrics
                         },
                         "level_min":
                         dict_get_key(LEVEL_MAPPING, available_min_level)
