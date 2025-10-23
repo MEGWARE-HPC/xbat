@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 -   upgraded Nuxt/Content from v2 to v3 (#82)
+-   upgraded QuestDB from v8 to v9 (#135)
+-   optimized queries for accessing QuestDB
 
 ### Fixed
 
