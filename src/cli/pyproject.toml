@@ -1,0 +1,28 @@
+[project]
+name = "xbat-cli"
+version = "0.1.0"
+description = "xbat command line interface"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "keyring>=25.6.0",
+    "pandas>=2.3.3",
+    "requests>=2.32.5",
+    "typer>=0.20.0",
+]
+
+[project.scripts]
+xbat = "xbat.cli:app"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.uv]
+package = true
+
+[dependency-groups]
+dev = [
+    "mypy>=1.18.2",
+    "pandas-stubs>=2.3.2.250926",
+    "types-requests>=2.32.4.20250913",
+]
