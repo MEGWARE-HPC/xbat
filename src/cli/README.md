@@ -18,7 +18,9 @@
 1. Using [pipx](https://pipx.pypa.io/stable/) and `pip install ./dist/xbat_cli*.whl` the application can be installed in an isolated environment.
 2. Run `sed '/^\s*#/! s/^/export /' .env >> ~/.bashrc` to install the custom CLI configuration for bash.
 
-## Locked Down xbat
+## Advanced Topics
+
+### Locked Down xbat
 
 If the xbat API and Web UI are only accessible via the system that running them, enable local port forwarding.  
 Your `$HOME/.ssh/config` should have an entry for connecting to the system without a password:
@@ -33,7 +35,7 @@ Host xbat-host
 Before using the CLI, export the environment variable `XBAT_SSH_FORWARDING_TARGET="xbat-host"`.  
 Optionally, you can also export `XBAT_SSH_FORWARDING_PORT=1234`, if the remote port is not available locally.
 
-## Non-interactive Use
+### Non-interactive Use
 
 When running in a CI pipeline, such as GitHub Actions,
 you can provide the credentials through the environment:
