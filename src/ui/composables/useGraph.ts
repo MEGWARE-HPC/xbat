@@ -507,6 +507,7 @@ export const useGraph = () => {
                         y: new Array(xMax).fill(scaledPeak),
                         interval,
                         legendgroup: "benchmarks",
+                        rawName: "Peaks",
                         width: 3,
                         auxiliary: true,
                         color: paletteColor,
