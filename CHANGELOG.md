@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 -   API endpoint and frontend button to backup entire MongoDB database (admin only) (#131)
 -   automatic subgroup opening and collapsing in docs navigation
 -   match highlighting to the search function in docs
+-   API endpoint for measurement roofline (#111)
 
 ### Changed
 
