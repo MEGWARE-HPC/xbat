@@ -171,7 +171,7 @@ def pull(
 
 @app.command(help="Open the xbat web UI.")
 def ui():
-    url = f"http://localhost:{app.local_port}"
+    url = f"http://localhost:{app.local_port}" if app.connection else app.base_url
 
     def can_open_url() -> bool:
         if sys.platform.startswith("linux"):
@@ -180,14 +180,26 @@ def ui():
             if not (display or wayland):
                 # No GUI environment detected
                 return False
-        try:
-            browser = webbrowser.get()
-            if isinstance(browser, webbrowser.BackgroundBrowser):
-                # BackgroundBrowser may fail in headless mode
-                return False
-            return True
-        except webbrowser.Error as e:
-            return False
+        for browser_name in [
+            None,
+            "firefox",
+            "mozilla",
+            "netscape",
+            "safari",
+            "chrome",
+            "chromium",
+            "opera",
+            "edge",
+        ]:
+            try:
+                browser = (
+                    webbrowser.get(browser_name) if browser_name else webbrowser.get()
+                )
+                if not isinstance(browser, webbrowser.BackgroundBrowser):
+                    return True
+            except webbrowser.Error:
+                pass
+        return False
 
     if can_open_url():
         webbrowser.open(url)

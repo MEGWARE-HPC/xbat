@@ -46,5 +46,5 @@ export XBAT_ACCESS_TOKEN=$(
     XBAT_PASS=${{ secrets.XbatPassword }} \
     xbat login --ci
 )
-xbat pull $JOB_ID measurements.csv
+xbat pull --quiet 249755 measurements.csv
 ```
