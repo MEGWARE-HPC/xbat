@@ -10,7 +10,7 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "@guolao/vue-monaco-editor": "^1.5.5",
+    "@guolao/vue-monaco-editor": "^1.6.0",
     "@mdi/font": "^7.4.47",
     "@mdi/js": "^7.4.47",
     "@nuxt/fonts": "^0.11.4",
@@ -41,7 +41,7 @@
     "vue-eslint-parser": "^10.2.0",
     "vue-router": "^4.6.3",
     "vuedraggable": "^4.1.0",
-    "vuetify": "3.10.5",
+    "vuetify": "3.10.7",
     "vuex": "^4.1.0"
   },
   "devDependencies": {
