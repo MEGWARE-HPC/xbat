@@ -3,7 +3,7 @@ openapi: 3.0.0
 info:
   title: xbat rest API
   description: xbat rest API
-  version: 1.1.0
+  version: 1.2.0
   contact:
     name: MEGWARE Computer Vertrieb und Service GmbH
     url: https://megware.com

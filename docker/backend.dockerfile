@@ -1,11 +1,12 @@
-FROM docker.io/almalinux:9.4
+FROM almalinux:9.6-minimal
 
 # temporary fix for conflict with openssl v3 breaking changes
 ENV NODE_OPTIONS=--openssl-legacy-provider
 
-RUN yum update -y \
-    && yum install -y make gcc python3.12-devel python3.12-pip python3.12-setuptools sssd-client pam openldap-devel python-devel openssl-devel libffi-devel wget zlib-devel pigz \
-    && yum clean -y all
+RUN sed -i 's/enabled=0/enabled=1/' /etc/yum.repos.d/almalinux-crb.repo || true \
+    && microdnf -y update \
+    && microdnf -y install make gcc python3.12 python3.12-devel python3.12-pip python3.12-setuptools sssd-client pam openldap-devel libffi zlib wget tar gzip pigz \
+    && microdnf -y clean all
 
 COPY ./src/setup.py /home/
 COPY ./src/backend /home/backend

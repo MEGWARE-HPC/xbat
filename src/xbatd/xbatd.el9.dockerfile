@@ -1,28 +1,36 @@
-FROM almalinux:9.6
+FROM almalinux:9.6-minimal
 
-RUN dnf -y update && \
-    dnf -y install epel-release && \
-    dnf clean all
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
 # require crb for ninja-build
-RUN dnf config-manager --enable crb && \
-    dnf -y update && \
-    dnf clean all
+RUN sed -i 's/enabled=0/enabled=1/' /etc/yum.repos.d/almalinux-crb.repo || true \
+    && microdnf -y update \
+    && microdnf -y install \
+    dnf dnf-plugins-core \
+    bash ca-certificates git which \
+    && microdnf -y clean all
+
+RUN dnf -y update \
+    && dnf -y install epel-release \
+    && dnf config-manager --set-enabled crb \
+    && dnf -y clean all
 
 RUN dnf install -y make gcc gcc-c++ wget perl-devel perl-Data-Dumper rpm-devel rpm-build dnf-plugins-core \
-    cmake libatomic rust-toolset git boost-devel libcurl-devel openssl-devel ninja-build && \
-    dnf clean all
+    cmake libatomic rust-toolset git boost-devel libcurl-devel openssl-devel ninja-build --setopt=install_weak_deps=False \
+    && dnf -y clean all
 
 RUN mkdir -p ~/rpmbuild/BUILD ~/rpmbuild/BUILDROOT ~/rpmbuild/RPMS ~/rpmbuild/SOURCES ~/rpmbuild/SPECS ~/rpmbuild/SRPMS /usr/local/share/xbatd
 
 # install nvml
 RUN dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo && \
-    dnf install -y nvidia-driver nvidia-driver-NVML nvidia-driver-devel cuda-nvml-devel-12-2 && dnf clean all
+    dnf install -y nvidia-driver nvidia-driver-NVML nvidia-driver-devel cuda-nvml-devel-12-2 --setopt=install_weak_deps=False \
+    && dnf -y clean all
 
 # install rocm
-RUN dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm && \
-    dnf install -y amd-smi-lib && \
-    dnf clean all
+RUN dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm \
+    && dnf install -y  amd-smi-lib \
+    && dnf -y clean all
 
 ENV CQUESTDB_VERSION=4.0.4
 # install questdb client

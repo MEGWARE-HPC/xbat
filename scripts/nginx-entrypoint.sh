@@ -1,5 +1,5 @@
-#!/bin/bash
-set -e
+#!/bin/sh
+set -eu
 
 # User-specified CERT_DIR is mapped to /etc/ssl in container
 CERT_DIR="${CERT_DIR:-/etc/ssl}"
