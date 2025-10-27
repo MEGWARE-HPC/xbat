@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file.
 
 -   x-axis titles in roofline (#117)
 -   optimized the mobile experience
+-   false positive error logs related to gRPC (#15)
 
 ## v1.1.0 - 2025-09-12
 
