@@ -9,6 +9,7 @@ from typing import Callable, Dict, List, Tuple
 from urllib.parse import urlparse
 
 import pandas as pd
+import questionary
 import typer
 from fabric import Connection  # type: ignore[import-untyped]
 from rich import print
@@ -154,7 +155,7 @@ def require_valid_access_token() -> Callable:
     return decorator
 
 
-@app.command(help="List benchmark runs/jobs.")
+@app.command(help="Output benchmark runs/jobs in a table.")
 @require_valid_access_token()
 def ls(
     filter_config: Annotated[
@@ -186,15 +187,18 @@ def ls(
     if filter_issuer:
         runs = [r for r in runs if r["issuer"] == filter_issuer]
 
+    configs = app.api.configurations
+
     def get_config(run):
         try:
-            return run["configuration"]["configuration"]["configurationName"]
+            config_id = run["configuration"]["_id"]
+            return (config_id, configs[config_id])
         except Exception:
-            return "N/A"
+            return ("N/A", "N/A")
 
     if filter_config:
         runs = [r for r in runs if get_config(r) == filter_config]
-    columns = ["run", "name", "config", "issuer", "run_state"]
+    columns = ["run", "name", "config", "config_name", "issuer", "run_state"]
     job_variant_state: Dict[int, Tuple[str, str]] = {}
     if filter_variant and not list_jobs:
         print(
@@ -230,7 +234,7 @@ def ls(
         values = [
             run["runNr"],
             run["name"],
-            get_config(run),
+            *get_config(run),
             run["issuer"],
             run["state"],
         ]
@@ -309,6 +313,29 @@ def pull(
     if not quiet:
         df = pd.read_csv(output_path)
         print(df)
+
+
+@app.command(help="Run a benchmark.")
+@require_valid_access_token()
+def run(
+    config_id: Annotated[
+        str | None, typer.Argument(help="The config name of the benchmark to run.")
+    ] = None,
+):
+    configs = app.api.configurations
+    if not config_id:
+        config_id = questionary.select(
+            "Select a configuration:",
+            choices=[dict(name=f"{k} {v}", value=k) for k, v in configs.items()],
+        ).ask()
+        if not config_id:
+            raise typer.Abort()
+    if config_id not in configs:
+        print(
+            f"[bold red]Error![/bold red] No configuration with id {config_id} found."
+        )
+        raise typer.Exit(1)
+    raise NotImplementedError()
 
 
 # TODO I could not test this yet due to HTTP 403

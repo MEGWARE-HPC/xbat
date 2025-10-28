@@ -74,12 +74,14 @@ class Api(object):
         self.__keyring_system = f"xbat-{self.__client_id}"
         self.__verify_ssl = self.__host != "localhost"
 
+    def __headers_accept(self, mime_type: str) -> Dict[str, str]:
+        return {"accept": mime_type}
+
     @_localhost_suppress_security_warning
     def authorize(self, user: str, password: str):
         headers = {
-            "accept": "text/json",
-            "Content-Type": "application/x-www-form-urlencoded",
-        }
+            "Content-Type": "application/x-www-form-urlencoded"
+        } | self.__headers_accept("application/json")
         data = dict(
             grant_type="password",
             username=user,
@@ -113,26 +115,27 @@ class Api(object):
             raise AccessTokenError("No access token found.")
         return access_token
 
+    @property
+    def __headers_auth(self) -> Dict[str, str]:
+        return {"Authorization": f"Bearer {self.access_token}"}
+
     @_localhost_suppress_security_warning
     def validate_access_token(self):
-        headers = {"Authorization": f"Bearer {self.access_token}"}
         response = requests.get(
             f"{self.__api_url}/current_user",
-            headers=headers,
+            headers=self.__headers_auth,
             verify=self.__verify_ssl,
         )
         if response.status_code == http.HTTPStatus.UNAUTHORIZED:
             raise AccessTokenError("Access token invalid.")
         response.raise_for_status()
 
+    # region benchmarks
     @property
     @_localhost_suppress_security_warning
     def benchmark_runs(self) -> List[Dict[str, Any]]:
         benchmark_runs_url = f"{self.__api_url}/benchmarks"
-        headers = {
-            "accept": "text/json",
-            "Authorization": f"Bearer {self.access_token}",
-        }
+        headers = self.__headers_accept("application/json") | self.__headers_auth
         response = requests.get(
             benchmark_runs_url,
             headers=headers,
@@ -141,6 +144,49 @@ class Api(object):
         response.raise_for_status()
         return response.json()["data"]
 
+    @_localhost_suppress_security_warning
+    def export_runs(
+        self,
+        run_ids: List[int],
+        output_path: Path,
+        anonymise: bool = False,
+        progress_callback: Callable[[float], None] | None = None,
+    ) -> Path:
+        export_url = f"{self.__api_url}/benchmarks/export"
+        headers = (
+            {"Content-Type": "application/json"}
+            | self.__headers_accept("application/octet-stream")
+            | self.__headers_auth
+        )
+        payload = {
+            "runNrs": run_ids,
+            "anonymise": anonymise,
+        }
+        response = requests.post(
+            export_url,
+            headers=headers,
+            json=payload,
+            stream=True,
+            verify=self.__verify_ssl,
+        )
+        if response.status_code == http.HTTPStatus.NO_CONTENT:
+            raise FileNotFoundError("No benchmark data available for export.")
+        response.raise_for_status()
+        total = int(response.headers.get("content-length", 0))
+        downloaded = 0
+        chunk_size = 8192
+        with open(output_path, "wb") as f:
+            for chunk in response.iter_content(chunk_size=chunk_size):
+                if chunk:
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    if progress_callback and total:
+                        progress_callback(downloaded / total)
+        return output_path
+
+    # endregion benchmarks
+
+    # region jobs
     @_localhost_suppress_security_warning
     def get_jobs(
         self,
@@ -161,10 +207,7 @@ class Api(object):
                 if i > 0:
                     jobs_url += ","
                 jobs_url += str(job)
-        headers = {
-            "accept": "text/json",
-            "Authorization": f"Bearer {self.access_token}",
-        }
+        headers = self.__headers_accept("application/json") | self.__headers_auth
         response = requests.get(
             jobs_url,
             headers=headers,
@@ -182,10 +225,7 @@ class Api(object):
     @_localhost_suppress_security_warning
     def get_job_output(self, job_id: int) -> Tuple[str, str]:
         jobs_url = f"{self.__api_url}/jobs/{job_id}/output"
-        headers = {
-            "accept": "text/json",
-            "Authorization": f"Bearer {self.access_token}",
-        }
+        headers = self.__headers_accept("application/json") | self.__headers_auth
         response = requests.get(
             jobs_url,
             headers=headers,
@@ -198,10 +238,7 @@ class Api(object):
     @_localhost_suppress_security_warning
     def get_job_metrics(self, job_id: int) -> List[str]:
         jobs_url = f"{self.__api_url}/jobs/{job_id}/metrics"
-        headers = {
-            "accept": "text/json",
-            "Authorization": f"Bearer {self.access_token}",
-        }
+        headers = self.__headers_accept("application/json") | self.__headers_auth
         response = requests.get(
             jobs_url,
             headers=headers,
@@ -212,6 +249,9 @@ class Api(object):
         print(output)
         exit()
 
+    # endregion jobs
+
+    # region measurements
     @_localhost_suppress_security_warning
     def download_job_measurements(
         self,
@@ -239,7 +279,7 @@ class Api(object):
         for k, v in params.items():
             params[k] = str(v)
         measurement_url = f"{self.__api_url}/measurements/{job_id}/csv"
-        headers = {"accept": "text/csv", "Authorization": f"Bearer {self.access_token}"}
+        headers = self.__headers_accept("text/csv") | self.__headers_auth
         response = requests.get(
             measurement_url,
             headers=headers,
@@ -265,42 +305,49 @@ class Api(object):
         response.raise_for_status()
         return output_path
 
+    # endregion measurements
+
+    # region configurations
+    @property
     @_localhost_suppress_security_warning
-    def export_runs(
-        self,
-        run_ids: List[int],
-        output_path: Path,
-        anonymise: bool = False,
-        progress_callback: Callable[[float], None] | None = None,
-    ) -> Path:
-        export_url = f"{self.__api_url}/benchmarks/export"
-        headers = {
-            "accept": "application/octet-stream",
-            "Authorization": f"Bearer {self.access_token}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "runNrs": run_ids,
-            "anonymise": anonymise,
-        }
-        response = requests.post(
-            export_url,
+    def configurations(self) -> Dict[str, str]:
+        configurations_url = f"{self.__api_url}/configurations"
+        headers = self.__headers_accept("application/json") | self.__headers_auth
+        response = requests.get(
+            configurations_url,
             headers=headers,
-            json=payload,
-            stream=True,
             verify=self.__verify_ssl,
         )
-        if response.status_code == http.HTTPStatus.NO_CONTENT:
-            raise FileNotFoundError("No benchmark data available for export.")
         response.raise_for_status()
-        total = int(response.headers.get("content-length", 0))
-        downloaded = 0
-        chunk_size = 8192
-        with open(output_path, "wb") as f:
-            for chunk in response.iter_content(chunk_size=chunk_size):
-                if chunk:
-                    f.write(chunk)
-                    downloaded += len(chunk)
-                    if progress_callback and total:
-                        progress_callback(downloaded / total)
-        return output_path
+        configurations = response.json()["data"]
+        projects = self.projects
+
+        def format_config(name, shared_project_ids):
+            if len(shared_project_ids) == 0:
+                return name
+            return f"{name} ({', '.join([projects[s] for s in shared_project_ids])})"
+
+        return {
+            c["_id"]: format_config(
+                c["configuration"]["configurationName"],
+                c["configuration"]["sharedProjects"],
+            )
+            for c in configurations
+        }
+
+    # endregion configurations
+
+    # region projects
+    @property
+    @_localhost_suppress_security_warning
+    def projects(self) -> Dict[str, str]:
+        projects_url = f"{self.__api_url}/projects"
+        headers = self.__headers_accept("application/json") | self.__headers_auth
+        response = requests.get(
+            projects_url,
+            headers=headers,
+            verify=self.__verify_ssl,
+        )
+        return {p["_id"]: p["name"] for p in response.json()["data"]}
+
+    # endregion projects
