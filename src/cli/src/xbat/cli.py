@@ -227,7 +227,7 @@ def ls(
 def log(
     job: Annotated[int, typer.Argument(help="ID of the finished job.")],
 ):
-    stdout, stderr = app.api.log(job)
+    stdout, stderr = app.api.get_job_output(job)
     if not stdout and not stderr:
         print(f"[bold red]Error![/bold red] No output or error found for job {job}.")
         raise typer.Exit(1)
@@ -269,11 +269,11 @@ def pull(
     try:
         pull_args = (job_id, output_path, type, metric, level, node)
         if quiet:
-            app.api.pull(*pull_args)
+            app.api.download_job_measurements(*pull_args)
         else:
             with Progress() as progress:
                 task = progress.add_task("Download", total=1)
-                app.api.pull(
+                app.api.download_job_measurements(
                     *pull_args,
                     lambda x: progress.update(task, completed=x),
                 )
@@ -305,11 +305,11 @@ def export(
     try:
         pull_args = (runs, output_path, anonymise)
         if quiet:
-            app.api.export(*pull_args)
+            app.api.export_runs(*pull_args)
         else:
             with Progress() as progress:
                 task = progress.add_task("Download", total=1)
-                app.api.export(
+                app.api.export_runs(
                     *pull_args,
                     lambda x: progress.update(task, completed=x),
                 )

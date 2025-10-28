@@ -180,7 +180,7 @@ class Api(object):
         return jobs
 
     @_localhost_suppress_security_warning
-    def log(self, job_id: int) -> Tuple[str, str]:
+    def get_job_output(self, job_id: int) -> Tuple[str, str]:
         jobs_url = f"{self.__api_url}/jobs/{job_id}/output"
         headers = {
             "accept": "text/json",
@@ -196,7 +196,7 @@ class Api(object):
         return output["standardOutput"], output["standardError"]
 
     @_localhost_suppress_security_warning
-    def pull(
+    def download_job_measurements(
         self,
         job_id: int,
         output_path: Path,
@@ -249,7 +249,7 @@ class Api(object):
         return output_path
 
     @_localhost_suppress_security_warning
-    def export(
+    def export_runs(
         self,
         run_ids: List[int],
         output_path: Path,
