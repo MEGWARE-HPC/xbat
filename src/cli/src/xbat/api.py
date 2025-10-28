@@ -4,7 +4,7 @@ import warnings
 from enum import Enum
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, Dict, TypeVar, cast
+from typing import Any, Callable, Dict, List, TypeVar, cast
 from urllib.parse import urlparse
 
 import keyring
@@ -76,7 +76,10 @@ class Api(object):
 
     @_localhost_suppress_security_warning
     def authorize(self, user: str, password: str):
-        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        headers = {
+            "accept": "text/json",
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
         data = dict(
             grant_type="password",
             username=user,
@@ -121,6 +124,60 @@ class Api(object):
         if response.status_code == http.HTTPStatus.UNAUTHORIZED:
             raise AccessTokenError("Access token invalid.")
         response.raise_for_status()
+
+    @property
+    @_localhost_suppress_security_warning
+    def benchmark_runs(self) -> List[Dict[str, Any]]:
+        benchmark_runs_url = f"{self.__api_url}/benchmarks"
+        headers = {
+            "accept": "text/json",
+            "Authorization": f"Bearer {self.access_token}",
+        }
+        response = requests.get(
+            benchmark_runs_url,
+            headers=headers,
+            verify=self.__verify_ssl,
+        )
+        response.raise_for_status()
+        return response.json()["data"]
+
+    @_localhost_suppress_security_warning
+    def get_jobs(
+        self,
+        runs: List[int] | None = None,
+        jobs: List[int] | None = None,
+        short: bool = True,
+    ) -> List[Dict[str, Any]]:
+        jobs_url = f"{self.__api_url}/jobs?short={short}"
+        if runs and False:  # FIXME Filtering by runs does not seem to work
+            jobs_url += "&runNrs="
+            for i, run in enumerate(runs):
+                if i > 0:
+                    jobs_url += ","
+                jobs_url += str(run)
+        if jobs and False:  # FIXME Filtering by jobs does not seem to work
+            jobs_url += "jobIds="
+            for i, job in enumerate(jobs):
+                if i > 0:
+                    jobs_url += ","
+                jobs_url += str(job)
+        headers = {
+            "accept": "text/json",
+            "Authorization": f"Bearer {self.access_token}",
+        }
+        response = requests.get(
+            jobs_url,
+            headers=headers,
+            verify=self.__verify_ssl,
+        )
+        response.raise_for_status()
+        data = response.json()["data"]
+        # FIXME Workaround for issues above
+        if runs:
+            data = [j for j in data if j["runNr"] in runs]
+        if jobs:
+            data = [j for j in data if j["jobId"] in jobs]
+        return data
 
     @_localhost_suppress_security_warning
     def pull(

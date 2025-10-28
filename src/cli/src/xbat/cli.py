@@ -5,7 +5,7 @@ import time
 import webbrowser
 from functools import wraps
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Dict, Tuple
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -13,6 +13,7 @@ import typer
 from fabric import Connection  # type: ignore[import-untyped]
 from rich import print
 from rich.progress import Progress
+from rich.table import Table
 from typing_extensions import Annotated
 
 from .api import AccessTokenError, Api, MeasurementLevel, MeasurementType
@@ -107,17 +108,21 @@ def login(
         raise typer.Exit(code=1)
 
 
-def validate_access_token() -> Callable:
+def validate_access_token():
+    try:
+        app.api.validate_access_token()
+    except AccessTokenError as e:
+        print("[bold red]Error![/bold red]", e)
+        app_name = os.path.basename(sys.argv[0])
+        print(f"Authenticate by running [green]{app_name} login[/green]!")
+        raise typer.Exit(code=1)
+
+
+def require_valid_access_token() -> Callable:
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs):
-            try:
-                app.api.validate_access_token()
-            except AccessTokenError as e:
-                print("[bold red]Error![/bold red]", e)
-                app_name = os.path.basename(sys.argv[0])
-                print(f"Authenticate by running [green]{app_name} login[/green]!")
-                raise typer.Exit(code=1)
+            validate_access_token()
             return func(*args, **kwargs)
 
         return wrapper
@@ -125,8 +130,100 @@ def validate_access_token() -> Callable:
     return decorator
 
 
+@app.command(help="List benchmark runs.")
+@require_valid_access_token()
+def ls(
+    filter_config: Annotated[
+        str | None,
+        typer.Option("--config", "-c", help="Filter benchmark runs by config name."),
+    ] = None,
+    filter_issuer: Annotated[
+        str | None,
+        typer.Option("--issuer", "-i", help="Filter benchmark runs by issuer."),
+    ] = None,
+    list_jobs: Annotated[
+        bool,
+        typer.Option(
+            "--list-jobs", "-j", help="List individual jobs instead of benchmark runs."
+        ),
+    ] = False,
+    filter_variant: Annotated[
+        str | None,
+        typer.Option("--variant", "-v", help="Filter jobs by variant name."),
+    ] = None,
+    no_header: Annotated[
+        bool,
+        typer.Option(
+            "--no-header", "-H", help="Do not print the header for the output table."
+        ),
+    ] = False,
+):
+    runs = app.api.benchmark_runs
+    if filter_issuer:
+        runs = [r for r in runs if r["issuer"] == filter_issuer]
+
+    def get_config(run):
+        try:
+            return run["configuration"]["configuration"]["configurationName"]
+        except Exception:
+            return "N/A"
+
+    if filter_config:
+        runs = [r for r in runs if get_config(r) == filter_config]
+    columns = ["run", "name", "config", "issuer", "run_state"]
+    job_variant_state: Dict[int, Tuple[str, str]] = {}
+    if filter_variant and not list_jobs:
+        print(
+            f"[bold yellow]Warning![/bold yellow] Option [italic]--variant[/italic]/[italic]-v[/italic] implies option [italic]--list-jobs[/italic]/[italic]-j[/italic]."
+        )
+        list_jobs = True
+    if list_jobs:
+        columns += ["job", "variant", "job_state"]
+        for job in app.api.get_jobs(runs=[r["runNr"] for r in runs]):
+            variant = "N/A"
+            try:
+                variant = job["configuration"]["jobscript"]["variantName"]
+            except Exception:
+                pass  # No variant found for this job
+            job_state = "unknown"
+            try:
+                job_state = job["jobInfo"]["jobState"]
+                if isinstance(job_state, list):
+                    job_state = ",".join(job_state)
+                job_state = job_state.lower()
+            except Exception:
+                pass  # Could not determine job state
+            job_variant_state[job["jobId"]] = (variant, job_state)
+    table = Table(
+        show_header=not no_header,
+        show_lines=False,
+        box=None,
+        pad_edge=False,
+    )
+    for column in columns:
+        table.add_column(column)
+    for run in runs:
+        values = [
+            run["runNr"],
+            run["name"],
+            get_config(run),
+            run["issuer"],
+            run["state"],
+        ]
+        values = [str(v) for v in values]
+        if list_jobs:
+            for job in run["jobIds"]:
+                variant, job_state = job_variant_state[job]
+                if filter_variant and filter_variant != variant:
+                    continue
+                table.add_row(*values, str(job), variant, job_state)
+        else:
+            table.add_row(*values)
+    print(table)
+
+
 @app.command(help="Download measurements for a finished job.")
-@validate_access_token()
+@require_valid_access_token()
 def pull(
     job_id: Annotated[int, typer.Argument(help="ID of a finished job.")],
     output_path: Annotated[Path, typer.Argument(help="CSV output path.")],
@@ -170,8 +267,39 @@ def pull(
 
 
 @app.command(help="Open the xbat web UI.")
-def ui():
+def ui(
+    run: Annotated[
+        int | None, typer.Option("--run", "-r", help="Benchmark run to open.")
+    ] = None,
+    job: Annotated[
+        int | None,
+        typer.Option("--job", "-j", help="Job for which to open the benchmark run."),
+    ] = None,
+):
     url = f"http://localhost:{app.local_port}" if app.connection else app.base_url
+    if run and job:
+        print(
+            "[bold yellow]Warning![/bold yellow]",
+            f"Job is ignored if benchmark run is given.",
+        )
+        job = None
+    if run:
+        validate_access_token()
+        runs = [int(r["runNr"]) for r in app.api.benchmark_runs]
+        if run not in runs:
+            print("[bold red]Error![/bold red]", f"No benchmark run #{run} found.")
+            raise typer.Exit(1)
+    elif job:
+        validate_access_token()
+        jobs = app.api.get_jobs(jobs=[job])
+        if len(jobs) == 0:
+            print("[bold red]Error![/bold red]", f"No job {job} found.")
+            raise typer.Exit(1)
+        run = jobs[0]["runNr"]
+    if run:
+        if not url.endswith("/"):
+            url += "/"
+        url += f"benchmarks/{run}"
 
     def can_open_url() -> bool:
         if sys.platform.startswith("linux"):

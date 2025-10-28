@@ -27,9 +27,9 @@ Your `$HOME/.ssh/config` should have an entry for connecting to the system witho
 
 ```ssh
 Host xbat-host
-	HostName example.org
-	User alice
-	IdentityFile ~/.ssh/id_ed25519
+    HostName example.org
+    User alice
+    IdentityFile ~/.ssh/id_ed25519
 ```
 
 Before using the CLI, export the environment variable `XBAT_SSH_FORWARDING_TARGET="xbat-host"`.  
