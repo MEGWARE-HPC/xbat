@@ -5,7 +5,7 @@ import time
 import webbrowser
 from functools import wraps
 from pathlib import Path
-from typing import Callable, Dict, Tuple
+from typing import Callable, Dict, List, Tuple
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -283,6 +283,39 @@ def pull(
     if not quiet:
         df = pd.read_csv(output_path)
         print(df)
+
+
+# TODO I could not test this yet due to HTTP 403
+@app.command(help="Create a backup of benchmark runs.")
+@require_valid_access_token()
+def export(
+    runs: Annotated[List[int], typer.Argument(help="IDs of benchmark runs to export.")],
+    output_path: Annotated[Path, typer.Argument(help="CSV output path.")],
+    anonymise: Annotated[
+        bool, typer.Option("--anonymise", "-a", help="Anonymise data on export.")
+    ] = False,
+    quiet: Annotated[
+        bool, typer.Option("--quiet", "-q", help="Do not show progress.")
+    ] = False,
+):
+    if output_path.suffix.lower() != ".tgz":
+        print(
+            f'[bold yellow]Warning![/bold yellow] Output path {output_path} does not end in ".tgz"'
+        )
+    try:
+        pull_args = (runs, output_path, anonymise)
+        if quiet:
+            app.api.export(*pull_args)
+        else:
+            with Progress() as progress:
+                task = progress.add_task("Download", total=1)
+                app.api.export(
+                    *pull_args,
+                    lambda x: progress.update(task, completed=x),
+                )
+    except Exception as e:
+        print("[bold red]Error![/bold red]", e)
+        raise typer.Exit(1)
 
 
 @app.command(help="Open the xbat web UI.")

@@ -205,7 +205,7 @@ class Api(object):
         level: MeasurementLevel,
         node: str | None,
         progress_callback: Callable[[float], None] | None = None,
-    ):
+    ) -> Path:
         if not isinstance(job_id, int):
             raise ValueError("job_id must be an integer.")
         if metric and type == MeasurementType.all:
@@ -246,3 +246,44 @@ class Api(object):
                 f"job_id {job_id} or combination of job_id, type, and metric not found."
             )
         response.raise_for_status()
+        return output_path
+
+    @_localhost_suppress_security_warning
+    def export(
+        self,
+        run_ids: List[int],
+        output_path: Path,
+        anonymise: bool = False,
+        progress_callback: Callable[[float], None] | None = None,
+    ) -> Path:
+        export_url = f"{self.__api_url}/benchmarks/export"
+        headers = {
+            "accept": "application/octet-stream",
+            "Authorization": f"Bearer {self.access_token}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "runNrs": run_ids,
+            "anonymise": anonymise,
+        }
+        response = requests.post(
+            export_url,
+            headers=headers,
+            json=payload,
+            stream=True,
+            verify=self.__verify_ssl,
+        )
+        if response.status_code == http.HTTPStatus.NO_CONTENT:
+            raise FileNotFoundError("No benchmark data available for export.")
+        response.raise_for_status()
+        total = int(response.headers.get("content-length", 0))
+        downloaded = 0
+        chunk_size = 8192
+        with open(output_path, "wb") as f:
+            for chunk in response.iter_content(chunk_size=chunk_size):
+                if chunk:
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    if progress_callback and total:
+                        progress_callback(downloaded / total)
+        return output_path
