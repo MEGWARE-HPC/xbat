@@ -196,6 +196,23 @@ class Api(object):
         return output["standardOutput"], output["standardError"]
 
     @_localhost_suppress_security_warning
+    def get_job_metrics(self, job_id: int) -> List[str]:
+        jobs_url = f"{self.__api_url}/jobs/{job_id}/metrics"
+        headers = {
+            "accept": "text/json",
+            "Authorization": f"Bearer {self.access_token}",
+        }
+        response = requests.get(
+            jobs_url,
+            headers=headers,
+            verify=self.__verify_ssl,
+        )
+        response.raise_for_status()
+        output = response.json()
+        print(output)
+        exit()
+
+    @_localhost_suppress_security_warning
     def download_job_measurements(
         self,
         job_id: int,

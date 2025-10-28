@@ -90,23 +90,46 @@ def main(
 
 @app.command(help="Update the xbat API access token.")
 def login(
-    user: Annotated[str | None, typer.Option(envvar="XBAT_USER")] = None,
-    password: Annotated[str | None, typer.Option(envvar="XBAT_PASS")] = None,
-    output_access_token: Annotated[
-        bool, typer.Option("--ci", help="Output access token.")
+    ci: Annotated[
+        bool,
+        typer.Option("--ci", help="Use non-interactive mode (CI) and output token."),
     ] = False,
 ):
-    user = user if user else typer.prompt("User")
-    password = password if password else typer.prompt("Password", hide_input=True)
-    try:
-        access_token = app.api.authorize(user, password)
-        if output_access_token:
-            print(access_token)
-        else:
-            print("Access token was updated.")
-    except Exception as e:
-        print("[bold red]Error![/bold red]", e)
+    access_token: str | None = None
+    user = os.getenv("XBAT_USER")
+    password = os.getenv("XBAT_PASS")
+    if ci and (not user or not password):
+        print(
+            " ".join(
+                [
+                    "[bold red]Error![/bold red] When using the option [italic]--ci[/italic],",
+                    "credential must be provided using environment variables",
+                    "([italic]XBAT_USER[/italic], [italic]XBAT_PASS[/italic])",
+                ]
+            )
+        )
         raise typer.Exit(code=1)
+    if not ci and user and password:
+        print("[bold blue]Found credentials in environment![/bold blue]")
+        try:
+            access_token = app.api.authorize(user, password)
+        except AccessTokenError:
+            print("[bold red]Error![/bold red] Implicit credentials were invalid.\n")
+            password = None
+    if not access_token:
+        user = user if ci else typer.prompt("User", default=user)
+        password = password if ci else typer.prompt("Password", hide_input=True)
+        try:
+            assert user, "User was None"
+            assert password, "Password was None"
+            access_token = app.api.authorize(user, password)
+        except Exception as e:
+            print("[bold red]Error![/bold red]", e)
+            raise typer.Exit(code=1)
+    if ci:
+        print(access_token)
+    else:
+        print("Access token was updated.")
 
 
 def validate_access_token():
@@ -266,6 +289,9 @@ def pull(
         print(
             f'[bold yellow]Warning![/bold yellow] Output path {output_path} does not end in ".csv"'
         )
+    # FIXME This currently always returns a 404 through the API.
+    # TODO Metrics should be matched against available ones.
+    # app.api.get_job_metrics(job_id)
     try:
         pull_args = (job_id, output_path, type, metric, level, node)
         if quiet:
