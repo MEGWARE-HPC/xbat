@@ -4,7 +4,7 @@ import warnings
 from enum import Enum
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, Dict, List, TypeVar, cast
+from typing import Any, Callable, Dict, List, Tuple, TypeVar, cast
 from urllib.parse import urlparse
 
 import keyring
@@ -144,20 +144,20 @@ class Api(object):
     @_localhost_suppress_security_warning
     def get_jobs(
         self,
-        runs: List[int] | None = None,
-        jobs: List[int] | None = None,
+        run_ids: List[int] | None = None,
+        job_ids: List[int] | None = None,
         short: bool = True,
     ) -> List[Dict[str, Any]]:
         jobs_url = f"{self.__api_url}/jobs?short={short}"
-        if runs and False:  # FIXME Filtering by runs does not seem to work
+        if run_ids and False:  # FIXME Filtering by runs does not seem to work
             jobs_url += "&runNrs="
-            for i, run in enumerate(runs):
+            for i, run in enumerate(run_ids):
                 if i > 0:
                     jobs_url += ","
                 jobs_url += str(run)
-        if jobs and False:  # FIXME Filtering by jobs does not seem to work
+        if job_ids and False:  # FIXME Filtering by jobs does not seem to work
             jobs_url += "jobIds="
-            for i, job in enumerate(jobs):
+            for i, job in enumerate(job_ids):
                 if i > 0:
                     jobs_url += ","
                 jobs_url += str(job)
@@ -171,13 +171,29 @@ class Api(object):
             verify=self.__verify_ssl,
         )
         response.raise_for_status()
-        data = response.json()["data"]
+        jobs = response.json()["data"]
         # FIXME Workaround for issues above
-        if runs:
-            data = [j for j in data if j["runNr"] in runs]
-        if jobs:
-            data = [j for j in data if j["jobId"] in jobs]
-        return data
+        if run_ids:
+            jobs = [j for j in jobs if j["runNr"] in run_ids]
+        if job_ids:
+            jobs = [j for j in jobs if j["jobId"] in job_ids]
+        return jobs
+
+    @_localhost_suppress_security_warning
+    def log(self, job_id: int) -> Tuple[str, str]:
+        jobs_url = f"{self.__api_url}/jobs/{job_id}/output"
+        headers = {
+            "accept": "text/json",
+            "Authorization": f"Bearer {self.access_token}",
+        }
+        response = requests.get(
+            jobs_url,
+            headers=headers,
+            verify=self.__verify_ssl,
+        )
+        response.raise_for_status()
+        output = response.json()
+        return output["standardOutput"], output["standardError"]
 
     @_localhost_suppress_security_warning
     def pull(

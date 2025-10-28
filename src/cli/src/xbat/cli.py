@@ -12,6 +12,7 @@ import pandas as pd
 import typer
 from fabric import Connection  # type: ignore[import-untyped]
 from rich import print
+from rich.console import Console
 from rich.progress import Progress
 from rich.table import Table
 from typing_extensions import Annotated
@@ -130,7 +131,7 @@ def require_valid_access_token() -> Callable:
     return decorator
 
 
-@app.command(help="List benchmark runs.")
+@app.command(help="List benchmark runs/jobs.")
 @require_valid_access_token()
 def ls(
     filter_config: Annotated[
@@ -179,7 +180,7 @@ def ls(
         list_jobs = True
     if list_jobs:
         columns += ["job", "variant", "job_state"]
-        for job in app.api.get_jobs(runs=[r["runNr"] for r in runs]):
+        for job in app.api.get_jobs(run_ids=[r["runNr"] for r in runs]):
             variant = "N/A"
             try:
                 variant = job["configuration"]["jobscript"]["variantName"]
@@ -220,6 +221,24 @@ def ls(
         else:
             table.add_row(*values)
     print(table)
+
+
+@app.command(help="Show the output and error of a job.")
+def log(
+    job: Annotated[int, typer.Argument(help="ID of the finished job.")],
+):
+    stdout, stderr = app.api.log(job)
+    if not stdout and not stderr:
+        print(f"[bold red]Error![/bold red] No output or error found for job {job}.")
+        raise typer.Exit(1)
+    if stdout:
+        Console(highlight=False).print(stdout)
+        sys.stdout.flush()
+    if stderr:
+        Console(highlight=False, stderr=True).print(
+            typer.style(stderr, fg=typer.colors.RED)
+        )
+        sys.stderr.flush()
 
 
 @app.command(help="Download measurements for a finished job.")
@@ -291,7 +310,7 @@ def ui(
             raise typer.Exit(1)
     elif job:
         validate_access_token()
-        jobs = app.api.get_jobs(jobs=[job])
+        jobs = app.api.get_jobs(job_ids=[job])
         if len(jobs) == 0:
             print("[bold red]Error![/bold red]", f"No job {job} found.")
             raise typer.Exit(1)
