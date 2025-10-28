@@ -184,6 +184,17 @@ class Api(object):
                         progress_callback(downloaded / total)
         return output_path
 
+    @_localhost_suppress_security_warning
+    def cancel_run(self, run_id: int):
+        cancelation_url = f"{self.__api_url}/benchmarks/{run_id}/cancel"
+        headers = self.__headers_auth
+        response = requests.post(
+            cancelation_url,
+            headers=headers,
+            verify=self.__verify_ssl,
+        )
+        response.raise_for_status()
+
     # endregion benchmarks
 
     # region jobs
@@ -249,7 +260,63 @@ class Api(object):
         print(output)
         exit()
 
+    @_localhost_suppress_security_warning
+    def cancel_job(self, job_id: int):
+        cancelation_url = f"{self.__api_url}/slurm/jobs/{job_id}/cancel"
+        headers = self.__headers_auth
+        response = requests.post(
+            cancelation_url,
+            headers=headers,
+            verify=self.__verify_ssl,
+        )
+        response.raise_for_status()
+
     # endregion jobs
+
+    # region configurations
+    @property
+    @_localhost_suppress_security_warning
+    def configurations(self) -> Dict[str, str]:
+        configurations_url = f"{self.__api_url}/configurations"
+        headers = self.__headers_accept("application/json") | self.__headers_auth
+        response = requests.get(
+            configurations_url,
+            headers=headers,
+            verify=self.__verify_ssl,
+        )
+        response.raise_for_status()
+        configurations = response.json()["data"]
+        projects = self.projects
+
+        def format_config(name, shared_project_ids):
+            if len(shared_project_ids) == 0:
+                return name
+            return f"{name} ({', '.join([projects[s] for s in shared_project_ids])})"
+
+        return {
+            c["_id"]: format_config(
+                c["configuration"]["configurationName"],
+                c["configuration"]["sharedProjects"],
+            )
+            for c in configurations
+        }
+
+    # endregion configurations
+
+    # region projects
+    @property
+    @_localhost_suppress_security_warning
+    def projects(self) -> Dict[str, str]:
+        projects_url = f"{self.__api_url}/projects"
+        headers = self.__headers_accept("application/json") | self.__headers_auth
+        response = requests.get(
+            projects_url,
+            headers=headers,
+            verify=self.__verify_ssl,
+        )
+        return {p["_id"]: p["name"] for p in response.json()["data"]}
+
+    # endregion projects
 
     # region measurements
     @_localhost_suppress_security_warning
@@ -306,48 +373,3 @@ class Api(object):
         return output_path
 
     # endregion measurements
-
-    # region configurations
-    @property
-    @_localhost_suppress_security_warning
-    def configurations(self) -> Dict[str, str]:
-        configurations_url = f"{self.__api_url}/configurations"
-        headers = self.__headers_accept("application/json") | self.__headers_auth
-        response = requests.get(
-            configurations_url,
-            headers=headers,
-            verify=self.__verify_ssl,
-        )
-        response.raise_for_status()
-        configurations = response.json()["data"]
-        projects = self.projects
-
-        def format_config(name, shared_project_ids):
-            if len(shared_project_ids) == 0:
-                return name
-            return f"{name} ({', '.join([projects[s] for s in shared_project_ids])})"
-
-        return {
-            c["_id"]: format_config(
-                c["configuration"]["configurationName"],
-                c["configuration"]["sharedProjects"],
-            )
-            for c in configurations
-        }
-
-    # endregion configurations
-
-    # region projects
-    @property
-    @_localhost_suppress_security_warning
-    def projects(self) -> Dict[str, str]:
-        projects_url = f"{self.__api_url}/projects"
-        headers = self.__headers_accept("application/json") | self.__headers_auth
-        response = requests.get(
-            projects_url,
-            headers=headers,
-            verify=self.__verify_ssl,
-        )
-        return {p["_id"]: p["name"] for p in response.json()["data"]}
-
-    # endregion projects

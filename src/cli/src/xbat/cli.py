@@ -3,6 +3,7 @@ import os
 import sys
 import time
 import webbrowser
+from enum import Enum
 from functools import wraps
 from pathlib import Path
 from typing import Callable, Dict, List, Tuple
@@ -315,9 +316,9 @@ def pull(
         print(df)
 
 
-@app.command(help="Run a benchmark.")
+@app.command(help="Start a benchmark run.")
 @require_valid_access_token()
-def run(
+def start(
     config_id: Annotated[
         str | None, typer.Argument(help="The config name of the benchmark to run.")
     ] = None,
@@ -336,6 +337,35 @@ def run(
         )
         raise typer.Exit(1)
     raise NotImplementedError()
+
+
+class StopType(str, Enum):
+    runs = "runs"
+    jobs = "jobs"
+
+
+@app.command(help="Stop benchmark runs/jobs.")
+@require_valid_access_token()
+def stop(
+    stop_type: Annotated[StopType, typer.Argument()],
+    ids: Annotated[
+        List[int], typer.Argument(help="The IDs benchmark runs/jobs to stop.")
+    ],
+    quiet: Annotated[
+        bool,
+        typer.Option("--quiet", "-q", help="Do not output and continue on failure."),
+    ] = False,
+):
+    cancel_func = (
+        app.api.cancel_run if stop_type == StopType.runs else app.api.cancel_job
+    )
+    for i in ids:
+        try:
+            cancel_func(i)
+        except Exception as e:
+            if not quiet:
+                print("[bold red]Error![/bold red]", e)
+                raise typer.Exit(1)
 
 
 # TODO I could not test this yet due to HTTP 403
