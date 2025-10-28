@@ -251,6 +251,26 @@ def ls(
     print(table)
 
 
+@app.command(help="Delete benchmark runs.")
+@require_valid_access_token()
+def rm(
+    runs: Annotated[
+        List[int], typer.Argument(help="The IDs benchmark runs to delete.")
+    ],
+    quiet: Annotated[
+        bool,
+        typer.Option("--quiet", "-q", help="Do not output and continue on failure."),
+    ] = False,
+):
+    for run in runs:
+        try:
+            app.api.delete_run(run)
+        except Exception as e:
+            if not quiet:
+                print("[bold red]Error![/bold red]", e)
+                raise typer.Exit(1)
+
+
 @app.command(help="Show the output and error of a job.")
 def log(
     job: Annotated[int, typer.Argument(help="ID of the finished job.")],

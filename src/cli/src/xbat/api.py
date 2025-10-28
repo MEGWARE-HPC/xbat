@@ -195,6 +195,17 @@ class Api(object):
         )
         response.raise_for_status()
 
+    @_localhost_suppress_security_warning
+    def delete_run(self, run_id: int):
+        deletion_url = f"{self.__api_url}/benchmarks/{run_id}"
+        headers = self.__headers_auth
+        response = requests.delete(
+            deletion_url,
+            headers=headers,
+            verify=self.__verify_ssl,
+        )
+        response.raise_for_status()
+
     # endregion benchmarks
 
     # region jobs
