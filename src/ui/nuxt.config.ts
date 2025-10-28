@@ -80,7 +80,7 @@ export default defineNuxtConfig({
         public: {
             apiPrefix: "/api/v1",
             clientIdPrefix: "wf_",
-            buildVersion: "1.1.0",
+            buildVersion: "1.2.0",
             devRestUrl: "https://localhost:7000",
             demoMode: false,
             demoUser: "",
