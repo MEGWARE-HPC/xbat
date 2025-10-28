@@ -255,7 +255,7 @@ def ls(
 @require_valid_access_token()
 def rm(
     runs: Annotated[
-        List[int], typer.Argument(help="The IDs benchmark runs to delete.")
+        List[int], typer.Argument(help="The IDs of the benchmark runs to delete.")
     ],
     quiet: Annotated[
         bool,
