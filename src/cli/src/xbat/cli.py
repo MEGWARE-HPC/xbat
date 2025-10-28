@@ -296,7 +296,8 @@ def pull(
         )
     # FIXME This currently always returns a 404 through the API.
     # TODO Metrics should be matched against available ones.
-    # app.api.get_job_metrics(job_id)
+    # available_metrics = app.api.get_job_metrics(job_id)
+    # print(available_metrics);exit()
     try:
         pull_args = (job_id, output_path, type, metric, level, node)
         if quiet:

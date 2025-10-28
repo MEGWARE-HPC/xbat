@@ -206,14 +206,14 @@ class Api(object):
         short: bool = True,
     ) -> List[Dict[str, Any]]:
         jobs_url = f"{self.__api_url}/jobs?short={short}"
-        if run_ids and False:  # FIXME Filtering by runs does not seem to work
+        if run_ids:
             jobs_url += "&runNrs="
             for i, run in enumerate(run_ids):
                 if i > 0:
                     jobs_url += ","
                 jobs_url += str(run)
-        if job_ids and False:  # FIXME Filtering by jobs does not seem to work
-            jobs_url += "jobIds="
+        if job_ids:
+            jobs_url += "&jobIds="
             for i, job in enumerate(job_ids):
                 if i > 0:
                     jobs_url += ","
@@ -248,7 +248,7 @@ class Api(object):
 
     @_localhost_suppress_security_warning
     def get_job_metrics(self, job_id: int) -> List[str]:
-        jobs_url = f"{self.__api_url}/jobs/{job_id}/metrics"
+        jobs_url = f"{self.__api_url}/jobs/metrics?jobId={job_id}"
         headers = self.__headers_accept("application/json") | self.__headers_auth
         response = requests.get(
             jobs_url,
