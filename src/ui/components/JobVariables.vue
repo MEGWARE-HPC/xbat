@@ -36,83 +36,86 @@
                 <template #no-data></template>
 
                 <template #chip="{ item }">
-                    <v-chip color="primary-light" style="font-size: 0.875rem">{{
-                        item.title
-                    }}</v-chip>
+                    <v-chip color="primary-light" style="font-size: 0.875rem">
+                        {{ item.title }}
+                    </v-chip>
                 </template>
 
                 <template #prepend-item>
-                    <v-text-field
-                        variant="outlined"
-                        label="Add Value"
-                        class="ml-3 mr-3"
-                        v-model="v.input"
-                        :error-messages="
-                            duplicateState[idx]?.add
-                                ? [
-                                      `Value '${duplicateState[idx].add}' already exists`
-                                  ]
-                                : []
-                        "
-                        @keyup.enter.stop="addNewValue(idx, v.input)"
-                        @keydown.stop
-                        @keyup.stop
-                        @keypress.stop
-                    >
-                        <template #append-inner>
-                            <v-btn
-                                title="Add a value"
-                                variant="plain"
-                                :color="
+                    <v-list-item>
+                        <div class="mt-2">
+                            <v-text-field
+                                variant="outlined"
+                                label="Add Value"
+                                hide-details
+                                v-model="v.input"
+                                ref="addValueInputRefs"
+                                :error-messages="
                                     duplicateState[idx]?.add
-                                        ? 'danger'
-                                        : 'primary-light'
+                                        ? [
+                                              `Value '${duplicateState[idx].add}' already exists`
+                                          ]
+                                        : []
                                 "
-                                icon="$plus"
-                                size="small"
-                                :disabled="
-                                    !v.input || !!duplicateState[idx]?.add
-                                "
-                                @click="addNewValue(idx, v.input)"
-                            />
-                            <v-btn
-                                title="Add multiple values"
-                                icon="$addArray"
-                                color="primary-light"
-                                size="small"
-                                variant="plain"
-                                class="ml-2"
-                                @click="openArrayDialog(idx)"
-                            />
-                            <v-btn
-                                title="Sort or reorder values"
-                                :icon="
-                                    v.sortOrder === 'custom'
-                                        ? '$sortCustom'
-                                        : v.sortOrder === 'desc'
-                                        ? '$sortNumDesc'
-                                        : '$sortNumAsc'
-                                "
-                                :color="
-                                    v.sortOrder === 'custom'
-                                        ? undefined
-                                        : 'primary-light'
-                                "
-                                size="small"
-                                variant="plain"
-                                @click="toggleSortOrder(idx)"
-                            />
-                        </template>
-                    </v-text-field>
+                                @keyup.enter.stop="addNewValue(idx, v.input)"
+                                @focus="onAddValueFocus(idx)"
+                                @click.stop
+                                @mousedown.stop
+                                @mouseup.stop
+                            >
+                                <template #append-inner>
+                                    <v-btn
+                                        title="Add a value"
+                                        variant="plain"
+                                        :color="
+                                            duplicateState[idx]?.add
+                                                ? 'danger'
+                                                : 'primary-light'
+                                        "
+                                        icon="$plus"
+                                        size="small"
+                                        :disabled="
+                                            !v.input ||
+                                            !!duplicateState[idx]?.add
+                                        "
+                                        @click.stop="addNewValue(idx, v.input)"
+                                    />
+                                    <v-btn
+                                        title="Add multiple values"
+                                        icon="$addArray"
+                                        color="primary-light"
+                                        size="small"
+                                        variant="plain"
+                                        class="ml-2"
+                                        @click.stop="openArrayDialog(idx)"
+                                    />
+                                    <v-btn
+                                        title="Sort or reorder values"
+                                        :icon="
+                                            v.sortOrder === 'custom'
+                                                ? '$sortCustom'
+                                                : v.sortOrder === 'desc'
+                                                ? '$sortNumDesc'
+                                                : '$sortNumAsc'
+                                        "
+                                        :color="
+                                            v.sortOrder === 'custom'
+                                                ? undefined
+                                                : 'primary-light'
+                                        "
+                                        size="small"
+                                        variant="plain"
+                                        @click.stop="toggleSortOrder(idx)"
+                                    />
+                                </template>
+                            </v-text-field>
+                        </div>
+                    </v-list-item>
                 </template>
 
-                <template #append-item>
-                    <div v-if="!v.values.length" class="pa-3 text-grey">
-                        No values configured
-                    </div>
-
+                <template #append-item v-if="v.values.length > 0">
+                    <v-divider class="mt-2" />
                     <draggable
-                        v-else
                         v-model="v.values"
                         item-key="value"
                         tag="div"
@@ -134,6 +137,15 @@
                                         )
                                     "
                                     hide-details="auto"
+                                    @click.stop
+                                    @mousedown.stop
+                                    @mouseup.stop
+                                    @focus="
+                                        onEditValueFocus(
+                                            idx,
+                                            v.values.indexOf(element)
+                                        )
+                                    "
                                     :error-messages="
                                         duplicateState[idx]?.edit === element
                                             ? [
@@ -141,20 +153,20 @@
                                               ]
                                             : []
                                     "
+                                    ref="editValueInputRefs"
                                 >
                                     <template #prepend>
                                         <v-icon
                                             icon="$sortDrag"
                                             size="small"
                                             class="mr-2 cursor-move"
-                                            @mousedown="
-                                                $event.stopPropagation()
-                                            "
+                                            @mousedown.stop
                                         />
                                         <v-checkbox-btn
                                             color="primary-light"
                                             v-model="v.selected"
                                             :value="element"
+                                            @click.stop
                                         />
                                     </template>
                                     <template #append>
@@ -162,7 +174,9 @@
                                             icon="$close"
                                             size="x-small"
                                             variant="plain"
-                                            @click="removeValue(idx, element)"
+                                            @click.stop="
+                                                removeValue(idx, element)
+                                            "
                                         />
                                     </template>
                                 </v-text-field>
@@ -180,9 +194,16 @@
                             variant="plain"
                             color="danger"
                             size="small"
-                            @click="removeAllValues(idx)"
+                            @click.stop="removeAllValues(idx)"
                         />
                     </div>
+                </template>
+                <template #append-item v-else-if="!v.values.length">
+                    <v-list-item class="text-grey">
+                        <v-list-item-title
+                            >No values configured</v-list-item-title
+                        >
+                    </v-list-item>
                 </template>
             </v-select>
 
@@ -201,8 +222,8 @@
                 @click="addVariable"
                 prepend-icon="$plus"
                 size="small"
-                >Add variable</v-btn
-            >
+                >Add variable
+            </v-btn>
         </div>
 
         <v-dialog v-model="arrayDialog.open" max-width="400px">
@@ -277,15 +298,15 @@
                         variant="plain"
                         size="small"
                         @click="arrayDialog.open = false"
-                        >Cancel</v-btn
-                    >
+                        >Cancel
+                    </v-btn>
                     <v-btn
                         variant="plain"
                         size="small"
                         color="primary-light"
                         @click="confirmArrayValues"
-                        >Confirm</v-btn
-                    >
+                        >Confirm
+                    </v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -330,6 +351,36 @@ const arrayDialog = ref({
     endError: "",
     stepError: ""
 });
+
+const addValueInputRefs = ref<HTMLElement[]>([]);
+const editValueInputRefs = ref<HTMLElement[][]>([]);
+
+const onAddValueFocus = (idx: number) => {
+    nextTick(() => {
+        const inputRef = addValueInputRefs.value[idx];
+        if (inputRef && typeof inputRef.focus === "function") {
+            const inputElement = inputRef.$el.querySelector("input");
+            if (inputElement) {
+                inputElement.focus();
+                inputElement.select();
+            }
+        }
+    });
+};
+
+const onEditValueFocus = (variableIdx: number, valueIdx: number) => {
+    nextTick(() => {
+        const inputRefGroup = editValueInputRefs.value[variableIdx];
+        if (inputRefGroup && inputRefGroup[valueIdx]) {
+            const inputRef = inputRefGroup[valueIdx];
+            const inputElement = inputRef.$el.querySelector("input");
+            if (inputElement) {
+                inputElement.focus();
+                inputElement.select();
+            }
+        }
+    });
+};
 
 const onNumberKeydown = (evt: KeyboardEvent, allowSign: boolean) => {
     const k = evt.key;
@@ -525,6 +576,17 @@ const addNewValue = (idx: number, value: string) => {
 
     v.input = "";
     state.add = false;
+
+    nextTick(() => {
+        const inputRef = addValueInputRefs.value[idx];
+        if (inputRef && typeof inputRef.focus === "function") {
+            const inputElement = inputRef.$el.querySelector("input");
+            if (inputElement) {
+                inputElement.focus();
+                inputElement.select();
+            }
+        }
+    });
 };
 
 const editValue = (idx: number, valIdx: number, newValue: string) => {
