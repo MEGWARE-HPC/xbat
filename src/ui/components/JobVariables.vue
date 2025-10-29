@@ -122,6 +122,7 @@
                         :ghost-class="'drag-ghost'"
                         :chosen-class="'drag-chosen'"
                         :drag-class="'drag-item'"
+                        handle=".drag-handle"
                     >
                         <template #item="{ element }">
                             <v-list-item :title="undefined">
@@ -150,10 +151,11 @@
                                         <v-icon
                                             icon="$sortDrag"
                                             size="small"
-                                            class="mr-2 cursor-move"
+                                            class="mr-2 cursor-move drag-handle"
                                             @mousedown.stop
                                         />
                                         <v-checkbox-btn
+                                            class="drag-handle"
                                             color="primary-light"
                                             v-model="v.selected"
                                             :value="element"
