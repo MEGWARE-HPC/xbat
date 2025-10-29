@@ -237,11 +237,6 @@ class Api(object):
         )
         response.raise_for_status()
         jobs = response.json()["data"]
-        # FIXME Workaround for issues above
-        if run_ids:
-            jobs = [j for j in jobs if j["runNr"] in run_ids]
-        if job_ids:
-            jobs = [j for j in jobs if j["jobId"] in job_ids]
         return jobs
 
     @_localhost_suppress_security_warning

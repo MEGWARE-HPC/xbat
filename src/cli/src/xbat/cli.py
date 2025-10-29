@@ -13,6 +13,7 @@ import pandas as pd
 import questionary
 import typer
 from fabric import Connection  # type: ignore[import-untyped]
+from invoke import Context
 from rich import print
 from rich.console import Console
 from rich.progress import Progress
@@ -37,6 +38,28 @@ class App(typer.Typer):
                 self.forward_ctx.close()
             if self.connection:
                 self.connection.close()
+
+    def exec_cmd(self, cmd: str) -> Tuple[int, str, str]:
+        runner = self.connection if self.connection is not None else Context()
+        result = runner.run(cmd, hide=True, warn=True)
+        assert result is not None
+        return result.exited, result.stdout.strip(), result.stderr.strip()
+
+    def check_command_exits(self, command: str) -> bool:
+        return (
+            os.EX_OK == self.exec_cmd(f"command -v {command}")[0]
+            or
+            # Try again for Windows CMD
+            os.EX_OK == self.exec_cmd(f"where {command}")[0]
+        )
+
+    def check_file_exists(self, path: Path) -> bool:
+        return (
+            os.EX_OK == self.exec_cmd(f"ls {path}")[0]
+            or
+            # Try again for Windows CMD
+            os.EX_OK == self.exec_cmd(f"dir {path}")[0]
+        )
 
 
 app = App(
@@ -90,7 +113,23 @@ def main(
     app.api = Api(app.base_url, api_version, client_id)
 
 
+def handle_errors(func: Callable) -> Callable:
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            print("[bold red]Error![/bold red]", e)
+            if isinstance(e, AccessTokenError):
+                app_name = os.path.basename(sys.argv[0])
+                print(f"Authenticate by running [green]{app_name} login[/green]!")
+            raise typer.Exit(code=1)
+
+    return wrapper
+
+
 @app.command(help="Update the xbat API access token.")
+@handle_errors
 def login(
     ci: Annotated[
         bool,
@@ -101,16 +140,15 @@ def login(
     user = os.getenv("XBAT_USER")
     password = os.getenv("XBAT_PASS")
     if ci and (not user or not password):
-        print(
+        raise ValueError(
             " ".join(
                 [
-                    "[bold red]Error![/bold red] When using the option [italic]--ci[/italic],",
+                    "When using the option --ci,",
                     "credential must be provided using environment variables",
-                    "([italic]XBAT_USER[/italic], [italic]XBAT_PASS[/italic])",
+                    "(XBAT_USER, XBAT_PASS)",
                 ]
             )
         )
-        raise typer.Exit(code=1)
     if not ci and user and password:
         print("[bold blue]Found credentials in environment![/bold blue]")
         try:
@@ -121,27 +159,18 @@ def login(
     if not access_token:
         user = user if ci else typer.prompt("User", default=user)
         password = password if ci else typer.prompt("Password", hide_input=True)
-        try:
-            assert user, "User was None"
-            assert password, "Password was None"
-            access_token = app.api.authorize(user, password)
-        except Exception as e:
-            print("[bold red]Error![/bold red]", e)
-            raise typer.Exit(code=1)
+        assert user, "User was None"
+        assert password, "Password was None"
+        access_token = app.api.authorize(user, password)
     if ci:
         print(access_token)
     else:
         print("Access token was updated.")
 
 
+@handle_errors
 def validate_access_token():
-    try:
-        app.api.validate_access_token()
-    except AccessTokenError as e:
-        print("[bold red]Error![/bold red]", e)
-        app_name = os.path.basename(sys.argv[0])
-        print(f"Authenticate by running [green]{app_name} login[/green]!")
-        raise typer.Exit(code=1)
+    app.api.validate_access_token()
 
 
 def require_valid_access_token() -> Callable:
@@ -252,6 +281,7 @@ def ls(
 
 
 @app.command(help="Delete benchmark runs.")
+@handle_errors
 @require_valid_access_token()
 def rm(
     runs: Annotated[
@@ -265,20 +295,19 @@ def rm(
     for run in runs:
         try:
             app.api.delete_run(run)
-        except Exception as e:
+        except Exception:
             if not quiet:
-                print("[bold red]Error![/bold red]", e)
-                raise typer.Exit(1)
+                raise
 
 
 @app.command(help="Show the output and error of a job.")
+@handle_errors
 def log(
     job: Annotated[int, typer.Argument(help="ID of the finished job.")],
 ):
     stdout, stderr = app.api.get_job_output(job)
     if not stdout and not stderr:
-        print(f"[bold red]Error![/bold red] No output or error found for job {job}.")
-        raise typer.Exit(1)
+        raise FileNotFoundError(f"No output or error found for job {job}.")
     if stdout:
         Console(highlight=False).print(stdout)
         sys.stdout.flush()
@@ -290,6 +319,7 @@ def log(
 
 
 @app.command(help="Download measurements for a finished job.")
+@handle_errors
 @require_valid_access_token()
 def pull(
     job_id: Annotated[int, typer.Argument(help="ID of a finished job.")],
@@ -318,46 +348,83 @@ def pull(
     # TODO Metrics should be matched against available ones.
     # available_metrics = app.api.get_job_metrics(job_id)
     # print(available_metrics);exit()
-    try:
-        pull_args = (job_id, output_path, type, metric, level, node)
-        if quiet:
-            app.api.download_job_measurements(*pull_args)
-        else:
-            with Progress() as progress:
-                task = progress.add_task("Download", total=1)
-                app.api.download_job_measurements(
-                    *pull_args,
-                    lambda x: progress.update(task, completed=x),
-                )
-    except Exception as e:
-        print("[bold red]Error![/bold red]", e)
-        raise typer.Exit(1)
+    pull_args = (job_id, output_path, type, metric, level, node)
+    if quiet:
+        app.api.download_job_measurements(*pull_args)
+    else:
+        with Progress() as progress:
+            task = progress.add_task("Download", total=1)
+            app.api.download_job_measurements(
+                *pull_args,
+                lambda x: progress.update(task, completed=x),
+            )
     if not quiet:
         df = pd.read_csv(output_path)
         print(df)
 
 
 @app.command(help="Start a benchmark run.")
+@handle_errors
 @require_valid_access_token()
 def start(
     config_id: Annotated[
         str | None, typer.Argument(help="The config name of the benchmark to run.")
     ] = None,
+    job_script: Annotated[
+        Path | None,
+        typer.Option(
+            "--job-script",
+            "-j",
+            help="The path to a Slurm script on the remote to execute as a benchmark run.",
+        ),
+    ] = None,
+    ci: Annotated[
+        bool,
+        typer.Option("--ci", help="Only output job ID on success."),
+    ] = False,
 ):
-    configs = app.api.configurations
-    if not config_id:
+    if config_id and job_script:
+        raise ValueError(
+            "Either a configuration ID or path to a job script may be given, not both."
+        )
+    configs = {} if job_script else app.api.configurations
+    if not config_id and not job_script:
         config_id = questionary.select(
             "Select a configuration:",
             choices=[dict(name=f"{k} {v}", value=k) for k, v in configs.items()],
         ).ask()
         if not config_id:
             raise typer.Abort()
-    if config_id not in configs:
-        print(
-            f"[bold red]Error![/bold red] No configuration with id {config_id} found."
+    if job_script:
+        if not app.check_command_exits("sbatch"):
+            raise RuntimeError(
+                f"No sbatch executable found. (Is Slurm installed on {app.exec_cmd('hostname')[1]}?)"
+            )
+        if not app.check_file_exists(job_script):
+            raise RuntimeError(f"No job script found at this path: {job_script}")
+        status, stdout, stderr = app.exec_cmd(
+            " ".join(
+                [
+                    "sbatch",
+                    "--constraint=xbat",
+                    "--exclusive",
+                    "--wait-all-nodes=1",
+                    "--parsable",
+                    str(job_script),
+                ]
+            )
         )
-        raise typer.Exit(1)
-    raise NotImplementedError()
+        if status != os.EX_OK:
+            raise RuntimeError((stdout + stderr).strip())
+        if ci:
+            print(stdout)
+        else:
+            print(f"Started benchmark run with job ID {stdout}.")
+    elif config_id not in configs:
+        raise FileNotFoundError(f"No configuration with id {config_id} found.")
+    else:
+        # TODO implement starting benchmark through API
+        raise NotImplementedError("Start benchmark run with config_id")
 
 
 class StopType(str, Enum):
@@ -366,6 +433,7 @@ class StopType(str, Enum):
 
 
 @app.command(help="Stop benchmark runs/jobs.")
+@handle_errors
 @require_valid_access_token()
 def stop(
     stop_type: Annotated[StopType, typer.Argument()],
@@ -383,14 +451,14 @@ def stop(
     for i in ids:
         try:
             cancel_func(i)
-        except Exception as e:
+        except Exception:
             if not quiet:
-                print("[bold red]Error![/bold red]", e)
-                raise typer.Exit(1)
+                raise
 
 
 # TODO I could not test this yet due to HTTP 403
 @app.command(help="Create a backup of benchmark runs.")
+@handle_errors
 @require_valid_access_token()
 def export(
     runs: Annotated[List[int], typer.Argument(help="IDs of benchmark runs to export.")],
@@ -406,23 +474,20 @@ def export(
         print(
             f'[bold yellow]Warning![/bold yellow] Output path {output_path} does not end in ".tgz"'
         )
-    try:
-        pull_args = (runs, output_path, anonymise)
-        if quiet:
-            app.api.export_runs(*pull_args)
-        else:
-            with Progress() as progress:
-                task = progress.add_task("Download", total=1)
-                app.api.export_runs(
-                    *pull_args,
-                    lambda x: progress.update(task, completed=x),
-                )
-    except Exception as e:
-        print("[bold red]Error![/bold red]", e)
-        raise typer.Exit(1)
+    pull_args = (runs, output_path, anonymise)
+    if quiet:
+        app.api.export_runs(*pull_args)
+    else:
+        with Progress() as progress:
+            task = progress.add_task("Download", total=1)
+            app.api.export_runs(
+                *pull_args,
+                lambda x: progress.update(task, completed=x),
+            )
 
 
 @app.command(help="Open the xbat web UI.")
+@handle_errors
 def ui(
     run: Annotated[
         int | None, typer.Option("--run", "-r", help="Benchmark run to open.")
@@ -443,14 +508,12 @@ def ui(
         validate_access_token()
         runs = [int(r["runNr"]) for r in app.api.benchmark_runs]
         if run not in runs:
-            print("[bold red]Error![/bold red]", f"No benchmark run #{run} found.")
-            raise typer.Exit(1)
+            raise FileNotFoundError("No benchmark run #{run} found.")
     elif job:
         validate_access_token()
         jobs = app.api.get_jobs(job_ids=[job])
         if len(jobs) == 0:
-            print("[bold red]Error![/bold red]", f"No job {job} found.")
-            raise typer.Exit(1)
+            raise FileNotFoundError("No job {job} found.")
         run = jobs[0]["runNr"]
     if run:
         if not url.endswith("/"):
@@ -487,7 +550,7 @@ def ui(
 
     if can_open_url():
         webbrowser.open(url)
-        time.sleep(1)
+        time.sleep(3)
         print("Web UI opened at", url)
     else:
         print("Web UI running at", url)
