@@ -49,7 +49,6 @@
                                 label="Add Value"
                                 hide-details
                                 v-model="v.input"
-                                ref="addValueInputRefs"
                                 :error-messages="
                                     duplicateState[idx]?.add
                                         ? [
@@ -58,7 +57,6 @@
                                         : []
                                 "
                                 @keyup.enter.stop="addNewValue(idx, v.input)"
-                                @focus="onAddValueFocus(idx)"
                                 @click.stop
                                 @mousedown.stop
                                 @mouseup.stop
@@ -140,12 +138,6 @@
                                     @click.stop
                                     @mousedown.stop
                                     @mouseup.stop
-                                    @focus="
-                                        onEditValueFocus(
-                                            idx,
-                                            v.values.indexOf(element)
-                                        )
-                                    "
                                     :error-messages="
                                         duplicateState[idx]?.edit === element
                                             ? [
@@ -153,7 +145,6 @@
                                               ]
                                             : []
                                     "
-                                    ref="editValueInputRefs"
                                 >
                                     <template #prepend>
                                         <v-icon
@@ -352,36 +343,6 @@ const arrayDialog = ref({
     stepError: ""
 });
 
-const addValueInputRefs = ref<HTMLElement[]>([]);
-const editValueInputRefs = ref<HTMLElement[][]>([]);
-
-const onAddValueFocus = (idx: number) => {
-    nextTick(() => {
-        const inputRef = addValueInputRefs.value[idx];
-        if (inputRef && typeof inputRef.focus === "function") {
-            const inputElement = inputRef.$el.querySelector("input");
-            if (inputElement) {
-                inputElement.focus();
-                inputElement.select();
-            }
-        }
-    });
-};
-
-const onEditValueFocus = (variableIdx: number, valueIdx: number) => {
-    nextTick(() => {
-        const inputRefGroup = editValueInputRefs.value[variableIdx];
-        if (inputRefGroup && inputRefGroup[valueIdx]) {
-            const inputRef = inputRefGroup[valueIdx];
-            const inputElement = inputRef.$el.querySelector("input");
-            if (inputElement) {
-                inputElement.focus();
-                inputElement.select();
-            }
-        }
-    });
-};
-
 const onNumberKeydown = (evt: KeyboardEvent, allowSign: boolean) => {
     const k = evt.key;
     const allowedNav = [
@@ -576,17 +537,6 @@ const addNewValue = (idx: number, value: string) => {
 
     v.input = "";
     state.add = false;
-
-    nextTick(() => {
-        const inputRef = addValueInputRefs.value[idx];
-        if (inputRef && typeof inputRef.focus === "function") {
-            const inputElement = inputRef.$el.querySelector("input");
-            if (inputElement) {
-                inputElement.focus();
-                inputElement.select();
-            }
-        }
-    });
 };
 
 const editValue = (idx: number, valIdx: number, newValue: string) => {
