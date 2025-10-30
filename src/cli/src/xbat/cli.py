@@ -90,6 +90,7 @@ def main(
     ] = "https://demo.xbat.dev",
     api_version: Annotated[str, typer.Option(envvar="XBAT_API_VERSION")] = "v1",
     client_id: Annotated[str, typer.Option(envvar="XBAT_API_CLIENT_ID")] = "demo",
+    # Just for documentation in help
     access_token: Annotated[
         str | None,
         typer.Option(envvar="XBAT_ACCESS_TOKEN", help="Alternative to keyring."),
@@ -186,6 +187,7 @@ def require_valid_access_token() -> Callable:
 
 
 @app.command(help="Output benchmark runs/jobs in a table.")
+@handle_errors
 @require_valid_access_token()
 def ls(
     filter_config: Annotated[
@@ -302,6 +304,7 @@ def rm(
 
 @app.command(help="Show the output and error of a job.")
 @handle_errors
+@require_valid_access_token()
 def log(
     job: Annotated[int, typer.Argument(help="ID of the finished job.")],
 ):
