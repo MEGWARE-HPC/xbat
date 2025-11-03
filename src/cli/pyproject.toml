@@ -3,7 +3,7 @@ name = "xbat-cli"
 version = "0.1.0"
 description = "xbat command line interface"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = [
     "fabric>=3.2.2",
     "keyring>=25.6.0",
@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-xbat = "xbat.cli:app"
+xbat = "xbat.__main__:app"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -25,6 +25,7 @@ package = true
 [dependency-groups]
 dev = [
     "mypy>=1.18.2",
+    "nuitka>=2.8.4",
     "pandas-stubs>=2.3.2.250926",
     "types-requests>=2.32.4.20250913",
 ]

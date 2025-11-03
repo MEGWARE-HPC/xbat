@@ -20,6 +20,11 @@
 
 ## Advanced Topics
 
+### Stand-alone Executable
+
+To use the xbat CLI without relying on Python being installed on the system, compile a stand-alone binary using [Nuitka](https://nuitka.net/) by running the script `build-standalone.py`, which creates `./dist/xbat.bin`.  
+:warning: This may take roughly 30 minutes and the resulting file is over 50 MB instead of 5 kB for the python binary package.
+
 ### Locked Down xbat
 
 If the xbat API and Web UI are only accessible via the system that running them, enable local port forwarding.  
