@@ -20,7 +20,7 @@
     "@nuxtjs/color-mode": "^3.5.2",
     "@pinia/nuxt": "^0.11.0",
     "@types/plotly.js-basic-dist-min": "^2.12.4",
-    "@vueuse/core": "^13.2.0",
+    "@vueuse/core": "^13.6.0",
     "async-mutex": "^0.5.0",
     "caniuse-lite": "^1.0.30001753",
     "canvg": "^4.0.3",
