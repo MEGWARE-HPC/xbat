@@ -115,7 +115,7 @@ services:
             - 6379
         command: ["/usr/local/etc/valkey/valkey.conf"]
     xbat-pgbouncer:
-        image: docker.io/bitnami/pgbouncer:1.23.1
+        image: docker.io/bitnamilegacy/pgbouncer:1.23.1
         restart: unless-stopped
         container_name: xbat-pgbouncer
         user: "#XBAT_UID#:#XBAT_GID#"

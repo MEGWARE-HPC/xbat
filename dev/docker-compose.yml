@@ -21,7 +21,7 @@ services:
         ports:
             - 6379:6379
     xbat-pgbouncer:
-        image: bitnami/pgbouncer:latest
+        image: bitnamilegacy/pgbouncer:1.23.1
         container_name: xbat-pgbouncer
         network_mode: "host"
         user: "${XBAT_UID}:${XBAT_GID}"
