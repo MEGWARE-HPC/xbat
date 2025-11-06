@@ -24,6 +24,7 @@ All notable changes to this project will be documented in this file.
 -   show x-axis title in the graph (#137)
 -   optimized the docs mobile experience
 -   data types and sorting strategies in job variables (#138)
+-   focus and improved drag-and-drop experience
 
 ## v1.1.0 - 2025-09-12
 
