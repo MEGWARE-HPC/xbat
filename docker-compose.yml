@@ -115,7 +115,7 @@ services:
             - 6379
         command: ["/usr/local/etc/valkey/valkey.conf"]
     xbat-pgbouncer:
-        image: edoburu/pgbouncer:latest
+        image: docker.io/edoburu/pgbouncer:latest
         restart: unless-stopped
         container_name: xbat-pgbouncer
         user: "#XBAT_UID#:#XBAT_GID#"
