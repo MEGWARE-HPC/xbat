@@ -14,7 +14,7 @@ services:
             - 389:389
             - 636:636
     xbat-valkey:
-        image: valkey/valkey
+        image: valkey/valkey:alpine
         container_name: xbat-valkey
         volumes:
             - /etc/xbat/valkey.conf:/usr/local/etc/valkey/valkey.conf:ro
