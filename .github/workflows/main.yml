@@ -3,10 +3,10 @@ name: Build and Test xbat daemon
 on:
   push:
     branches:
-      - CI_squash
+      - CI_containers
   pull_request:
     branches:
-      - CI_squash
+      - CI_containers
 
 jobs:
   build-el8:
