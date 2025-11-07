@@ -1,0 +1,12 @@
+name: 'Cache Node Modules'
+description: 'Caches the node_modules directory based on package-lock.json to speed up builds.'
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/cache@v3
+      with:
+        path: node_modules
+        key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
