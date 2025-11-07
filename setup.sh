@@ -132,8 +132,6 @@ prepare_databases() {
     QUESTDB_LOG_PATH="$LOG_BASE_PATH/questdb"
 
     if [[ "$NODB" == false ]]; then
-        "$EXECUTOR" build -t xbat_mongodb -f ./docker/mongodb.dockerfile .
-
         sudo -u "$XBAT_USER" mkdir -p "$MONGODB_PATH" "$MONGODB_LOG_PATH" "$QUESTDB_PATH" "$QUESTDB_LOG_PATH" "$QUESTDB_CONF_PATH"
         sudo -u "$XBAT_USER" touch "$MONGODB_LOG_PATH/mongod.log"
 
