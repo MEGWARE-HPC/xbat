@@ -57,12 +57,16 @@ def get_all(runNrs=None, jobIds=None, short=False):
     accessable_jobs = [j["jobId"] for j in jobs]
 
     if runNrs is not None:
+        if not runNrs:
+            raise httpErrors.BadRequest("'runNrs' must not be empty.")
         for run in runNrs:
-            if not (run in accessable_runs): raise httpErrors.Unauthorized()
+            if not (run in accessable_runs): raise httpErrors.NotFound()
 
     if jobIds is not None:
+        if not jobIds:
+            raise httpErrors.BadRequest("'jobIds' must not be empty.")
         for job in jobIds:
-            if not (job in accessable_jobs): raise httpErrors.Unauthorized()
+            if not (job in accessable_jobs): raise httpErrors.NotFound()
 
     query_filter = {}
     if runNrs is not None:
