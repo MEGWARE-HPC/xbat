@@ -15,10 +15,7 @@
                 }}
             </p>
 
-            <div
-                v-if="props.error.statusCode === 404"
-                class="mt-4 text-medium-emphasis"
-            >
+            <div v-if="props.error.statusCode === 404" class="back-home">
                 <p>Back to Homepage in {{ countdown }} seconds...</p>
             </div>
 
@@ -95,5 +92,12 @@ useSeoMeta({
     font-size: 2.5em;
     margin-bottom: 20px;
     color: $primary-light;
+}
+.back-home {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(var(--v-theme-font-base), 0.16);
+    color: $font-light;
+    font-size: 0.95rem;
 }
 </style>
