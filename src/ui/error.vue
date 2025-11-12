@@ -14,7 +14,15 @@
                     "An unexpected error occurred"
                 }}
             </p>
-            <div class="d-flex justify-center mt-12">
+
+            <div
+                v-if="props.error.statusCode === 404"
+                class="mt-4 text-medium-emphasis"
+            >
+                <p>Back to home in {{ countdown }} seconds...</p>
+            </div>
+
+            <div class="d-flex justify-center mt-12 gap-4">
                 <v-btn
                     color="primary-light"
                     size="large"
@@ -33,6 +41,31 @@ const props = withDefaults(
     }>(),
     { layout: "default" }
 );
+
+const countdown = ref(5);
+let timer: ReturnType<typeof setInterval> | null = null;
+
+const clearTimer = () => {
+    if (timer) {
+        clearInterval(timer);
+        timer = null;
+    }
+};
+onMounted(() => {
+    if (props.error.statusCode === 404) {
+        timer = setInterval(() => {
+            countdown.value--;
+            if (countdown.value <= 0) {
+                clearTimer();
+                navigateTo("/");
+            }
+        }, 1000);
+    }
+});
+
+onUnmounted(() => {
+    clearTimer();
+});
 
 const errorDescriptions: Record<string, string> = {
     "404": "Sorry, but the page you were trying to view does not exist.",
