@@ -19,7 +19,7 @@
                 v-if="props.error.statusCode === 404"
                 class="mt-4 text-medium-emphasis"
             >
-                <p>Back to home in {{ countdown }} seconds...</p>
+                <p>Back to Homepage in {{ countdown }} seconds...</p>
             </div>
 
             <div class="d-flex justify-center mt-12 gap-4">
@@ -72,13 +72,20 @@ const errorDescriptions: Record<string, string> = {
     "400": "Your submission contains invalid parameters, please check and try again.",
     "401": "You are not authorized to view this page. Please login.",
     "403": "You do not have permission to access this page.",
-    "408": "Request Timeout",
-    "429": "Too Many Requests",
+    "408": "Request Timeout - The server took too long to respond.",
+    "429": "Too Many Requests - Please try again later.",
     "500": "Internal Server Error",
     "502": "Bad Gateway",
     "503": "Service Unavailable",
     "504": "Gateway Timeout"
 };
+
+useSeoMeta({
+    title: `Error - ${props.error.statusCode}`,
+    description:
+        errorDescriptions[props.error.statusCode] ||
+        "An unexpected error occurred"
+});
 </script>
 
 <style scoped lang="scss">
