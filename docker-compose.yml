@@ -122,7 +122,7 @@ services:
         volumes:
             - /etc/localtime:/etc/localtime:ro
             - /etc/xbat/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
-            - /etc/xbat/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+            - /etc/xbat/userlists.txt:/etc/pgbouncer/userlists.txt:ro
         depends_on:
             - xbat-questdb
         expose:
