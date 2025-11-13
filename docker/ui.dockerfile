@@ -1,4 +1,4 @@
-FROM node:22-alpine AS builder
+FROM node:lts-alpine AS builder
 
 WORKDIR /app
 
@@ -13,9 +13,7 @@ RUN npm run build
 
 #############################
 
-FROM node:22-alpine AS runner
-
-RUN addgroup -g 1001 -S nodegroup && adduser -u 1001 -S nodeuser -G nodegroup
+FROM node:lts-alpine AS runner
 
 WORKDIR /app
 
@@ -25,8 +23,8 @@ COPY --from=builder /app/ecosystem.config.cjs .
 
 RUN npm install -g pm2
 
-USER nodeuser
+USER node
 
 EXPOSE 7003
 
-CMD ["pm2-runtime", "--interpreter=$(whereis node)", "ecosystem.config.cjs"]
+CMD ["pm2-runtime", "--interpreter=node", "ecosystem.config.cjs"]
