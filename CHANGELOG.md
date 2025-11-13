@@ -9,16 +9,23 @@ All notable changes to this project will be documented in this file.
 -   API endpoint and frontend button to backup entire MongoDB database (admin only) (#131)
 -   automatic subgroup opening and collapsing in docs navigation
 -   match highlighting to the search function in docs
+-   duplicate checks in manual mode to job variables (#138)
+-   input restrictions (+ error messages) in job variables and optimize support for Firefox (#138)
 
 ### Changed
 
 -   upgraded Nuxt/Content from v2 to v3 (#82)
+-   upgraded QuestDB from v8 to v9 (#135)
+-   optimized queries for accessing QuestDB
 -   migrated MongoDB from v5 to v8 (to retain data from the previous database, please follow the migration guide.) (#90)
 
 ### Fixed
 
 -   x-axis titles in roofline (#117)
--   optimized the mobile experience
+-   show x-axis title in the graph (#137)
+-   optimized the docs mobile experience
+-   data types and sorting strategies in job variables (#138)
+-   focus and improved drag-and-drop experience
 
 ## v1.1.0 - 2025-09-12
 
