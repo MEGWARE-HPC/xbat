@@ -11,12 +11,18 @@ All notable changes to this project will be documented in this file.
 -   match highlighting to the search function in docs
 -   duplicate checks in manual mode to job variables (#138)
 -   input restrictions (+ error messages) in job variables and optimize support for Firefox (#138)
+-   validation to ensure peaks and metrics are matched (#151)
+-   support to retain previous modifiers settings (#151)
+-   support for custom legends for peak values (#151)
+-   support to retain peaks information when switching between levels (#151)
+-   group name for peaks within traces (#151)
 
 ### Changed
 
 -   upgraded Nuxt/Content from v2 to v3 (#82)
 -   upgraded QuestDB from v8 to v9 (#135)
 -   optimized queries for accessing QuestDB
+-   optimized scaling factor for peak values and improved its representation in legends (#151)
 
 ### Fixed
 
