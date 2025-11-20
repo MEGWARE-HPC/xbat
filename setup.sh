@@ -17,9 +17,10 @@ CONF_DEST_PATH="/etc/xbat"
 LOG_BASE_PATH="/var/log/xbat"
 LIB_BASE_PATH="/var/lib/xbat"
 RUN_PATH="/run/xbat"
+YES=false
 
-EXECUTOR="podman"
-EXECUTOR_COMPOSE="podman-compose"
+EXECUTOR="docker"
+EXECUTOR_COMPOSE=(docker compose)
 
 HOME_MNT=""
 HELP=false
@@ -61,7 +62,11 @@ create_user_if_missing() {
 }
 
 check_prerequisites() {
-    local cmds=("rsync" "wget" "$EXECUTOR" "$EXECUTOR_COMPOSE")
+    local cmds=("rsync" "wget" "$EXECUTOR")
+    if [[ "$EXECUTOR" == "podman" ]]; then
+        cmds+=("$EXECUTOR_COMPOSE")
+    fi
+
     for cmd in "${cmds[@]}"; do
         if ! command -v "$cmd" &>/dev/null; then
             log_error "$cmd is not installed. Please install it and try again."
@@ -201,28 +206,50 @@ setup_systemd_service() {
 remove_action() {
     log_info "Starting removal..."
     systemctl stop "$SERVICE_NAME" || true
+    echo "After systemctl stop"
     systemctl disable "$SERVICE_NAME" || true
+    echo "After systemctl disable"
     rm -f "$SERVICE_DEST_PATH/$SERVICE_NAME"
+    echo "After removing service file"
     systemctl daemon-reload
+    echo "After daemon reload"
 
     if [[ -d "$INSTALL_PATH" ]]; then
         pushd "$INSTALL_PATH" > /dev/null
-        "$EXECUTOR_COMPOSE" down
+        echo "Entered $INSTALL_PATH"
+        
+        "${EXECUTOR_COMPOSE[@]}" down
+        echo "After docker compose down"
+        
         popd > /dev/null
+        echo "Exited $INSTALL_PATH"
+    else
+        echo "$INSTALL_PATH does not exist"
     fi
-
+    
     rm -rf "$INSTALL_PATH" "$CONF_DEST_PATH" "$RUN_PATH" "$LOG_BASE_PATH" "$LIB_BASE_PATH"
-
+    echo "Removed directories"
+    
     if id "$XBAT_USER" &>/dev/null; then
-        read -rp "Remove user '$XBAT_USER'? [y/N]: " confirm
-        if [[ "$confirm" =~ ^[Yy]$ ]]; then
+        if [[ "$YES" == true ]]; then
             userdel "$XBAT_USER"
             log_info "User '$XBAT_USER' removed."
+        else
+            read -rp "Remove user '$XBAT_USER'? [y/N]: " confirm
+            if [[ "$confirm" =~ ^[Yy]$ ]]; then
+                userdel "$XBAT_USER"
+                log_info "User '$XBAT_USER' removed."
+            else
+                echo "User removal skipped"
+            fi
         fi
+    else
+        echo "User $XBAT_USER does not exist"
     fi
-
+    
     log_info "Removal completed successfully."
 }
+
 
 # cleanup() {
 #     # log_info "Cleanup complete."
@@ -241,6 +268,7 @@ show_help() {
     echo -e "\t[--workers <count>] Number of workers (default 8)"
     echo -e "\t[--certificate-dir <dir>] Certificates directory (default /etc/xbat/certs)"
     echo -e "\t[--user <user>] system user to run xbat (default xbat)"
+    echo -e "\t[--yes] Automatically confirm user removal during remove action"
 }
 
 #########################################
@@ -251,7 +279,14 @@ POSITIONAL_ARGS=()
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --executor) EXECUTOR="$2"; shift; shift;;
+    --executor)     
+        EXECUTOR="$2"
+        if [[ "$EXECUTOR" == "docker" ]]; then
+            EXECUTOR_COMPOSE=(docker compose)
+        else
+            EXECUTOR_COMPOSE=(podman-compose)
+        fi
+        shift; shift;;
     --home-mnt) HOME_MNT="$2"; shift; shift;;
     --no-db) NODB=true; shift;;
     --expose-questdb) EXPOSE_QUESTDB=true; shift;;
@@ -262,6 +297,7 @@ while [[ $# -gt 0 ]]; do
     --certificate-dir) CERT_DIR="$2"; shift; shift;;
     --user) XBAT_USER="$2"; shift; shift;;
     --help) HELP=true; shift;;
+    -y|--yes) YES=true; shift;;
     -*|--*) log_error "Unknown option $1"; exit 1;;
     *) POSITIONAL_ARGS+=("$1"); shift;;
   esac
