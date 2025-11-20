@@ -14,7 +14,12 @@
                     "An unexpected error occurred"
                 }}
             </p>
-            <div class="d-flex justify-center mt-12">
+
+            <div v-if="props.error.statusCode === 404" class="back-home">
+                <p>Back to Homepage in {{ countdown }} seconds...</p>
+            </div>
+
+            <div class="d-flex justify-center mt-12 gap-4">
                 <v-btn
                     color="primary-light"
                     size="large"
@@ -34,18 +39,50 @@ const props = withDefaults(
     { layout: "default" }
 );
 
+const countdown = ref(5);
+let timer: ReturnType<typeof setInterval> | null = null;
+
+const clearTimer = () => {
+    if (timer) {
+        clearInterval(timer);
+        timer = null;
+    }
+};
+onMounted(() => {
+    if (props.error.statusCode === 404) {
+        timer = setInterval(() => {
+            countdown.value--;
+            if (countdown.value <= 0) {
+                clearTimer();
+                navigateTo("/");
+            }
+        }, 1000);
+    }
+});
+
+onUnmounted(() => {
+    clearTimer();
+});
+
 const errorDescriptions: Record<string, string> = {
     "404": "Sorry, but the page you were trying to view does not exist.",
     "400": "Your submission contains invalid parameters, please check and try again.",
     "401": "You are not authorized to view this page. Please login.",
     "403": "You do not have permission to access this page.",
-    "408": "Request Timeout",
-    "429": "Too Many Requests",
+    "408": "Request Timeout - The server took too long to respond.",
+    "429": "Too Many Requests - Please try again later.",
     "500": "Internal Server Error",
     "502": "Bad Gateway",
     "503": "Service Unavailable",
     "504": "Gateway Timeout"
 };
+
+useSeoMeta({
+    title: `Error - ${props.error.statusCode}`,
+    description:
+        errorDescriptions[props.error.statusCode] ||
+        "An unexpected error occurred"
+});
 </script>
 
 <style scoped lang="scss">
@@ -55,5 +92,12 @@ const errorDescriptions: Record<string, string> = {
     font-size: 2.5em;
     margin-bottom: 20px;
     color: $primary-light;
+}
+.back-home {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(var(--v-theme-font-base), 0.16);
+    color: $font-light;
+    font-size: 0.95rem;
 }
 </style>

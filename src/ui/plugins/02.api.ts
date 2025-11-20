@@ -64,6 +64,16 @@ export default defineNuxtPlugin((nuxtApp) => {
                     $authStore.clearToken(true);
                     navigateTo("/login");
                 });
+            } else if (response.status === 404) {
+                await nuxtApp.runWithContext(() => {
+                    const { $store } = useNuxtApp();
+                    $store.error = {
+                        title: "Not Found",
+                        status: 404,
+                        detail: "The requested resource was not found"
+                    };
+                    console.error("Resource not found:", response._data);
+                });
             } else if (!response.ok) {
                 await nuxtApp.runWithContext(() => {
                     const { $store } = useNuxtApp();
