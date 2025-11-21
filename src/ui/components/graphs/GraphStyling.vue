@@ -25,7 +25,14 @@
                 size="small"
                 title="Apply this color palette permanently to all graphs"
                 @click="$graphStore.syncColorPalette(colorPalette)"
-            ></v-btn>
+            />
+        </div>
+        <div class="d-flex align-center gap-10 mt-3">
+            <v-switch
+                v-model="showLegend"
+                label="Show Legend"
+                hide-details
+            />
         </div>
     </div>
 </template>
@@ -39,13 +46,24 @@ const { $graphStore } = useNuxtApp();
 const storeGraph = $graphStore.useStoreGraph(props.graphId, "default");
 
 const colorPalette = ref("");
+const showLegend = ref(true);
 
-watch(colorPalette, (v) => {
-    storeGraph.styling.value = { colorPalette: v };
-});
+watch(
+    [colorPalette, showLegend],
+    ([palette, legend]) => {
+        storeGraph.styling.value = {
+            ...storeGraph.styling.value,
+            colorPalette: palette,
+            showLegend: legend
+        };
+    },
+    { immediate: false }
+);
 
 watchEffect(() => {
-    colorPalette.value = storeGraph.styling.value.colorPalette;
+    const styling = storeGraph.styling.value || {};
+    colorPalette.value = styling.colorPalette || "";
+    showLegend.value = styling.showLegend ?? true;
 });
 
 const colorItems = computed(() =>
