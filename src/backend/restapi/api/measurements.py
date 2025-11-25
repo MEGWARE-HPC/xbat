@@ -625,6 +625,45 @@ def generate_csv(result):
     return csv_content
 
 
+async def export_statistics(jobId, group="", metric="", level="", node=""):
+    """
+    Export statistics (min, max, avg, sum, median, std, var) as CSV or JSON.
+    """
+    if not jobId:
+        raise httpErrors.BadRequest("jobId is required")
+
+    result, _ = await get_measurements(jobId=jobId,
+                                       group=group,
+                                       metric=metric,
+                                       level=level,
+                                       node=node,
+                                       deciles=False)
+
+    traces = result.get("traces", [])
+    if not traces:
+        raise httpErrors.NotFound("No statistics data available")
+
+    rows = []
+    for trace in traces:
+        stats = trace.get("statistics", {})
+        rows.append({
+            "jobId": trace.get("jobId", ""),
+            "group": trace.get("group", ""),
+            "metric": trace.get("metric", ""),
+            "rawName": trace.get("rawName", ""),
+            "unit": trace.get("unit", ""),
+            "min": stats.get("min", ""),
+            "max": stats.get("max", ""),
+            "avg": stats.get("avg", ""),
+            "sum": stats.get("sum", ""),
+            "median": stats.get("median", ""),
+            "std": stats.get("std", ""),
+            "var": stats.get("var", "")
+        })
+
+    return jsonify(rows), 200
+
+
 async def calculate_energy(jobId):
     """
     Calculates energy usage metrics for a given job.
