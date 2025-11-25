@@ -66,12 +66,8 @@ export default defineNuxtPlugin((nuxtApp) => {
                 });
             } else if (response.status === 404) {
                 await nuxtApp.runWithContext(() => {
-                    const { $store } = useNuxtApp();
-                    $store.error = {
-                        title: "Not Found",
-                        status: 404,
-                        detail: "The requested resource was not found"
-                    };
+                    const { $snackbar } = useNuxtApp();
+                    $snackbar.show("The requested resource was not found.", "warning");
                     console.error("Resource not found:", response._data);
                 });
             } else if (!response.ok) {
