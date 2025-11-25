@@ -36,83 +36,84 @@
                 <template #no-data></template>
 
                 <template #chip="{ item }">
-                    <v-chip color="primary-light" style="font-size: 0.875rem">{{
-                        item.title
-                    }}</v-chip>
+                    <v-chip color="primary-light" style="font-size: 0.875rem">
+                        {{ item.title }}
+                    </v-chip>
                 </template>
 
                 <template #prepend-item>
-                    <v-text-field
-                        variant="outlined"
-                        label="Add Value"
-                        class="ml-3 mr-3"
-                        v-model="v.input"
-                        :error-messages="
-                            duplicateState[idx]?.add
-                                ? [
-                                      `Value '${duplicateState[idx].add}' already exists`
-                                  ]
-                                : []
-                        "
-                        @keyup.enter.stop="addNewValue(idx, v.input)"
-                        @keydown.stop
-                        @keyup.stop
-                        @keypress.stop
-                    >
-                        <template #append-inner>
-                            <v-btn
-                                title="Add a value"
-                                variant="plain"
-                                :color="
+                    <v-list-item>
+                        <div class="mt-2">
+                            <v-text-field
+                                variant="outlined"
+                                label="Add Value"
+                                hide-details
+                                v-model="v.input"
+                                :error-messages="
                                     duplicateState[idx]?.add
-                                        ? 'danger'
-                                        : 'primary-light'
+                                        ? [
+                                              `Value '${duplicateState[idx].add}' already exists`
+                                          ]
+                                        : []
                                 "
-                                icon="$plus"
-                                size="small"
-                                :disabled="
-                                    !v.input || !!duplicateState[idx]?.add
-                                "
-                                @click="addNewValue(idx, v.input)"
-                            />
-                            <v-btn
-                                title="Add multiple values"
-                                icon="$addArray"
-                                color="primary-light"
-                                size="small"
-                                variant="plain"
-                                class="ml-2"
-                                @click="openArrayDialog(idx)"
-                            />
-                            <v-btn
-                                title="Sort or reorder values"
-                                :icon="
-                                    v.sortOrder === 'custom'
-                                        ? '$sortCustom'
-                                        : v.sortOrder === 'desc'
-                                        ? '$sortNumDesc'
-                                        : '$sortNumAsc'
-                                "
-                                :color="
-                                    v.sortOrder === 'custom'
-                                        ? undefined
-                                        : 'primary-light'
-                                "
-                                size="small"
-                                variant="plain"
-                                @click="toggleSortOrder(idx)"
-                            />
-                        </template>
-                    </v-text-field>
+                                @keyup.enter.stop="addNewValue(idx, v.input)"
+                                @click.stop
+                                @mousedown.stop
+                                @mouseup.stop
+                            >
+                                <template #append-inner>
+                                    <v-btn
+                                        title="Add a value"
+                                        variant="plain"
+                                        :color="
+                                            duplicateState[idx]?.add
+                                                ? 'danger'
+                                                : 'primary-light'
+                                        "
+                                        icon="$plus"
+                                        size="small"
+                                        :disabled="
+                                            !v.input ||
+                                            !!duplicateState[idx]?.add
+                                        "
+                                        @click.stop="addNewValue(idx, v.input)"
+                                    />
+                                    <v-btn
+                                        title="Add multiple values"
+                                        icon="$addArray"
+                                        color="primary-light"
+                                        size="small"
+                                        variant="plain"
+                                        class="ml-2"
+                                        @click.stop="openArrayDialog(idx)"
+                                    />
+                                    <v-btn
+                                        title="Sort or reorder values"
+                                        :icon="
+                                            v.sortOrder === 'custom'
+                                                ? '$sortCustom'
+                                                : v.sortOrder === 'desc'
+                                                ? '$sortNumDesc'
+                                                : '$sortNumAsc'
+                                        "
+                                        :color="
+                                            v.sortOrder === 'custom'
+                                                ? undefined
+                                                : 'primary-light'
+                                        "
+                                        size="small"
+                                        variant="plain"
+                                        @click.stop="toggleSortOrder(idx)"
+                                    />
+                                </template>
+                            </v-text-field>
+                        </div>
+                    </v-list-item>
                 </template>
 
-                <template #append-item>
-                    <div v-if="!v.values.length" class="pa-3 text-grey">
-                        No values configured
-                    </div>
-
+                <template #append-item v-if="v.values.length > 0">
+                    <v-divider class="mt-2" />
                     <draggable
-                        v-else
                         v-model="v.values"
                         item-key="value"
                         tag="div"
@@ -121,6 +122,7 @@
                         :ghost-class="'drag-ghost'"
                         :chosen-class="'drag-chosen'"
                         :drag-class="'drag-item'"
+                        handle=".drag-handle"
                     >
                         <template #item="{ element }">
                             <v-list-item :title="undefined">
@@ -134,6 +136,9 @@
                                         )
                                     "
                                     hide-details="auto"
+                                    @click.stop
+                                    @mousedown.stop
+                                    @mouseup.stop
                                     :error-messages="
                                         duplicateState[idx]?.edit === element
                                             ? [
@@ -146,15 +151,15 @@
                                         <v-icon
                                             icon="$sortDrag"
                                             size="small"
-                                            class="mr-2 cursor-move"
-                                            @mousedown="
-                                                $event.stopPropagation()
-                                            "
+                                            class="mr-2 cursor-move drag-handle"
+                                            @mousedown.stop
                                         />
                                         <v-checkbox-btn
+                                            class="drag-handle"
                                             color="primary-light"
                                             v-model="v.selected"
                                             :value="element"
+                                            @click.stop
                                         />
                                     </template>
                                     <template #append>
@@ -162,7 +167,9 @@
                                             icon="$close"
                                             size="x-small"
                                             variant="plain"
-                                            @click="removeValue(idx, element)"
+                                            @click.stop="
+                                                removeValue(idx, element)
+                                            "
                                         />
                                     </template>
                                 </v-text-field>
@@ -180,9 +187,16 @@
                             variant="plain"
                             color="danger"
                             size="small"
-                            @click="removeAllValues(idx)"
+                            @click.stop="removeAllValues(idx)"
                         />
                     </div>
+                </template>
+                <template #append-item v-else-if="!v.values.length">
+                    <v-list-item class="text-grey">
+                        <v-list-item-title
+                            >No values configured</v-list-item-title
+                        >
+                    </v-list-item>
                 </template>
             </v-select>
 
@@ -201,8 +215,8 @@
                 @click="addVariable"
                 prepend-icon="$plus"
                 size="small"
-                >Add variable</v-btn
-            >
+                >Add variable
+            </v-btn>
         </div>
 
         <v-dialog v-model="arrayDialog.open" max-width="400px">
@@ -214,16 +228,38 @@
                             v-model.number="arrayDialog.start"
                             label="Start"
                             type="number"
+                            @keydown="onNumberKeydown($event, true)"
+                            :error-messages="
+                                arrayDialog.startError
+                                    ? [arrayDialog.startError]
+                                    : []
+                            "
+                            @input="validateField('start')"
                         />
                         <v-text-field
                             v-model.number="arrayDialog.end"
                             label="End"
                             type="number"
+                            @keydown="onNumberKeydown($event, true)"
+                            :error-messages="
+                                arrayDialog.endError
+                                    ? [arrayDialog.endError]
+                                    : []
+                            "
+                            @input="validateField('end')"
                         />
                         <v-text-field
                             v-model.number="arrayDialog.step"
                             label="Step"
                             type="number"
+                            :min="0"
+                            :error-messages="
+                                arrayDialog.stepError
+                                    ? [arrayDialog.stepError]
+                                    : []
+                            "
+                            @keydown="onNumberKeydown($event, false)"
+                            @input="validateField('step')"
                         />
                     </div>
                     <div v-else>
@@ -255,15 +291,15 @@
                         variant="plain"
                         size="small"
                         @click="arrayDialog.open = false"
-                        >Cancel</v-btn
-                    >
+                        >Cancel
+                    </v-btn>
                     <v-btn
                         variant="plain"
                         size="small"
                         color="primary-light"
                         @click="confirmArrayValues"
-                        >Confirm</v-btn
-                    >
+                        >Confirm
+                    </v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -303,8 +339,128 @@ const arrayDialog = ref({
     end: 0,
     step: 1,
     manual: false,
-    manualInput: ""
+    manualInput: "",
+    startError: "",
+    endError: "",
+    stepError: ""
 });
+
+const onNumberKeydown = (evt: KeyboardEvent, allowSign: boolean) => {
+    const k = evt.key;
+    const allowedNav = [
+        "Backspace",
+        "Delete",
+        "ArrowLeft",
+        "ArrowRight",
+        "Home",
+        "End",
+        "Tab"
+    ];
+    if (allowedNav.includes(k)) return;
+
+    const el = evt.target as HTMLInputElement;
+    const val = el.value;
+    const selStart = el.selectionStart ?? 0;
+    const selEnd = el.selectionEnd ?? 0;
+    const hasSel = selEnd > selStart;
+
+    if (k >= "0" && k <= "9") return;
+
+    if (k === ".") {
+        const replacingHasDot =
+            hasSel && val.slice(selStart, selEnd).includes(".");
+        if (!val.includes(".") || replacingHasDot) return;
+        evt.preventDefault();
+        return;
+    }
+
+    if ((k === "+" || k === "-") && allowSign) {
+        const atStart = selStart === 0;
+        const noSignYet = !/^[+-]/.test(val);
+        if (atStart && noSignYet) return;
+        evt.preventDefault();
+        return;
+    }
+
+    evt.preventDefault();
+};
+
+const validateField = (field: "start" | "end" | "step"): boolean => {
+    const val = (arrayDialog.value as any)[field];
+    let ok = Number.isFinite(val);
+    if (field === "step") ok = ok && Number(val) > 0;
+
+    if (field === "start") {
+        (arrayDialog.value as any).startError = ok
+            ? ""
+            : "Start must be an integer or decimal";
+    } else if (field === "end") {
+        (arrayDialog.value as any).endError = ok
+            ? ""
+            : "End must be an integer or decimal";
+    } else {
+        (arrayDialog.value as any).stepError = ok
+            ? ""
+            : "Step must be positive";
+    }
+    return ok;
+};
+
+const decimalPlaces = (x: number | string): number => {
+    const s = typeof x === "number" ? String(x) : String(x ?? "");
+    if (!s) return 0;
+    const m = s.match(/e-([0-9]+)/i);
+    const exp = m ? parseInt(m[1]!, 10) : 0;
+    const dot = s.indexOf(".");
+    const frac = dot >= 0 ? s.length - dot - 1 : 0;
+    return Math.max(exp, frac);
+};
+
+const normalizeNumber = (x: number, decimals: number): string => {
+    const fixed = x.toFixed(Math.max(0, decimals));
+    const n = Number(fixed);
+    return Object.is(n, -0) ? "0" : n.toString();
+};
+
+const generateRange = (start: number, end: number, step: number): string[] => {
+    if (
+        !Number.isFinite(start) ||
+        !Number.isFinite(end) ||
+        !Number.isFinite(step) ||
+        step <= 0
+    )
+        return [];
+    const dir = end >= start ? 1 : -1;
+    const decimals = Math.max(
+        decimalPlaces(start),
+        decimalPlaces(end),
+        decimalPlaces(step)
+    );
+    const eps = Math.pow(10, -decimals) / 2;
+    const distance = Math.abs(end - start);
+    const steps = Math.floor(distance / step + eps) + 1;
+
+    const out: string[] = [];
+    for (let i = 0; i < steps; i++) {
+        const raw = start + dir * i * step;
+        out.push(normalizeNumber(raw, decimals));
+    }
+    out.push(normalizeNumber(end, decimals));
+    return Array.from(new Set(out));
+};
+
+const toNumber = (s: unknown): number | null => {
+    const t = String(s ?? "").trim();
+    if (t === "") return null;
+    const n = Number(t);
+    if (!Number.isFinite(n)) return null;
+    return Object.is(n, -0) ? 0 : n;
+};
+
+const normalizeString = (s: string): string => {
+    const n = toNumber(s);
+    return n === null ? s.trim() : n === 0 ? "0" : n.toString();
+};
 
 const getDuplicateState = (idx: number) => {
     if (!duplicateState.value[idx]) duplicateState.value[idx] = {};
@@ -360,17 +516,23 @@ const addNewValue = (idx: number, value: string) => {
     const v = variables.value[idx];
     const state = getDuplicateState(idx);
 
-    if (v.values.includes(value)) {
-        state.add = value;
-        if (!v.selected.includes(value)) {
-            v.selected.push(value);
+    const val = normalizeString(value);
+
+    if (v.values.includes(val)) {
+        state.add = val;
+        if (!v.selected.includes(val)) {
+            v.selected.push(val);
+            v.selected = Array.from(new Set(v.selected));
             v.selected = sortValues(v.selected, v.sortOrder);
         }
         return;
     }
 
-    v.values.push(value);
-    v.selected.push(value);
+    v.values.push(val);
+    v.selected.push(val);
+
+    v.values = Array.from(new Set(v.values));
+    v.selected = Array.from(new Set(v.selected));
 
     v.values = sortValues(v.values, v.sortOrder);
     v.selected = sortValues(v.selected, v.sortOrder);
@@ -383,19 +545,23 @@ const editValue = (idx: number, valIdx: number, newValue: string) => {
     const v = variables.value[idx];
     const oldValue = v.values[valIdx];
     const state = getDuplicateState(idx);
+    const normNew = normalizeString(newValue);
 
     const existsElsewhere =
-        v.values.includes(newValue) && v.values.indexOf(newValue) !== valIdx;
-    state.edit = existsElsewhere ? newValue : "";
+        v.values.includes(normNew) && v.values.indexOf(normNew) !== valIdx;
+    state.edit = existsElsewhere ? normNew : "";
 
     if (existsElsewhere) return;
 
-    v.values[valIdx] = newValue;
+    v.values[valIdx] = normNew;
 
     const selIdx = v.selected.indexOf(oldValue);
     if (selIdx !== -1) {
-        v.selected.splice(selIdx, 1, newValue);
+        v.selected.splice(selIdx, 1, normNew);
     }
+
+    v.values = Array.from(new Set(v.values));
+    v.selected = Array.from(new Set(v.selected));
 
     v.values = sortValues(v.values, v.sortOrder);
     v.selected = sortValues(v.selected, v.sortOrder);
@@ -426,38 +592,92 @@ const openArrayDialog = (idx: number) => {
         end: 0,
         step: 1,
         manual: false,
-        manualInput: ""
+        manualInput: "",
+        startError: "",
+        endError: "",
+        stepError: ""
     };
 };
 
 const confirmArrayValues = () => {
     const { index, start, end, step, manual, manualInput } = arrayDialog.value;
-    if (step === 0 || index < 0) return;
-    const v = variables.value[index];
-
-    const valuesToAdd: string[] = [];
-    if (manual) {
-        manualInput
-            .split(",")
-            .map((s) => s.trim())
-            .filter((s) => s !== "")
-            .forEach((val) => {
-                if (!v.values.includes(val)) {
-                    valuesToAdd.push(val);
-                }
-            });
-    } else {
-        if (step === 0) return;
-        for (let i = start; step > 0 ? i <= end : i >= end; i += step) {
-            const strVal = String(i);
-            if (!v.values.includes(strVal)) {
-                valuesToAdd.push(strVal);
-            }
+    if (!manual) {
+        const okStart = validateField("start");
+        const okEnd = validateField("end");
+        const okStep = validateField("step");
+        if (!okStart || !okEnd || !okStep) {
+            if (!okStart) (arrayDialog.value as any).start = null;
+            if (!okEnd) (arrayDialog.value as any).end = null;
+            if (!okStep) (arrayDialog.value as any).step = null;
+            return;
         }
     }
 
+    if (
+        !Number.isFinite(start) ||
+        !Number.isFinite(end) ||
+        !Number.isFinite(step) ||
+        step <= 0 ||
+        index < 0
+    )
+        return;
+
+    const v = variables.value[index];
+
+    const valuesToAdd: string[] = [];
+
+    if (manual) {
+        const uniqueInput = Array.from(
+            new Set(
+                manualInput
+                    .split(",")
+                    .map((s) => normalizeString(s))
+                    .filter((s) => s !== "")
+            )
+        );
+
+        const toSelectOnly: string[] = [];
+        uniqueInput.forEach((val) => {
+            if (v.values.includes(val)) {
+                if (!v.selected.includes(val)) {
+                    toSelectOnly.push(val);
+                }
+            } else {
+                valuesToAdd.push(val);
+            }
+        });
+
+        if (toSelectOnly.length) {
+            v.selected.push(...toSelectOnly);
+        }
+    } else {
+        if (
+            !Number.isFinite(start) ||
+            !Number.isFinite(end) ||
+            !Number.isFinite(step) ||
+            step === 0
+        )
+            return;
+
+        const rangeValues = generateRange(
+            Number(start),
+            Number(end),
+            Number(step)
+        );
+
+        rangeValues.forEach((val) => {
+            if (!v.values.includes(val)) {
+                valuesToAdd.push(val);
+            } else if (!v.selected.includes(val)) {
+                v.selected.push(val);
+            }
+        });
+    }
+
     v.values.push(...valuesToAdd);
+    v.values = Array.from(new Set(v.values));
     v.selected.push(...valuesToAdd);
+    v.selected = Array.from(new Set(v.selected));
     v.values = sortValues(v.values, v.sortOrder ?? "asc");
     v.selected = sortValues(v.selected, v.sortOrder ?? "asc");
 
@@ -483,11 +703,22 @@ const sortValues = (
 ) => {
     if (order === "custom") return [...arr];
 
-    const collator = new Intl.Collator(undefined, {
-        numeric: true,
-        sensitivity: "base"
+    const sorted = [...arr].sort((a, b) => {
+        const na = toNumber(a);
+        const nb = toNumber(b);
+        const aNum = na !== null;
+        const bNum = nb !== null;
+
+        if (aNum && bNum) return na! - nb!;
+        if (aNum && !bNum) return -1;
+        if (!aNum && bNum) return 1;
+
+        return String(a).localeCompare(String(b), undefined, {
+            numeric: true,
+            sensitivity: "base"
+        });
     });
-    const sorted = [...arr].sort((a, b) => collator.compare(a, b));
+
     return order === "asc" ? sorted : sorted.reverse();
 };
 

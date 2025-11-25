@@ -9,6 +9,9 @@ All notable changes to this project will be documented in this file.
 -   API endpoint and frontend button to backup entire MongoDB database (admin only) (#131)
 -   automatic subgroup opening and collapsing in docs navigation
 -   match highlighting to the search function in docs
+-   API endpoint for measurement roofline (#111)
+-   duplicate checks in manual mode to job variables (#138)
+-   input restrictions (+ error messages) in job variables and optimize support for Firefox (#138)
 -   auto-redirect for nonexistent pages (#159)
 
 ### Changed
@@ -23,6 +26,9 @@ All notable changes to this project will be documented in this file.
 -   x-axis titles in roofline (#117)
 -   show x-axis title in the graph (#137)
 -   optimized the docs mobile experience
+-   false positive error logs related to gRPC (#15)
+-   data types and sorting strategies in job variables (#138)
+-   focus and improved drag-and-drop experience
 -   error message for nonexistent pages (#159)
 
 ## v1.1.0 - 2025-09-12
