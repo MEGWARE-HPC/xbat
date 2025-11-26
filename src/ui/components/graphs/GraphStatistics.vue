@@ -22,6 +22,7 @@
             <div class="d-flex justify-end pa-2">
                 <v-btn
                     icon="$download"
+                    title="Export as CSV"
                     size="small"
                     density="comfortable"
                     variant="outlined"
