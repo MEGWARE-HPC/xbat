@@ -625,9 +625,9 @@ def generate_csv(result):
     return csv_content
 
 
-async def export_statistics(jobId, group="", metric="", level="", node=""):
+async def _get_statistics_rows(jobId, group="", metric="", level="", node=""):
     """
-    Export statistics (min, max, avg, sum, median, std, var) as CSV or JSON.
+    Get statistics rows.
     """
     if not jobId:
         raise httpErrors.BadRequest("jobId is required")
@@ -661,7 +661,70 @@ async def export_statistics(jobId, group="", metric="", level="", node=""):
             "var": stats.get("var", "")
         })
 
+    return rows
+
+
+async def export_statistics(
+    jobId,
+    group="",
+    metric="",
+    level="",
+    node="",
+):
+    """
+    Export statistics (min, max, avg, sum, median, std, var).
+    """
+    rows = await _get_statistics_rows(
+        jobId=jobId,
+        group=group,
+        metric=metric,
+        level=level,
+        node=node,
+    )
     return jsonify(rows), 200
+
+
+async def export_statistics_csv(jobId, group="", metric="", level="", node=""):
+    """
+    Export statistics (min, max, avg, sum, median, std, var) as CSV.
+    """
+    rows = await _get_statistics_rows(
+        jobId=jobId,
+        group=group,
+        metric=metric,
+        level=level,
+        node=node,
+    )
+
+    output = StringIO()
+    try:
+        fieldnames = [
+            "jobId", "group", "metric", "rawName", "unit", "min", "max", "avg",
+            "sum", "median", "std", "var"
+        ]
+        writer = csv.DictWriter(
+            output,
+            fieldnames=fieldnames,
+            extrasaction="ignore",
+        )
+        writer.writeheader()
+        writer.writerows(rows)
+
+        csv_content = output.getvalue()
+    finally:
+        output.close()
+
+    level_part = level or "job"
+    if group and metric:
+        filename = f"{jobId}_{group}_{metric}_{level_part}_statistics.csv"
+    else:
+        filename = f"{jobId}_all_statistics_{level_part}.csv"
+
+    return Response(
+        csv_content,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 async def calculate_energy(jobId):
