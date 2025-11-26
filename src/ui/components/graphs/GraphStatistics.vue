@@ -18,6 +18,18 @@
             }
         ]"
     >
+        <template v-slot:top>
+            <div class="d-flex justify-end pa-2">
+                <v-btn
+                    icon="$download"
+                    size="small"
+                    density="comfortable"
+                    variant="outlined"
+                    rounded="sm"
+                    :disabled="!canExport"
+                />
+            </div>
+        </template>
         <template v-slot:header.data-table-group>
             {{ `Metric (${storeGraph.graph.value?.traces?.[0]?.unit || ""})` }}
         </template>
@@ -78,5 +90,9 @@ const tableItems = computed(() => {
 
     state.filterMatchingNone = false;
     return visibleTraces;
+});
+
+const canExport = computed(() => {
+    return !!storeGraph.graph.value?.traces?.length;
 });
 </script>
