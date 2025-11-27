@@ -468,8 +468,15 @@ const getDuplicateState = (idx: number) => {
 };
 
 const propagateChanges = () => {
-    if (!deepEqual(variables.value, props.modelValue)) {
-        emit("update:modelValue", variables.value);
+    const businessVars = variables.value.map((v) => ({
+        key: v.key,
+        values: v.values,
+        selected: v.selected,
+        input: v.input
+    }));
+
+    if (!deepEqual(businessVars, props.modelValue)) {
+        emit("update:modelValue", businessVars);
     }
 };
 
