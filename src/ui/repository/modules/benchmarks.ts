@@ -16,17 +16,10 @@ export type Benchmark = {
     cli?: boolean;
 };
 
-type BenchmarkVariableDTO = {
-    key: string;
-    values: string[];
-    selected: string[];
-    input?: string;
-};
-
 type BenchmarkPayload = {
     name: string;
     configId: string;
-    variables: BenchmarkVariableDTO;
+    variables: object;
     sharedProjects: string[];
 };
 
