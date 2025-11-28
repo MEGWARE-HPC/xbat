@@ -27,6 +27,7 @@ All notable changes to this project will be documented in this file.
 -   false positive error logs related to gRPC (#15)
 -   data types and sorting strategies in job variables (#138)
 -   focus and improved drag-and-drop experience
+-   benchmark submission failures with internal server error (#171)
 
 ## v1.1.0 - 2025-09-12
 
