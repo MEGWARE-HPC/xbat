@@ -12,7 +12,7 @@ All notable changes to this project will be documented in this file.
 -   API endpoint for measurement roofline (#111)
 -   duplicate checks in manual mode to job variables (#138)
 -   input restrictions (+ error messages) in job variables and optimize support for Firefox (#138)
--   support to toggle legend visibility in graph styling (#164)
+-   support to toggle legend visibility in graph styling and export, including layout syncing and improved export UI (#164)
 
 ### Changed
 
