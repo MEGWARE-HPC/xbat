@@ -28,6 +28,19 @@ class MeasurementModule extends FetchFactory {
             undefined // body
         );
     }
+
+    async exportStatistics(query: GraphQuery) {
+        const response = await this.call<Blob>(
+            "GET",
+            `${this.RESOURCE}/${query.jobIds[0]}/statistics/csv?group=${query.group}&metric=${query.metric}&level=${query.level}&node=${query.node}`,
+            undefined,
+            { responseType: "blob" }
+        );
+        if (response && response.size === 0) {
+            return null;
+        }
+        return response;
+    }
 }
 
 export default MeasurementModule;

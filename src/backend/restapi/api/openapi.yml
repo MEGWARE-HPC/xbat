@@ -559,7 +559,7 @@ paths:
       tags:
         - measurements
       summary: Measurement results
-      description: Returns all results for all measurements of the specified runNr
+      description: Returns all results for all measurements of the specified job
       responses:
         "200":
           description: Successfully retrieved measurements
@@ -619,6 +619,60 @@ paths:
       responses:
         "200":
           description: Successfully exported measurement results in CSV format
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              description: Indicates that the response contains an attachment file
+              schema:
+                type: string
+                example: attachment; filename="<jobId>_<group>.csv"
+      security:
+        - oauth2:
+            - benchmarks_r
+  /measurements/{jobId}/statistics:
+    get:
+      operationId: backend.restapi.api.measurements.export_statistics
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - $ref: "#/components/parameters/GroupQuery"
+          required: true
+        - $ref: "#/components/parameters/MetricQuery"
+          required: true
+        - $ref: "#/components/parameters/LevelQuery"
+          required: true
+        - $ref: "#/components/parameters/NodeQuery"
+      tags:
+        - measurements
+      summary: Returns statistics results
+      responses:
+        "200":
+          description: Successfully retrieved statistics
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - benchmarks_r
+  /measurements/{jobId}/statistics/csv:
+    get:
+      operationId: backend.restapi.api.measurements.export_statistics_csv
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - $ref: "#/components/parameters/GroupQuery"
+        - $ref: "#/components/parameters/MetricQuery"
+        - $ref: "#/components/parameters/LevelQuery"
+        - $ref: "#/components/parameters/NodeQuery"
+      tags:
+        - measurements
+      summary: Export statistics results in CSV format
+      responses:
+        "200":
+          description: Successfully exported statistics results in CSV format
           content:
             text/csv:
               schema:

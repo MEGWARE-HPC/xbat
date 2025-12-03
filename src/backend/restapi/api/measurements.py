@@ -625,6 +625,108 @@ def generate_csv(result):
     return csv_content
 
 
+async def _get_statistics_rows(jobId, group="", metric="", level="", node=""):
+    """
+    Get statistics rows.
+    """
+    if not jobId:
+        raise httpErrors.BadRequest("jobId is required")
+
+    result, _ = await get_measurements(jobId=jobId,
+                                       group=group,
+                                       metric=metric,
+                                       level=level,
+                                       node=node,
+                                       deciles=False)
+
+    traces = result.get("traces", [])
+    if not traces:
+        raise httpErrors.NotFound("No statistics data available")
+
+    rows = []
+    for trace in traces:
+        stats = trace.get("statistics", {})
+        rows.append({
+            "jobId": trace.get("jobId", ""),
+            "group": trace.get("group", ""),
+            "metric": trace.get("metric", ""),
+            "rawName": trace.get("rawName", ""),
+            "unit": trace.get("unit", ""),
+            "min": stats.get("min", ""),
+            "max": stats.get("max", ""),
+            "avg": stats.get("avg", ""),
+            "sum": stats.get("sum", ""),
+            "median": stats.get("median", ""),
+            "std": stats.get("std", ""),
+            "var": stats.get("var", "")
+        })
+
+    return rows
+
+
+async def export_statistics(
+    jobId,
+    group="",
+    metric="",
+    level="",
+    node="",
+):
+    """
+    Export statistics (min, max, avg, sum, median, std, var).
+    """
+    rows = await _get_statistics_rows(
+        jobId=jobId,
+        group=group,
+        metric=metric,
+        level=level,
+        node=node,
+    )
+    return jsonify(rows), 200
+
+
+async def export_statistics_csv(jobId, group="", metric="", level="", node=""):
+    """
+    Export statistics (min, max, avg, sum, median, std, var) as CSV.
+    """
+    rows = await _get_statistics_rows(
+        jobId=jobId,
+        group=group,
+        metric=metric,
+        level=level,
+        node=node,
+    )
+
+    output = StringIO()
+    try:
+        fieldnames = [
+            "jobId", "group", "metric", "rawName", "unit", "min", "max", "avg",
+            "sum", "median", "std", "var"
+        ]
+        writer = csv.DictWriter(
+            output,
+            fieldnames=fieldnames,
+            extrasaction="ignore",
+        )
+        writer.writeheader()
+        writer.writerows(rows)
+
+        csv_content = output.getvalue()
+    finally:
+        output.close()
+
+    level_part = level or "job"
+    if group and metric:
+        filename = f"{jobId}_{group}_{metric}_{level_part}_statistics.csv"
+    else:
+        filename = f"{jobId}_all_statistics_{level_part}.csv"
+
+    return Response(
+        csv_content,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
 async def calculate_energy(jobId):
     """
     Calculates energy usage metrics for a given job.
