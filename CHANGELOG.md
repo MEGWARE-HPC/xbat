@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 -   API endpoint for measurement roofline (#111)
 -   duplicate checks in manual mode to job variables (#138)
 -   input restrictions (+ error messages) in job variables and optimize support for Firefox (#138)
+-   validation for required benchmarks to prevent incomplete data from breaking the roofline model (#139)
 
 ### Changed
 
