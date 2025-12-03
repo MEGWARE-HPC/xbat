@@ -253,16 +253,17 @@ def register(jobId):
             # check when node was last updated since benchmarking may have failed and therefore a new benchmark is required
             # if no benchmarks are present
 
-            # determine whether required benchmarks are present: require bandwidth_mem and at least one peakflops* entry
+            # determine whether required benchmarks are present: require bandwidth_mem, peakflops, peakflops_sp entry
             benchmarks = node.get("benchmarks") or {}
             # check presence of memory bandwidth benchmark
             has_bandwidth = "bandwidth_mem" in benchmarks
-            # check if there's any peakflops* entry
-            has_peakflops = any(
-                key.startswith("peakflops") and benchmarks.get(key) is not None
-                for key in benchmarks)
+            # check presence of peakflops_dp and peakflops_sp
+            has_peakflops_dp = ("peakflops" in benchmarks
+                                and benchmarks.get("peakflops") is not None)
+            has_peakflops_sp = ("peakflops_sp" in benchmarks
+                                and benchmarks.get("peakflops_sp") is not None)
             # required benchmark completeness
-            has_required_benchmarks = has_bandwidth and has_peakflops
+            has_required_benchmarks = has_bandwidth and has_peakflops_dp and has_peakflops_sp
             # check if benchmarking window expired
             benchmarking_window_expired = not (
                 "lastUpdate" in node) or get_current_timestamp(
