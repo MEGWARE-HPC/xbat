@@ -14,22 +14,17 @@ services:
             - 389:389
             - 636:636
     xbat-valkey:
-        image: valkey/valkey
+        image: valkey/valkey:alpine
         container_name: xbat-valkey
         volumes:
             - /etc/xbat/valkey.conf:/usr/local/etc/valkey/valkey.conf:ro
         ports:
             - 6379:6379
     xbat-pgbouncer:
-        image: bitnami/pgbouncer:latest
+        image: edoburu/pgbouncer:latest
         container_name: xbat-pgbouncer
         network_mode: "host"
         user: "${XBAT_UID}:${XBAT_GID}"
         volumes:
-            - /etc/xbat/pgbouncer.ini:/bitnami/pgbouncer/conf/pgbouncer.ini:ro
-            - /etc/xbat/userlists.txt:/bitnami/pgbouncer/conf/userlists.txt:ro
-        entrypoint:
-            [
-                "/opt/bitnami/pgbouncer/bin/pgbouncer",
-                "/bitnami/pgbouncer/conf/pgbouncer.ini"
-            ]
+            - /etc/xbat/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+            - /etc/xbat/userlists.txt:/etc/pgbouncer/userlists.txt:ro
