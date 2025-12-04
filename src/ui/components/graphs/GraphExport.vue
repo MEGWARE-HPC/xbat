@@ -141,7 +141,15 @@
                                         >
                                         </v-number-input>
                                     </v-col>
-                                    <v-col sm="12" md="12">
+                                    <v-col cols="12" md="6">
+                                        <v-switch
+                                            class="ml-3"
+                                            v-model="legendVisible"
+                                            label="Show legend"
+                                            hide-details
+                                        />
+                                    </v-col>
+                                    <v-col cols="12" md="6">
                                         <v-select
                                             label="Legend Location"
                                             :items="[
@@ -151,8 +159,8 @@
                                             ]"
                                             v-model="state.legendLocation"
                                             hide-details
-                                        >
-                                        </v-select>
+                                            :disabled="!legendVisible"
+                                        />
                                     </v-col>
                                     <v-col
                                         sm="12"
@@ -274,6 +282,19 @@ const exportGraphId = nanoid(6);
 
 const storeGraph = $graphStore.useStoreGraph(props.graphId, props.type);
 const exportStoreGraph = $graphStore.useStoreGraph(exportGraphId, props.type);
+
+const legendVisible = computed({
+    get() {
+        const styling = storeGraph.styling.value || {};
+        return styling.showLegend ?? true;
+    },
+    set(v) {
+        storeGraph.styling.value = {
+            ...storeGraph.styling.value,
+            showLegend: v
+        };
+    }
+});
 
 const state = reactive({
     tab: "image",
