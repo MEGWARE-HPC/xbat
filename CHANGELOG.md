@@ -9,15 +9,25 @@ All notable changes to this project will be documented in this file.
 -   API endpoint and frontend button to backup entire MongoDB database (admin only) (#131)
 -   automatic subgroup opening and collapsing in docs navigation
 -   match highlighting to the search function in docs
+-   documentation about backup the MongoDB database (#86)
+-   API endpoint for measurement roofline (#111)
+-   duplicate checks in manual mode to job variables (#138)
+-   input restrictions (+ error messages) in job variables and optimize support for Firefox (#138)
 
 ### Changed
 
 -   upgraded Nuxt/Content from v2 to v3 (#82)
+-   upgraded QuestDB from v8 to v9 (#135)
+-   optimized queries for accessing QuestDB
 
 ### Fixed
 
 -   x-axis titles in roofline (#117)
--   optimized the mobile experience
+-   show x-axis title in the graph (#137)
+-   optimized the docs mobile experience
+-   false positive error logs related to gRPC (#15)
+-   data types and sorting strategies in job variables (#138)
+-   focus and improved drag-and-drop experience
 
 ## v1.1.0 - 2025-09-12
 
