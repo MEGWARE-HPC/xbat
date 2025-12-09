@@ -329,6 +329,7 @@ class Api(object):
             return f"{name} ({', '.join([projects[s] for s in shared_project_ids])})"
 
         return {
+            # TODO Consider returning shared projects as objects to auto-share new runs 
             c["_id"]: format_config(
                 c["configuration"]["configurationName"],
                 c["configuration"]["sharedProjects"],
