@@ -6,7 +6,7 @@ import webbrowser
 from enum import Enum
 from functools import wraps
 from pathlib import Path
-from typing import Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -30,7 +30,7 @@ class App(typer.Typer):
     connection: Connection | None = None
     forward_ctx: contextlib.ExitStack | None = None
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
         try:
             return super().__call__(*args, **kwargs)
         finally:
@@ -116,7 +116,7 @@ def main(
 
 def handle_errors(func: Callable) -> Callable:
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         try:
             return func(*args, **kwargs)
         except Exception as e:
@@ -170,14 +170,14 @@ def login(
 
 
 @handle_errors
-def validate_access_token():
+def validate_access_token() -> None:
     app.api.validate_access_token()
 
 
 def require_valid_access_token() -> Callable:
     def decorator(func: Callable) -> Callable:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             validate_access_token()
             return func(*args, **kwargs)
 
@@ -221,7 +221,7 @@ def ls(
 
     configs = app.api.configurations
 
-    def get_config(run):
+    def get_config(run: dict[str, Any]) -> Tuple[str, str]:
         try:
             config_id = run["configuration"]["_id"]
             return (config_id, configs[config_id])
@@ -234,7 +234,7 @@ def ls(
     job_variant_state: Dict[int, Tuple[str, str]] = {}
     if filter_variant and not list_jobs:
         print(
-            f"[bold yellow]Warning![/bold yellow] Option [italic]--variant[/italic]/[italic]-v[/italic] implies option [italic]--list-jobs[/italic]/[italic]-j[/italic]."
+            "[bold yellow]Warning![/bold yellow] Option [italic]--variant[/italic]/[italic]-v[/italic] implies option [italic]--list-jobs[/italic]/[italic]-j[/italic]."
         )
         list_jobs = True
     if list_jobs:
@@ -373,12 +373,20 @@ def start(
     config_id: Annotated[
         str | None, typer.Argument(help="The config name of the benchmark to run.")
     ] = None,
+    name: Annotated[
+        str | None,
+        typer.Option(
+            "--name",
+            "-n",
+            help="Explicitly name the benchmark run.",
+        ),
+    ] = None,
     job_script: Annotated[
         Path | None,
         typer.Option(
             "--job-script",
             "-j",
-            help="The path to a Slurm script on the remote to execute as a benchmark run.",
+            help="The path to a Slurm script on the cluster to execute as a benchmark run.",
         ),
     ] = None,
     ci: Annotated[
@@ -405,18 +413,17 @@ def start(
             )
         if not app.check_file_exists(job_script):
             raise RuntimeError(f"No job script found at this path: {job_script}")
-        status, stdout, stderr = app.exec_cmd(
-            " ".join(
-                [
-                    "sbatch",
-                    "--constraint=xbat",
-                    "--exclusive",
-                    "--wait-all-nodes=1",
-                    "--parsable",
-                    str(job_script),
-                ]
-            )
-        )
+        sbatch_args = [
+            "sbatch",
+            "--constraint=xbat",
+            "--exclusive",
+            "--wait-all-nodes=1",
+            "--parsable",
+            str(job_script),
+        ]
+        if name:
+            sbatch_args.insert(1, f"--job-name={name}")
+        status, stdout, stderr = app.exec_cmd(" ".join(sbatch_args))
         if status != os.EX_OK:
             raise RuntimeError((stdout + stderr).strip())
         if ci:
@@ -426,8 +433,8 @@ def start(
     elif config_id not in configs:
         raise FileNotFoundError(f"No configuration with id {config_id} found.")
     else:
-        # TODO implement starting benchmark through API
-        raise NotImplementedError("Start benchmark run with config_id")
+        app.api.start_run(config_id, name if name else configs[config_id])
+        print("Benchmark was started. (Open web UI for details.)")
 
 
 class StopType(str, Enum):
@@ -504,7 +511,7 @@ def ui(
     if run and job:
         print(
             "[bold yellow]Warning![/bold yellow]",
-            f"Job is ignored if benchmark run is given.",
+            "Job is ignored if benchmark run is given.",
         )
         job = None
     if run:

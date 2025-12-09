@@ -13,7 +13,7 @@ import urllib3
 
 
 class AccessTokenError(Exception):
-    def __init__(self, reason: str):
+    def __init__(self, reason: str) -> None:
         super().__init__(reason)
 
 
@@ -25,7 +25,7 @@ class MeasurementLevel(str, Enum):
     core = "core"
     thread = "thread"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.value
 
 
@@ -38,7 +38,7 @@ class MeasurementType(str, Enum):
     energy = "energy"
     interconnect = "interconnect"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.value
 
 
@@ -62,7 +62,12 @@ def _localhost_suppress_security_warning(method: F) -> F:
 
 
 class Api(object):
-    def __init__(self, base_url: str, version: str, client_id: str):
+    def __init__(
+        self,
+        base_url: str,
+        version: str,
+        client_id: str,
+    ) -> None:
         self.__base_url = base_url
         host = urlparse(self.__base_url).hostname
         assert host
@@ -78,7 +83,7 @@ class Api(object):
         return {"accept": mime_type}
 
     @_localhost_suppress_security_warning
-    def authorize(self, user: str, password: str):
+    def authorize(self, user: str, password: str) -> str:
         headers = {
             "Content-Type": "application/x-www-form-urlencoded"
         } | self.__headers_accept("application/json")
@@ -105,7 +110,7 @@ class Api(object):
         return access_token
 
     @property
-    def access_token(self):
+    def access_token(self) -> str:
         try:
             access_token = keyring.get_password(self.__keyring_system, self.__host)
         except keyring.errors.NoKeyringError:
@@ -120,7 +125,7 @@ class Api(object):
         return {"Authorization": f"Bearer {self.access_token}"}
 
     @_localhost_suppress_security_warning
-    def validate_access_token(self):
+    def validate_access_token(self) -> None:
         response = requests.get(
             f"{self.__api_url}/current_user",
             headers=self.__headers_auth,
@@ -185,7 +190,31 @@ class Api(object):
         return output_path
 
     @_localhost_suppress_security_warning
-    def cancel_run(self, run_id: int):
+    def start_run(
+        self,
+        config_id: str,
+        name: str,
+        share_project_ids: List[str] = [],
+        variables: List[str] = [],
+    ) -> None:
+        url = f"{self.__api_url}/benchmarks"
+        headers = self.__headers_auth
+        payload = dict(
+            name=name,
+            configId=config_id,
+            sharedProjects=share_project_ids,
+            variables=variables,
+        )
+        response = requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            verify=self.__verify_ssl,
+        )
+        response.raise_for_status()
+
+    @_localhost_suppress_security_warning
+    def cancel_run(self, run_id: int) -> None:
         cancelation_url = f"{self.__api_url}/benchmarks/{run_id}/cancel"
         headers = self.__headers_auth
         response = requests.post(
@@ -196,7 +225,7 @@ class Api(object):
         response.raise_for_status()
 
     @_localhost_suppress_security_warning
-    def delete_run(self, run_id: int):
+    def delete_run(self, run_id: int) -> None:
         deletion_url = f"{self.__api_url}/benchmarks/{run_id}"
         headers = self.__headers_auth
         response = requests.delete(
@@ -267,7 +296,7 @@ class Api(object):
         exit()
 
     @_localhost_suppress_security_warning
-    def cancel_job(self, job_id: int):
+    def cancel_job(self, job_id: int) -> None:
         cancelation_url = f"{self.__api_url}/slurm/jobs/{job_id}/cancel"
         headers = self.__headers_auth
         response = requests.post(
@@ -294,7 +323,7 @@ class Api(object):
         configurations = response.json()["data"]
         projects = self.projects
 
-        def format_config(name, shared_project_ids):
+        def format_config(name, shared_project_ids) -> str:
             if len(shared_project_ids) == 0:
                 return name
             return f"{name} ({', '.join([projects[s] for s in shared_project_ids])})"

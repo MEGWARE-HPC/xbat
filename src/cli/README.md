@@ -10,12 +10,12 @@
 ## Development
 
 + Upgrade dependencies by running `uv sync --upgrade` and `uv lock --upgrade`.
-+ Run `uvx isort .` and `uvx black .` to reformat the code.
++ Run `uvx ruff check --fix` and `uvx ruff format .` to reformat the code.
 + Use `uv run mypy ./src` to perform static type checking.
 
 ## Installation
 
-1. Using [pipx](https://pipx.pypa.io/stable/) and `pip install ./dist/xbat_cli*.whl` the application can be installed in an isolated environment.
+1. Using [pipx](https://pipx.pypa.io/stable/) and `pipx install ./dist/xbat_cli*.whl` the application can be installed in an isolated environment.
 2. Run `sed '/^\s*#/! s/^/export /' .env >> ~/.bashrc` to install the custom CLI configuration for bash.
 
 ## Advanced Topics
