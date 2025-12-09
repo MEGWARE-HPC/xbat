@@ -82,7 +82,7 @@ def main(
         int | None,
         typer.Option(
             envvar="XBAT_SSH_FORWARDING_PORT",
-            help="Local port being forwarded. (Otherwise, use remote port.))",
+            help="Local port being forwarded. (Otherwise, use remote port.)",
         ),
     ] = None,
     base_url: Annotated[

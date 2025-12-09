@@ -24,3 +24,35 @@ xbat currently monitors the entire compute node regardless of the number of core
 ::
 
 xbat provides additional features like parameter studies, API support and collaboration when using job configurations via the UI. See here for more details on [job configurations](/docs/user/get-started/job-configuration).
+
+## xbat CLI
+
+Set the following environment variables or export them from your shell profile/RC file:
+
+| Variable | Explanation | Example |
+|---|---|---|
+| `XBAT_BASE_URL` | Base URL of the xbat installation. | `https://demo.xbat.dev` |
+| `XBAT_API_VERSION` | [API](../api.md) version (part of the URL). | `v1` |
+| `XBAT_API_CLIENT_ID` | [API](../api.md) OAuth2 client ID for the CLI. | `CLI` |
+
+The following environment variables are only required when the xbat is only exposed locally, or when starting a Slurm scripts through the CLI with `xbat start --job-script my_job_script.sh` (see above):
+
+| Variable | Explanation |
+|---|---|
+| `XBAT_SSH_FORWARDING_TARGET` | SSH target for proxying xbat CLI through. |
+| `XBAT_SSH_FORWARDING_PORT` | Local port being forwarded. (Otherwise, use remote port.) |
+
+Authenticate interactively using `xbat login`.
+The following commands are available (use `--help` for documentation of arguments):
+
+| Command | Explanation |
+|---|---|
+| `login` | Update the xbat API access token. |
+| `ls` | Output benchmark runs/jobs in a table. |
+| `rm` | Delete benchmark runs. |
+| `log` | Show the output and error of a job. |
+| `pull` | Download measurements for a finished job. |
+| `start` | Start a benchmark run. |
+| `stop` | Stop benchmark runs/jobs. |
+| `export` | Create a backup of benchmark runs. |
+| `ui` | Open the xbat web UI. |
