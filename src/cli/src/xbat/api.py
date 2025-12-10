@@ -5,7 +5,7 @@ import warnings
 from enum import Enum
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Tuple, TypeVar, cast
+from typing import Any, Callable, Dict, Iterable, List, Tuple, TypeVar, cast
 from urllib.parse import urlparse
 
 import keyring
@@ -214,7 +214,7 @@ class Api(object):
         self,
         config_id: str,
         name: str,
-        share_project_ids: List[str] = [],
+        share_project_ids: Iterable[str] = [],
         variables: List[str] = [],
     ) -> None:
         url = f"{self.__api_url}/benchmarks"
@@ -222,7 +222,7 @@ class Api(object):
         payload = dict(
             name=name,
             configId=config_id,
-            sharedProjects=share_project_ids,
+            sharedProjects=list(share_project_ids),
             variables=variables,
         )
         response = requests.post(
@@ -341,15 +341,15 @@ class Api(object):
         )
         response.raise_for_status()
         configurations = response.json()["data"]
-        projects = self.projects
+        projects = {p.project_id: p for p in self.projects}
 
         return [
             Configuration(
                 c["_id"],
                 c["configuration"]["configurationName"],
                 [
-                    Project(p_id, projects[p_id])
-                    for p_id in c["configuration"]["sharedProjects"]
+                    projects[project_id]
+                    for project_id in c["configuration"]["sharedProjects"]
                 ],
             )
             for c in configurations
@@ -360,7 +360,7 @@ class Api(object):
     # region projects
     @property
     @_localhost_suppress_security_warning
-    def projects(self) -> Dict[str, str]:
+    def projects(self) -> List[Project]:
         projects_url = f"{self.__api_url}/projects"
         headers = self.__headers_accept("application/json") | self.__headers_auth
         response = requests.get(
@@ -368,7 +368,7 @@ class Api(object):
             headers=headers,
             verify=self.__verify_ssl,
         )
-        return {p["_id"]: p["name"] for p in response.json()["data"]}
+        return [Project(p["_id"], p["name"]) for p in response.json()["data"]]
 
     # endregion projects
 

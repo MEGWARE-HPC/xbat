@@ -23,6 +23,10 @@ from typing_extensions import Annotated
 from .api import AccessTokenError, Api, MeasurementLevel, MeasurementType
 
 
+def warn(*args: Any, category: str = "Warning", **kwargs: Any) -> None:
+    print(f"[bold yellow]{category}:[/bold yellow]", *args, **kwargs, file=sys.stderr)
+
+
 class App(typer.Typer):
     base_url: str
     local_port: int
@@ -120,10 +124,13 @@ def handle_errors(func: Callable) -> Callable:
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            print("[bold red]Error![/bold red]", e)
+            print("[bold red]Error![/bold red]", e, file=sys.stderr)
             if isinstance(e, AccessTokenError):
                 app_name = os.path.basename(sys.argv[0])
-                print(f"Authenticate by running [green]{app_name} login[/green]!")
+                print(
+                    f"Authenticate by running [green]{app_name} login[/green]!",
+                    file=sys.stderr,
+                )
             raise typer.Exit(code=1)
 
     return wrapper
@@ -366,20 +373,12 @@ def pull(
         print(df)
 
 
-@app.command(help="Start a benchmark run.")
+@app.command(help="Start a benchmark run using a config ID or Slurm job script path.")
 @handle_errors
 @require_valid_access_token()
 def start(
     config_id: Annotated[
         str | None, typer.Argument(help="The config name of the benchmark to run.")
-    ] = None,
-    name: Annotated[
-        str | None,
-        typer.Option(
-            "--name",
-            "-n",
-            help="Explicitly name the benchmark run.",
-        ),
     ] = None,
     job_script: Annotated[
         Path | None,
@@ -389,11 +388,51 @@ def start(
             help="The path to a Slurm script on the cluster to execute as a benchmark run.",
         ),
     ] = None,
+    name: Annotated[
+        str | None,
+        typer.Option(
+            "--name",
+            "-n",
+            help="Explicitly name the benchmark run.",
+        ),
+    ] = None,
+    share_flag: Annotated[
+        bool,
+        typer.Option(
+            "--share",
+            "-s",
+            help="Share the benchmark run with the benchmark shared projects.",
+        ),
+    ] = False,
+    share_projects: Annotated[
+        List[str],
+        typer.Option(
+            "--share-project",
+            "-p",
+            help="Explicitly share the benchmark run with these projects.",
+        ),
+    ] = [],
     ci: Annotated[
         bool,
-        typer.Option("--ci", help="Only output job ID on success."),
+        typer.Option(
+            "--ci",
+            help="Only print the job ID to stdout on success. (Only for starting by benchmark ID.)",
+        ),
     ] = False,
 ):
+    share_projects_ids = set()
+    projects = app.api.projects
+    projects_by_name = {p.name: p for p in projects}
+    for project_name in share_projects:
+        if len(projects_by_name) != len(projects):
+            warn(
+                "Project names are not unique.",
+                "(Ignoring explicit sharing.)",
+            )
+            break
+        if project_name not in projects_by_name:
+            raise ValueError(f"No such project: {project_name}")
+        share_projects_ids.add(projects_by_name[project_name].project_id)
     if config_id and job_script:
         raise ValueError(
             "Either a configuration ID or path to a job script may be given, not both."
@@ -430,14 +469,28 @@ def start(
             print(stdout)
         else:
             print(f"Started benchmark run with job ID {stdout}.")
+        if share_flag:
+            warn("No shared projects exist for Slurm job script based benchmark runs")
+        if len(share_projects_ids) > 0:
+            # TODO Consider resolving the benchmark run from the job ID and updating the shared projects
+            raise NotImplementedError(
+                "Sharing Slurm job script based benchmark runs is not yet implemented. (Use the web interface!)",
+            )
     elif config_id not in configs:
-        raise FileNotFoundError(f"No configuration with id {config_id} found.")
+        raise FileNotFoundError(f"No configuration found with ID: {config_id}")
     else:
         config = configs[config_id]
+        if share_flag:
+            share_projects_ids.update(p.project_id for p in config.shared_projects)
+            if len(share_projects_ids) == 0:
+                warn(
+                    "No shared projects found for this benchmark config:",
+                    config.name,
+                )
         app.api.start_run(
             config_id,
             name if name else config.name,
-            [p.project_id for p in config.shared_projects],
+            share_projects_ids,
         )
         print("Benchmark was started. (Open web UI for details.)")
 
@@ -471,7 +524,7 @@ def stop(
                 raise
 
 
-# TODO I could not test this yet due to HTTP 403
+# TODO Could not yet be tested due to HTTP 403
 @app.command(help="Create a backup of benchmark runs.")
 @handle_errors
 @require_valid_access_token()
