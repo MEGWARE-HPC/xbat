@@ -11,7 +11,7 @@
 
 + Upgrade dependencies by running `uv sync --upgrade` and `uv lock --upgrade`.
 + Run `uvx ruff check --fix` and `uvx ruff format .` to reformat the code.
-+ Use `uv run mypy ./src` to perform static type checking.
++ Use `uv run mypy ./src/` to perform static type checking.
 
 ## Installation
 

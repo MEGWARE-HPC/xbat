@@ -398,7 +398,7 @@ def start(
         raise ValueError(
             "Either a configuration ID or path to a job script may be given, not both."
         )
-    configs = {} if job_script else app.api.configurations
+    configs = {} if job_script else {c.config_id: c for c in app.api.configurations}
     if not config_id and not job_script:
         config_id = questionary.select(
             "Select a configuration:",
@@ -433,7 +433,12 @@ def start(
     elif config_id not in configs:
         raise FileNotFoundError(f"No configuration with id {config_id} found.")
     else:
-        app.api.start_run(config_id, name if name else configs[config_id])
+        config = configs[config_id]
+        app.api.start_run(
+            config_id,
+            name if name else config.name,
+            [p.project_id for p in config.shared_projects],
+        )
         print("Benchmark was started. (Open web UI for details.)")
 
 

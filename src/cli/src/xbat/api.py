@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import http
 import os
 import warnings
@@ -30,7 +31,7 @@ class MeasurementLevel(str, Enum):
 
 
 class MeasurementType(str, Enum):
-    # TODO are there more?
+    # TODO Are there more?
     all = "all"
     cpu = "cpu"
     cache = "cache"
@@ -40,6 +41,25 @@ class MeasurementType(str, Enum):
 
     def __str__(self) -> str:
         return self.value
+
+
+@dataclass
+class Project:
+    project_id: str
+    name: str
+
+
+@dataclass
+class Configuration:
+    config_id: str
+    name: str
+    shared_projects: List[Project]
+
+    def __str__(self) -> str:
+        if len(self.shared_projects) > 0:
+            return f"{self.name} ({', '.join([p.name for p in self.shared_projects])})"
+        else:
+            return self.name
 
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -311,7 +331,7 @@ class Api(object):
     # region configurations
     @property
     @_localhost_suppress_security_warning
-    def configurations(self) -> Dict[str, str]:
+    def configurations(self) -> List[Configuration]:
         configurations_url = f"{self.__api_url}/configurations"
         headers = self.__headers_accept("application/json") | self.__headers_auth
         response = requests.get(
@@ -323,19 +343,17 @@ class Api(object):
         configurations = response.json()["data"]
         projects = self.projects
 
-        def format_config(name, shared_project_ids) -> str:
-            if len(shared_project_ids) == 0:
-                return name
-            return f"{name} ({', '.join([projects[s] for s in shared_project_ids])})"
-
-        return {
-            # TODO Consider returning shared projects as objects to auto-share new runs 
-            c["_id"]: format_config(
+        return [
+            Configuration(
+                c["_id"],
                 c["configuration"]["configurationName"],
-                c["configuration"]["sharedProjects"],
+                [
+                    Project(p_id, projects[p_id])
+                    for p_id in c["configuration"]["sharedProjects"]
+                ],
             )
             for c in configurations
-        }
+        ]
 
     # endregion configurations
 
