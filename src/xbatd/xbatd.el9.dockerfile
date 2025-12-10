@@ -1,12 +1,12 @@
 FROM almalinux:9.6
 
-RUN dnf -y update && \
+RUN dnf -y --releasever=9.6 update && \
     dnf -y install epel-release && \
     dnf clean all
 
 # require crb for ninja-build
 RUN dnf config-manager --enable crb && \
-    dnf -y update && \
+    dnf -y --releasever=9.6 update && \
     dnf clean all
 
 RUN dnf install -y make gcc gcc-c++ wget perl-devel perl-Data-Dumper rpm-devel rpm-build dnf-plugins-core \
@@ -21,7 +21,7 @@ RUN dnf config-manager --add-repo https://developer.download.nvidia.com/compute/
 
 # install rocm
 RUN dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm && \
-    dnf install -y amd-smi-lib && \
+    dnf --releasever=9.6 install -y amd-smi-lib && \
     dnf clean all
 
 ENV CQUESTDB_VERSION=4.0.4
