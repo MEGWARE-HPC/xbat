@@ -1,0 +1,25 @@
+name: 'Docker Setup'
+description: 'Installs Docker and Docker Compose, then starts the Docker daemon and verifies its status.'
+
+runs:
+  using: "composite"
+  steps:
+    - run: |
+        sudo apt-get update
+        sudo apt-get remove -y containerd docker docker-engine docker.io docker-compose || true
+        sudo apt-get install -y ca-certificates curl gnupg lsb-release
+        sudo mkdir -p /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+        sudo apt-get update
+        sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+        docker --version
+        docker compose version
+      shell: bash
+
+    - run: |
+        sudo systemctl start docker || echo "Warning: systemctl start docker failed"
+        sudo systemctl status docker || echo "Warning: Docker service not running"
+        docker info || { echo "Docker info failed - aborting"; exit 1; }
+        docker ps || { echo "Docker ps failed - aborting"; exit 1; }
+      shell: bash
