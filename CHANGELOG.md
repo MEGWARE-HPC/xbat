@@ -9,10 +9,16 @@ All notable changes to this project will be documented in this file.
 -   API endpoint and frontend button to backup entire MongoDB database (admin only) (#131)
 -   automatic subgroup opening and collapsing in docs navigation
 -   match highlighting to the search function in docs
+-   documentation about backup the MongoDB database (#86)
 -   API endpoint for measurement roofline (#111)
 -   duplicate checks in manual mode to job variables (#138)
 -   input restrictions (+ error messages) in job variables and optimize support for Firefox (#138)
 -   auto-redirect for nonexistent pages (#159)
+-   validation to ensure peaks and metrics are matched (#151)
+-   support to retain previous modifiers settings (#151)
+-   support for custom legends for peak values (#151)
+-   support to retain peaks information when switching between levels (#151)
+-   group name for peaks within traces (#151)
 
 ### Changed
 
@@ -20,6 +26,7 @@ All notable changes to this project will be documented in this file.
 -   upgraded QuestDB from v8 to v9 (#135)
 -   optimized queries for accessing QuestDB
 -   optimized jobs API and improve error page handling
+-   optimized scaling factor for peak values and improved its representation in legends (#151)
 
 ### Fixed
 
