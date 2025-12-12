@@ -25,6 +25,7 @@ All notable changes to this project will be documented in this file.
 -   upgraded Nuxt/Content from v2 to v3 (#82)
 -   upgraded QuestDB from v8 to v9 (#135)
 -   optimized queries for accessing QuestDB
+-   switched to an improved PgBouncer image and optimized the Valkey image (#169)
 -   optimized jobs API and improve error page handling
 -   optimized scaling factor for peak values and improved its representation in legends (#151)
 
