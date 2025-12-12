@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file.
 -   upgraded QuestDB from v8 to v9 (#135)
 -   optimized queries for accessing QuestDB
 -   upgraded LIKWID to v5.5.0 (#107)
+-   Upgraded ROCm to v7.1.1
 
 ### Fixed
 
