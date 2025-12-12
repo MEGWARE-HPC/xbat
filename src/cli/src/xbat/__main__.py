@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Tuple
 from urllib.parse import urlparse
 
+import click
 import pandas as pd
 import questionary
 import typer
@@ -20,7 +21,14 @@ from rich.progress import Progress
 from rich.table import Table
 from typing_extensions import Annotated
 
-from .api import AccessTokenError, Api, MeasurementLevel, MeasurementType
+from .api import (
+    AccessTokenError,
+    Api,
+    BenchmarkRun,
+    Configuration,
+    MeasurementLevel,
+    MeasurementType,
+)
 
 
 def warn(*args: Any, category: str = "Warning", **kwargs: Any) -> None:
@@ -124,6 +132,10 @@ def handle_errors(func: Callable) -> Callable:
         try:
             return func(*args, **kwargs)
         except Exception as e:
+            if isinstance(e, typer.Exit):
+                sys.exit(e.exit_code)
+            if isinstance(e, click.exceptions.Abort):
+                raise e
             print("[bold red]Error![/bold red]", e, file=sys.stderr)
             if isinstance(e, AccessTokenError):
                 app_name = os.path.basename(sys.argv[0])
@@ -131,6 +143,8 @@ def handle_errors(func: Callable) -> Callable:
                     f"Authenticate by running [green]{app_name} login[/green]!",
                     file=sys.stderr,
                 )
+            else:
+                print(e, file=sys.stderr)
             raise typer.Exit(code=1)
 
     return wrapper
@@ -147,6 +161,8 @@ def login(
     access_token: str | None = None
     user = os.getenv("XBAT_USER")
     password = os.getenv("XBAT_PASS")
+    if not ci:
+        print(f"[italic white]Setting credentials for {app.base_url}[/italic white]")
     if ci and (not user or not password):
         raise ValueError(
             " ".join(
@@ -162,8 +178,7 @@ def login(
         try:
             access_token = app.api.authorize(user, password)
         except AccessTokenError:
-            print("[bold red]Error![/bold red] Implicit credentials were invalid.\n")
-            password = None
+            raise AccessTokenError("Implicit credentials were invalid")
     if not access_token:
         user = user if ci else typer.prompt("User", default=user)
         password = password if ci else typer.prompt("Password", hide_input=True)
@@ -222,17 +237,19 @@ def ls(
         ),
     ] = False,
 ):
-    runs = app.api.benchmark_runs
+    runs = list(app.api.benchmark_runs.values())
     if filter_issuer:
-        runs = [r for r in runs if r["issuer"] == filter_issuer]
+        runs = [r for r in runs if r.issuer == filter_issuer]
 
     configs = app.api.configurations
 
-    def get_config(run: dict[str, Any]) -> Tuple[str, str]:
-        try:
-            config_id = run["configuration"]["_id"]
-            return (config_id, configs[config_id])
-        except Exception:
+    def get_config(run: BenchmarkRun) -> Tuple[str, str]:
+        if run.config_id:
+            return (
+                run.config_id,
+                "N/A" if run.config_id not in configs else str(configs[run.config_id]),
+            )
+        else:
             return ("N/A", "N/A")
 
     if filter_config:
@@ -246,21 +263,9 @@ def ls(
         list_jobs = True
     if list_jobs:
         columns += ["job", "variant", "job_state"]
-        for job in app.api.get_jobs(run_ids=[r["runNr"] for r in runs]):
-            variant = "N/A"
-            try:
-                variant = job["configuration"]["jobscript"]["variantName"]
-            except Exception:
-                pass  # No variant found for this job
-            job_state = "unknown"
-            try:
-                job_state = job["jobInfo"]["jobState"]
-                if isinstance(job_state, list):
-                    job_state = ",".join(job_state)
-                job_state = job_state.lower()
-            except Exception:
-                pass  # Could not determine job state
-            job_variant_state[job["jobId"]] = (variant, job_state)
+        for job in app.api.get_jobs(run_ids=[r.run_number for r in runs]):
+            variant = job.variant if job.variant else "N/A"
+            job_variant_state[job.job_id] = (variant, job.state)
     table = Table(
         show_header=not no_header,
         show_lines=False,
@@ -270,20 +275,22 @@ def ls(
     for column in columns:
         table.add_column(column)
     for run in runs:
-        values = [
-            run["runNr"],
-            run["name"],
-            *get_config(run),
-            run["issuer"],
-            run["state"],
+        values: List[str] = [
+            str(v)
+            for v in [
+                run.run_number,
+                run.name,
+                *get_config(run),
+                run.issuer,
+                run.state,
+            ]
         ]
-        values = [str(v) for v in values]
         if list_jobs:
-            for job in run["jobIds"]:
-                variant, job_state = job_variant_state[job]
+            for job_id in run.job_ids:
+                variant, job_state = job_variant_state[job_id]
                 if filter_variant and filter_variant != variant:
                     continue
-                table.add_row(*values, str(job), variant, job_state)
+                table.add_row(*values, str(job_id), variant, job_state)
         else:
             table.add_row(*values)
     print(table)
@@ -332,8 +339,13 @@ def log(
 @handle_errors
 @require_valid_access_token()
 def pull(
-    job_id: Annotated[int, typer.Argument(help="ID of a finished job.")],
-    output_path: Annotated[Path, typer.Argument(help="CSV output path.")],
+    job_id: Annotated[
+        int | None, typer.Option("--job-id", "-j", help="ID of a finished job.")
+    ] = None,
+    output_path: Annotated[
+        Path,
+        typer.Option("--output-path", "-o", help="Path to CSV output folder/file."),
+    ] = Path().absolute(),
     type: Annotated[
         MeasurementType, typer.Option("--type", "-t", help="Measurement type.")
     ] = MeasurementType.all,
@@ -346,10 +358,41 @@ def pull(
     node: Annotated[
         str | None, typer.Option("--node", "-n", help="Node of measurements.")
     ] = None,
-    quiet: Annotated[
-        bool, typer.Option("--quiet", "-q", help="Do not output on success.")
+    verbose: Annotated[
+        bool, typer.Option("--verbose", "-v", help="Do not output status and result.")
     ] = False,
 ):
+    if job_id is None:
+        runs = app.api.benchmark_runs
+        for k in list(runs):
+            if runs[k].state != "done":
+                del runs[k]
+        jobs = dict()
+        for job in app.api.get_jobs(run_ids=[r for r in runs]):
+            run = runs[job.run_number]
+            label = run.name
+            if run.config_name:
+                label += " ["
+                label += run.config_name
+                if job.variant:
+                    label += f" ({job.variant})"
+                label += "]"
+            jobs[job.job_id] = label
+        job_id = questionary.select(
+            "Select a job ID:",
+            choices=[dict(name=f"{k} {v}", value=k) for k, v in jobs.items()],
+        ).ask()
+        if not job_id:
+            raise typer.Abort()
+    if output_path.is_dir():
+        output_path = output_path / (
+            f"xbat_job-{job_id}_type-{type}"
+            + (f"_metric-{metric}" if metric else "")
+            + f"_level-{level}"
+            + (f"_node-{node}" if node else "")
+            + ".csv"
+        )
+        print(f"[italic white]Saving output to {output_path}[/italic white]")
     if output_path.suffix.lower() != ".csv":
         print(
             f'[bold yellow]Warning![/bold yellow] Output path {output_path} does not end in ".csv"'
@@ -359,7 +402,7 @@ def pull(
     # available_metrics = app.api.get_job_metrics(job_id)
     # print(available_metrics);exit()
     pull_args = (job_id, output_path, type, metric, level, node)
-    if quiet:
+    if not verbose:
         app.api.download_job_measurements(*pull_args)
     else:
         with Progress() as progress:
@@ -368,7 +411,7 @@ def pull(
                 *pull_args,
                 lambda x: progress.update(task, completed=x),
             )
-    if not quiet:
+    if verbose:
         df = pd.read_csv(output_path)
         print(df)
 
@@ -437,8 +480,8 @@ def start(
         raise ValueError(
             "Either a configuration ID or path to a job script may be given, not both."
         )
-    configs = {} if job_script else {c.config_id: c for c in app.api.configurations}
-    if not config_id and not job_script:
+    configs: Dict[str, Configuration] = {} if job_script else app.api.configurations
+    if config_id is None and not job_script:
         config_id = questionary.select(
             "Select a configuration:",
             choices=[dict(name=f"{k} {v}", value=k) for k, v in configs.items()],
@@ -479,6 +522,7 @@ def start(
     elif config_id not in configs:
         raise FileNotFoundError(f"No configuration found with ID: {config_id}")
     else:
+        assert config_id
         config = configs[config_id]
         if share_flag:
             share_projects_ids.update(p.project_id for p in config.shared_projects)
@@ -574,15 +618,14 @@ def ui(
         job = None
     if run:
         validate_access_token()
-        runs = [int(r["runNr"]) for r in app.api.benchmark_runs]
-        if run not in runs:
+        if run not in app.api.benchmark_runs:
             raise FileNotFoundError("No benchmark run #{run} found.")
     elif job:
         validate_access_token()
         jobs = app.api.get_jobs(job_ids=[job])
         if len(jobs) == 0:
             raise FileNotFoundError("No job {job} found.")
-        run = jobs[0]["runNr"]
+        run = jobs[0].run_number
     if run:
         if not url.endswith("/"):
             url += "/"

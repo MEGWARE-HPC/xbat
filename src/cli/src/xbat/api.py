@@ -62,6 +62,25 @@ class Configuration:
             return self.name
 
 
+@dataclass
+class BenchmarkRun:
+    run_number: int
+    name: str
+    issuer: str
+    config_id: str | None
+    config_name: str | None
+    state: str
+    job_ids: List[int]
+
+
+@dataclass
+class Job:
+    job_id: int
+    state: str
+    run_number: int
+    variant: str | None
+
+
 F = TypeVar("F", bound=Callable[..., Any])
 
 
@@ -158,7 +177,7 @@ class Api(object):
     # region benchmarks
     @property
     @_localhost_suppress_security_warning
-    def benchmark_runs(self) -> List[Dict[str, Any]]:
+    def benchmark_runs(self) -> Dict[int, BenchmarkRun]:
         benchmark_runs_url = f"{self.__api_url}/benchmarks"
         headers = self.__headers_accept("application/json") | self.__headers_auth
         response = requests.get(
@@ -167,7 +186,21 @@ class Api(object):
             verify=self.__verify_ssl,
         )
         response.raise_for_status()
-        return response.json()["data"]
+        runs = response.json()["data"]
+        return {
+            r["runNr"]: BenchmarkRun(
+                r["runNr"],
+                r["name"],
+                r["issuer"],
+                r["configuration"]["_id"] if r.get("configuration") else None,
+                r["configuration"]["configuration"]["configurationName"]
+                if r.get("configuration")
+                else None,
+                r["state"],
+                r["jobIds"],
+            )
+            for r in runs
+        }
 
     @_localhost_suppress_security_warning
     def export_runs(
@@ -264,7 +297,7 @@ class Api(object):
         run_ids: List[int] | None = None,
         job_ids: List[int] | None = None,
         short: bool = True,
-    ) -> List[Dict[str, Any]]:
+    ) -> List[Job]:
         jobs_url = f"{self.__api_url}/jobs?short={short}"
         if run_ids:
             jobs_url += "&runNrs="
@@ -285,8 +318,29 @@ class Api(object):
             verify=self.__verify_ssl,
         )
         response.raise_for_status()
-        jobs = response.json()["data"]
-        return jobs
+
+        def parse_job(job_dict: Dict[str, Any]) -> Job:
+            variant: str | None = None
+            try:
+                variant = str(job_dict["configuration"]["jobscript"]["variantName"])
+            except Exception:
+                pass  # No variant found for this job
+            job_state = None
+            try:
+                job_state = job_dict["jobInfo"]["jobState"]
+                if isinstance(job_state, list):
+                    job_state = ",".join(job_state)
+                job_state = job_state.lower()
+            except Exception:
+                pass  # Could not determine job state
+            return Job(
+                int(job_dict["jobId"]),
+                str(job_state),
+                int(job_dict["runNr"]),
+                variant,
+            )
+
+        return [parse_job(j) for j in response.json()["data"]]
 
     @_localhost_suppress_security_warning
     def get_job_output(self, job_id: int) -> Tuple[str, str]:
@@ -331,7 +385,7 @@ class Api(object):
     # region configurations
     @property
     @_localhost_suppress_security_warning
-    def configurations(self) -> List[Configuration]:
+    def configurations(self) -> Dict[str, Configuration]:
         configurations_url = f"{self.__api_url}/configurations"
         headers = self.__headers_accept("application/json") | self.__headers_auth
         response = requests.get(
@@ -343,8 +397,8 @@ class Api(object):
         configurations = response.json()["data"]
         projects = {p.project_id: p for p in self.projects}
 
-        return [
-            Configuration(
+        return {
+            c["_id"]: Configuration(
                 c["_id"],
                 c["configuration"]["configurationName"],
                 [
@@ -353,7 +407,7 @@ class Api(object):
                 ],
             )
             for c in configurations
-        ]
+        }
 
     # endregion configurations
 
