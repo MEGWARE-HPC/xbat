@@ -29,7 +29,7 @@ ENV CQUESTDB_VERSION=4.0.4
 RUN git clone https://github.com/questdb/c-questdb-client.git && cd c-questdb-client && git checkout "$CQUESTDB_VERSION" && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
 
 # install LIKWID
-ENV LIKWID_VERSION="v5.5.0"
+ENV LIKWID_VERSION="v5.5.1rc1"
 RUN git clone https://github.com/RRZE-HPC/likwid.git && cd likwid && git checkout "${LIKWID_VERSION}" && \
     sed -i -e 's!PREFIX ?= /usr/local#NO SPACE!PREFIX ?= /usr/local/share/xbatd/#NO SPACE!g' config.mk && \
     sed -i -e 's!MAX_NUM_THREADS = 512!MAX_NUM_THREADS = 1024!g' config.mk \
