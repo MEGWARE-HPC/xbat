@@ -42,7 +42,7 @@ RUN printf '%s\n' \
 
 RUN microdnf -y install amd-smi-lib && microdnf clean all
 
-ENV CQUESTDB_VERSION=4.0.4
+ENV CQUESTDB_VERSION=4.0.5
 # install questdb client
 RUN git clone --depth 1 --branch "${CQUESTDB_VERSION}" https://github.com/questdb/c-questdb-client.git && \
     cd c-questdb-client && \
