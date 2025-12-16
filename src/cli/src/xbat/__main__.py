@@ -344,13 +344,13 @@ def pull(
     ] = None,
     output_path: Annotated[
         Path,
-        typer.Option("--output-path", "-o", help="Path to CSV output folder/file."),
+        typer.Option("--output-path", "-o", help="Path to output folder/file."),
     ] = Path().absolute(),
     group: Annotated[
-        MeasurementGroup, typer.Option("--type", "-t", help="Measurement type.")
+        MeasurementGroup, typer.Option("--group", "-g", help="Measurement group.")
     ] = MeasurementGroup.all,
     metric: Annotated[
-        str | None, typer.Option("--metric", "-m", help="Measurement type metric.")
+        str | None, typer.Option("--metric", "-m", help="Measurement metric.")
     ] = None,
     level: Annotated[
         MeasurementLevel, typer.Option("--level", "-l", help="Measurement level.")
@@ -358,10 +358,14 @@ def pull(
     node: Annotated[
         str | None, typer.Option("--node", "-n", help="Node of measurements.")
     ] = None,
+    as_json: Annotated[
+        bool, typer.Option("--json", help="Output as JSON instead of CSV.")
+    ] = False,
     verbose: Annotated[
         bool, typer.Option("--verbose", "-v", help="Do not output status and result.")
     ] = False,
 ):
+    file_format = "json" if as_json else "csv"
     if job_id is None:
         runs = app.api.benchmark_runs
         for k in list(runs):
@@ -395,18 +399,18 @@ def pull(
             + (f"_metric-{metric_fmtd}" if metric else "")
             + f"_level-{level}"
             + (f"_node-{node}" if node else "")
-            + ".csv"
+            + f".{file_format}"
         )
         print(f"[italic white]Saving output to {output_path}[/italic white]")
-    if output_path.suffix.lower() != ".csv":
+    if output_path.suffix.lower() != f".{file_format}":
         print(
-            f'[bold yellow]Warning![/bold yellow] Output path {output_path} does not end in ".csv"'
+            f'[bold yellow]Warning![/bold yellow] Output path {output_path} does not end in ".{file_format}"'
         )
-    # FIXME This currently always returns a 404 through the API.
+    # FIXME API is inconsistent and therefore not suitable for validation of selected metric (s. GH issue #177).
     # TODO Metrics should be matched against available ones.
     # available_metrics = app.api.get_job_metrics(job_id)
     # print(available_metrics);exit()
-    pull_args = (job_id, output_path, group, metric, level, node)
+    pull_args = (job_id, output_path, group, metric, level, node, file_format)
     if not verbose:
         app.api.download_job_measurements(*pull_args)
     else:

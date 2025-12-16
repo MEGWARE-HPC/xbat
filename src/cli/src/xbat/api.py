@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import http
+import json
 import os
 import warnings
 from enum import Enum
@@ -32,7 +33,6 @@ class MeasurementLevel(str, Enum):
 
 
 class MeasurementGroup(str, Enum):
-    # TODO Are there more?
     all = "all"
     cpu = "cpu"
     cache = "cache"
@@ -356,9 +356,10 @@ class Api(object):
         output = response.json()
         return output["standardOutput"], output["standardError"]
 
+    # FIXME API is inconsistent and therefore not suitable for validation of selected metric (s. GH issue #177).
     @_localhost_suppress_security_warning
-    def get_job_metrics(self, job_id: int) -> List[str]:
-        jobs_url = f"{self.__api_url}/jobs/metrics?jobId={job_id}"
+    def get_job_metrics(self, job_id: int) -> Dict[str, List[str]]:
+        jobs_url = f"{self.__api_url}/metrics?jobIds={job_id}"
         headers = self.__headers_accept("application/json") | self.__headers_auth
         response = requests.get(
             jobs_url,
@@ -366,9 +367,12 @@ class Api(object):
             verify=self.__verify_ssl,
         )
         response.raise_for_status()
-        output = response.json()
-        print(output)
-        exit()
+        grouped_metrics: Dict[str, List[str]] = dict()
+        for group_name, group in response.json()["metrics"].items():
+            grouped_metrics[group_name] = []
+            for subgroup in group.values():
+                grouped_metrics[group_name] += list(subgroup["metrics"].keys())
+        return grouped_metrics
 
     @_localhost_suppress_security_warning
     def cancel_job(self, job_id: int) -> None:
@@ -437,14 +441,19 @@ class Api(object):
         metric: str | None,
         level: MeasurementLevel,
         node: str | None,
+        file_format: str = "json",
         progress_callback: Callable[[float], None] | None = None,
     ) -> Path:
         if not isinstance(job_id, int):
             raise ValueError("job_id must be an integer.")
         if metric and group == MeasurementGroup.all:
-            raise ValueError('Cannot select metric when type is "all".')
+            raise ValueError('Cannot select metric if group is "all".')
+        if not metric and group != MeasurementGroup.all:
+            raise ValueError('Metric must be provided if group is not "all".')
         if not node and level == MeasurementLevel.node:
-            raise ValueError('Node must be provided when level is "node"')
+            raise ValueError('Node must be provided if level is "node"')
+        if file_format not in ["csv", "json"]:
+            raise ValueError("Invalid file format.")
         params: Dict[str, Any] = dict(level=level)
         if group != MeasurementGroup.all:
             params["group"] = group
@@ -454,8 +463,8 @@ class Api(object):
             params["node"] = node
         for k, v in params.items():
             params[k] = str(v)
-        measurement_url = f"{self.__api_url}/measurements/{job_id}/csv"
-        headers = self.__headers_accept("text/csv") | self.__headers_auth
+        measurement_url = f"{self.__api_url}/measurements/{job_id}/{file_format}"
+        headers = self.__headers_accept(f"text/{file_format}") | self.__headers_auth
         response = requests.get(
             measurement_url,
             headers=headers,
@@ -472,11 +481,19 @@ class Api(object):
                     if chunk:
                         f.write(chunk)
                         downloaded += len(chunk)
-                        if progress_callback:
+                        if progress_callback and total:
                             progress_callback(downloaded / total)
+            if file_format == "json":
+                # Pretty-print
+                data = json.loads(output_path.read_text())
+                output_path.write_text(json.dumps(data, indent=3))
+        elif response.status_code == http.HTTPStatus.BAD_REQUEST:
+            raise ValueError(
+                "Could not fulfill request for combination of job_id, group and metric."
+            )
         elif response.status_code == http.HTTPStatus.NOT_FOUND:
             raise FileNotFoundError(
-                f"job_id {job_id} or combination of job_id, type, and metric not found."
+                f"job_id {job_id} or combination of job_id, group and metric not found."
             )
         response.raise_for_status()
         return output_path
