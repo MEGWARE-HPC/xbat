@@ -32,6 +32,7 @@ export const useGraph = () => {
 
         const query = storeGraph.query.value;
         const overrides = storeGraph.overrides.value;
+        const styling = storeGraph.styling.value;
 
         if (!Object.keys(query).length) {
             return {
@@ -163,7 +164,8 @@ export const useGraph = () => {
                 : undefined,
             autorange: all.unit != "%",
             rangeslider: storeGraph.preferences.value.rangeslider,
-            noData: storeGraph.noData.value || !all.traces.length
+            noData: storeGraph.noData.value || !all.traces.length,
+            showLegend: styling?.showLegend ?? true
         });
 
         // TODO fix ts
