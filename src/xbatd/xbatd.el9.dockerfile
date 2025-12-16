@@ -17,7 +17,9 @@ RUN microdnf -y update && \
         boost-devel \
         libcurl-devel \
         openssl-devel && \
-    microdnf -y install --enablerepo=crb ninja-build && \
+    microdnf -y install --enablerepo=crb \
+        ninja-build \
+        python3-wheel && \
     microdnf clean all
 
 RUN mkdir -p ~/rpmbuild/BUILD ~/rpmbuild/BUILDROOT ~/rpmbuild/RPMS ~/rpmbuild/SOURCES ~/rpmbuild/SPECS ~/rpmbuild/SRPMS /usr/local/share/xbatd
