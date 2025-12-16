@@ -106,8 +106,8 @@
                             >
                             <v-list-item
                                 v-if="
-                                    $authStore.userLevel >=
-                                    $authStore.UserLevelEnum.demo
+                                    $authStore.userLevel ==
+                                    $authStore.UserLevelEnum.admin
                                 "
                                 value="backup"
                                 v-bind:title.attr="'Backup the entire mongodb database'"
