@@ -44,15 +44,19 @@ RUN microdnf -y install amd-smi-lib && microdnf clean all
 
 ENV CQUESTDB_VERSION=4.0.4
 # install questdb client
-RUN git clone https://github.com/questdb/c-questdb-client.git && cd c-questdb-client && git checkout "$CQUESTDB_VERSION" && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
+RUN git clone --depth 1 --branch "${CQUESTDB_VERSION}" https://github.com/questdb/c-questdb-client.git && \
+    cd c-questdb-client && \
+    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build build
 
 # install LIKWID
 ENV LIKWID_VERSION="v5.5.1rc1"
-RUN git clone https://github.com/RRZE-HPC/likwid.git && cd likwid && git checkout "${LIKWID_VERSION}" && \
+RUN git clone --depth 1 --branch "${LIKWID_VERSION}" https://github.com/RRZE-HPC/likwid.git && \
+    cd likwid && \
     sed -i -e 's!PREFIX ?= /usr/local#NO SPACE!PREFIX ?= /usr/local/share/xbatd/#NO SPACE!g' config.mk && \
-    sed -i -e 's!MAX_NUM_THREADS = 512!MAX_NUM_THREADS = 1024!g' config.mk \
-    && make -j $(nproc) \
-    && make install
+    sed -i -e 's!MAX_NUM_THREADS = 512!MAX_NUM_THREADS = 1024!g' config.mk && \
+    make -j "$(nproc)" && \
+    make install
 
 ARG VERSION
 ARG RELEASE
@@ -62,7 +66,7 @@ ENV XBAT_RELEASE=$RELEASE
 ENV APP_NAME=xbatd-${XBAT_VERSION}
 
 RUN echo -e "%_unpackaged_files_terminate_build      0 \n%_binaries_in_noarch_packages_terminate_build   0" > /etc/rpm/macros
-RUN mkdir /root/rpmbuild/SOURCES/${APP_NAME}
+RUN mkdir -p /root/rpmbuild/SOURCES/${APP_NAME}
 COPY . /root/rpmbuild/SOURCES/${APP_NAME}
 RUN cd /root/rpmbuild/SOURCES/ && tar -czvf ${APP_NAME}.tar.gz ${APP_NAME}
 RUN cp /root/rpmbuild/SOURCES/${APP_NAME}/xbatd.spec /root/rpmbuild/SPECS
