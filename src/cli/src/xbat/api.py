@@ -14,8 +14,9 @@ import urllib3
 
 
 class AccessTokenError(Exception):
-    def __init__(self, reason: str) -> None:
+    def __init__(self, reason: str, no_credentials: bool = True) -> None:
         super().__init__(reason)
+        self.no_credentials = no_credentials
 
 
 class MeasurementLevel(str, Enum):
@@ -30,7 +31,7 @@ class MeasurementLevel(str, Enum):
         return self.value
 
 
-class MeasurementType(str, Enum):
+class MeasurementGroup(str, Enum):
     # TODO Are there more?
     all = "all"
     cpu = "cpu"
@@ -139,7 +140,7 @@ class Api(object):
             verify=self.__verify_ssl,
         )
         if token_response.status_code == http.HTTPStatus.UNAUTHORIZED:
-            raise AccessTokenError("Invalid credentials provided.")
+            raise AccessTokenError("Invalid credentials provided.", False)
         token_response.raise_for_status()
         access_token = token_response.json()["access_token"]
         try:
@@ -432,7 +433,7 @@ class Api(object):
         self,
         job_id: int,
         output_path: Path,
-        type: MeasurementType,
+        group: MeasurementGroup,
         metric: str | None,
         level: MeasurementLevel,
         node: str | None,
@@ -440,13 +441,13 @@ class Api(object):
     ) -> Path:
         if not isinstance(job_id, int):
             raise ValueError("job_id must be an integer.")
-        if metric and type == MeasurementType.all:
+        if metric and group == MeasurementGroup.all:
             raise ValueError('Cannot select metric when type is "all".')
         if not node and level == MeasurementLevel.node:
             raise ValueError('Node must be provided when level is "node"')
         params: Dict[str, Any] = dict(level=level)
-        if type != MeasurementType.all:
-            params["group"] = type
+        if group != MeasurementGroup.all:
+            params["group"] = group
         if metric:
             params["metric"] = metric
         if node:

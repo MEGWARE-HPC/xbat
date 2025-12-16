@@ -27,7 +27,7 @@ from .api import (
     BenchmarkRun,
     Configuration,
     MeasurementLevel,
-    MeasurementType,
+    MeasurementGroup,
 )
 
 
@@ -101,7 +101,9 @@ def main(
         str, typer.Option(envvar="XBAT_BASE_URL")
     ] = "https://demo.xbat.dev",
     api_version: Annotated[str, typer.Option(envvar="XBAT_API_VERSION")] = "v1",
-    client_id: Annotated[str, typer.Option(envvar="XBAT_API_CLIENT_ID")] = "demo",
+    client_id: Annotated[str, typer.Option(envvar="XBAT_API_CLIENT_ID")] = os.getenv(
+        "XBAT_USER", "demo"
+    ),
     # Just for documentation in help
     access_token: Annotated[
         str | None,
@@ -137,14 +139,12 @@ def handle_errors(func: Callable) -> Callable:
             if isinstance(e, click.exceptions.Abort):
                 raise e
             print("[bold red]Error![/bold red]", e, file=sys.stderr)
-            if isinstance(e, AccessTokenError):
+            if isinstance(e, AccessTokenError) and e.no_credentials:
                 app_name = os.path.basename(sys.argv[0])
                 print(
                     f"Authenticate by running [green]{app_name} login[/green]!",
                     file=sys.stderr,
                 )
-            else:
-                print(e, file=sys.stderr)
             raise typer.Exit(code=1)
 
     return wrapper
@@ -346,9 +346,9 @@ def pull(
         Path,
         typer.Option("--output-path", "-o", help="Path to CSV output folder/file."),
     ] = Path().absolute(),
-    type: Annotated[
-        MeasurementType, typer.Option("--type", "-t", help="Measurement type.")
-    ] = MeasurementType.all,
+    group: Annotated[
+        MeasurementGroup, typer.Option("--type", "-t", help="Measurement type.")
+    ] = MeasurementGroup.all,
     metric: Annotated[
         str | None, typer.Option("--metric", "-m", help="Measurement type metric.")
     ] = None,
@@ -385,9 +385,14 @@ def pull(
         if not job_id:
             raise typer.Abort()
     if output_path.is_dir():
+        metric_fmtd = str(metric)
+        if metric:
+            metric_fmtd = "".join(
+                [m[0].upper() + m[1:].lower() for m in metric.split()]
+            )
         output_path = output_path / (
-            f"xbat_job-{job_id}_type-{type}"
-            + (f"_metric-{metric}" if metric else "")
+            f"xbat_job-{job_id}_group-{group}"
+            + (f"_metric-{metric_fmtd}" if metric else "")
             + f"_level-{level}"
             + (f"_node-{node}" if node else "")
             + ".csv"
@@ -401,7 +406,7 @@ def pull(
     # TODO Metrics should be matched against available ones.
     # available_metrics = app.api.get_job_metrics(job_id)
     # print(available_metrics);exit()
-    pull_args = (job_id, output_path, type, metric, level, node)
+    pull_args = (job_id, output_path, group, metric, level, node)
     if not verbose:
         app.api.download_job_measurements(*pull_args)
     else:
