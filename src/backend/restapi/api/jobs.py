@@ -50,35 +50,39 @@ def get_all(runNrs=None, jobIds=None, short=False):
     benchmarkQuery = create_user_benchmark_filter(user)
 
     benchmarks = db.getMany("benchmarks", benchmarkQuery, {"runNr": True})
-    accessable_runs = [b["runNr"] for b in benchmarks]
+    accessible_runs = {b["runNr"] for b in benchmarks}
     jobs = db.getMany("jobs", {"runNr": {
-        "$in": accessable_runs
+        "$in": list(accessible_runs)
     }}, {"jobId": True})
-    accessable_jobs = [j["jobId"] for j in jobs]
+    accessible_jobs = {j["jobId"] for j in jobs}
 
     if runNrs is not None:
-        for run in runNrs:
-            if not (run in accessable_runs): raise httpErrors.Unauthorized()
+        if not runNrs:
+            raise httpErrors.BadRequest("'runNrs' must not be empty.")
+        invalid_runs = set(runNrs) - accessible_runs
+        if invalid_runs:
+            raise httpErrors.NotFound(
+                f"Access denied for runNrs: {list(invalid_runs)}")
 
     if jobIds is not None:
-        for job in jobIds:
-            if not (job in accessable_jobs): raise httpErrors.Unauthorized()
+        if not jobIds:
+            raise httpErrors.BadRequest("'jobIds' must not be empty.")
+        invalid_jobs = set(jobIds) - accessible_jobs
+        if invalid_jobs:
+            raise httpErrors.NotFound(
+                f"Access denied for jobIds: {list(invalid_jobs)}")
 
-    query_filter = {}
     if runNrs is not None:
         query_filter = {"runNr": {"$in": runNrs}}
     elif jobIds is not None:
         query_filter = {"jobId": {"$in": jobIds}}
     else:
-        query_filter = {"runNr": {"$in": accessable_runs}}
+        query_filter = {"runNr": {"$in": list(accessible_runs)}}
 
-    exclude_filter = {
-        "_id": False,
-    }
+    exclude_filter = {"_id": False}
 
     if short:
-        exclude_filter = {
-            **exclude_filter,
+        exclude_filter.update({
             "runNr": True,
             "jobId": True,
             "iteration": True,
@@ -88,7 +92,7 @@ def get_all(runNrs=None, jobIds=None, short=False):
             "nodes": True,
             "jobInfo.jobState": True,
             "variables": True,
-        }
+        })
 
     result = db.getMany("jobs", query_filter, exclude_filter)
 

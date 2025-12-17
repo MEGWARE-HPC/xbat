@@ -21,6 +21,8 @@ const parseGeneralUnit = (unit: string) => {
     };
 };
 
+let __lastLevel: string | null = null;
+
 export const useGraph = () => {
     const { createLayout, createTrace, calculateTimestamps } = useGraphBase();
 
@@ -30,6 +32,7 @@ export const useGraph = () => {
 
         const query = storeGraph.query.value;
         const overrides = storeGraph.overrides.value;
+        const styling = storeGraph.styling.value;
 
         if (!Object.keys(query).length) {
             return {
@@ -146,6 +149,11 @@ export const useGraph = () => {
             all.traces.forEach((x: Partial<Trace>) => {
                 x.visible = x.uid && filteredVisibleTraces.includes(x.uid);
             });
+        } else {
+            const vis = new Set(storeGraph.settings.value.visible);
+            all.traces.forEach((x: Partial<Trace>) => {
+                x.visible = x.uid ? vis.has(x.uid) : true;
+            });
         }
 
         const layout = createLayout({
@@ -156,7 +164,8 @@ export const useGraph = () => {
                 : undefined,
             autorange: all.unit != "%",
             rangeslider: storeGraph.preferences.value.rangeslider,
-            noData: storeGraph.noData.value || !all.traces.length
+            noData: storeGraph.noData.value || !all.traces.length,
+            showLegend: styling?.showLegend ?? true
         });
 
         // TODO fix ts
@@ -369,7 +378,87 @@ export const useGraph = () => {
 
         const nodes = storeGraph.nodes.value;
 
+        {
+            const { flopItems, dramItems, cacheItems } = useNodeBenchmarks();
+            const supportedPeaks =
+                query.metric === "FLOPS" ||
+                (query.metric === "Bandwidth" &&
+                    (query.group === "memory" || query.group === "cache"));
+
+            const allowed = (() => {
+                if (!supportedPeaks) return new Set<string>();
+                const arr =
+                    query.metric === "FLOPS"
+                        ? Array.isArray(flopItems)
+                            ? flopItems
+                            : []
+                        : query.group === "memory"
+                        ? Array.isArray(dramItems)
+                            ? dramItems
+                            : []
+                        : Array.isArray(cacheItems)
+                        ? cacheItems
+                        : [];
+                return new Set<string>(arr.map((i: any) => i.value));
+            })();
+
+            const prevSel: string[] = Array.isArray(modifiers.systemBenchmarks)
+                ? modifiers.systemBenchmarks
+                : [];
+            const nextSel = supportedPeaks
+                ? prevSel.filter((b) => allowed.has(b))
+                : [];
+
+            if (nextSel.length !== prevSel.length) {
+                modifiers.systemBenchmarks = nextSel;
+            }
+
+            const prevVis: string[] = Array.isArray(
+                storeGraph.settings.value.visible
+            )
+                ? storeGraph.settings.value.visible
+                : [];
+            const prefix = `${query.node}-peak-`;
+
+            const nextVis = prevVis.filter((uid) => {
+                if (typeof uid !== "string" || !uid.startsWith(prefix))
+                    return true;
+                const bench = uid.slice(prefix.length);
+                return supportedPeaks && allowed.has(bench);
+            });
+
+            if (nextVis.length !== prevVis.length) {
+                storeGraph.settings.value.visible = nextVis;
+            }
+        }
+
         if (modifiers.systemBenchmarks?.length) {
+            const existUids = new Set<string>(
+                (storeGraph.graph.value?.traces ?? [])
+                    .map((t: any) => t?.uid)
+                    .filter((u: any): u is string => typeof u === "string")
+            );
+
+            const scaleRaw = modifiers.systemBenchmarksScalingFactor ?? 1;
+            const formatScale = (v: number) => {
+                const n = Number(v);
+                if (!isFinite(n) || n <= 0) return "1";
+                if (n >= 1) return String(n);
+                if (n < 0.01) return n.toExponential(2);
+                return n.toFixed(2);
+            };
+            // The display format of the scaling factor can be customized
+            // The current format is 'peak* x factor'
+            const formattedScale = formatScale(scaleRaw);
+            const scaleSuffix =
+                formattedScale !== "1" && formattedScale !== "1.0"
+                    ? ` × ${formattedScale}`
+                    : "";
+            const stripScaleSuffix = (name: string) =>
+                (name || "")
+                    .replace(/\s*[\(\[]\s*×[^)\]]*[\)\]]\s*$/u, "")
+                    .replace(/\s*×[0-9.+\-eE]+\s*$/u, "");
+
             modifiers.systemBenchmarks.forEach((benchmark) => {
                 const nodeNames = Object.keys(nodes[query.jobIds[0]]);
                 const node =
@@ -389,24 +478,61 @@ export const useGraph = () => {
                     unit.length - (isBandwidth ? "B/s".length : "FLOPS".length)
                 );
 
-                const uid = `${query.node}-peak-${benchmark}`;
+                const uidNode =
+                    query.level === "job" ? nodeNames[0] : query.node;
+                const uid = `${uidNode}-peak-${benchmark}`;
                 const paletteColor = palette[traceCount % palette.length];
+                const overrideName = overrides.traces?.[uid]?.name || null;
+                {
+                    const prev = Array.isArray(
+                        storeGraph.settings.value.visible
+                    )
+                        ? storeGraph.settings.value.visible
+                        : [];
+                    if (!prev.includes(uid) && !existUids.has(uid)) {
+                        storeGraph.settings.value = {
+                            ...storeGraph.settings.value,
+                            visible: Array.from(new Set([...prev, uid]))
+                        };
+                    }
+                }
 
+                const baseName =
+                    overrideName || `Peak ${benchmarkTitles.value[benchmark]}`;
+                const nameWithScale = `${stripScaleSuffix(
+                    baseName
+                )}${scaleSuffix}`;
                 const scaledPeak = humanSizeFixed(peak, baseUnit);
                 traces.push(
                     createTrace({
-                        name: `Peak ${benchmarkTitles.value[benchmark]}`,
+                        name: nameWithScale,
                         y: new Array(xMax).fill(scaledPeak),
                         interval,
                         legendgroup: "benchmarks",
+                        rawName: "Peaks",
                         width: 3,
                         auxiliary: true,
                         color: paletteColor,
-                        uid: uid
+                        uid
                     })
                 );
                 traceCount += 1;
             });
+        }
+
+        {
+            const curLevel = query.level;
+            if (__lastLevel !== curLevel) {
+                __lastLevel = curLevel;
+                const allUids: string[] = (traces ?? [])
+                    .map((t: any) => t?.uid)
+                    .filter((u: any): u is string => typeof u === "string");
+                const prev = storeGraph.settings.value ?? {};
+                storeGraph.settings.value = {
+                    ...prev,
+                    visible: allUids
+                };
+            }
         }
 
         return {
