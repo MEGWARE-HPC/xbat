@@ -6,7 +6,7 @@ import webbrowser
 from enum import Enum
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Set, Tuple
 from urllib.parse import urlparse
 
 import click
@@ -68,7 +68,7 @@ class App(typer.Typer):
             os.EX_OK == self.exec_cmd(f"where {command}")[0]
         )
 
-    def check_file_exists(self, path: Path) -> bool:
+    def check_file_exists(self, path: Path | str) -> bool:
         return (
             os.EX_OK == self.exec_cmd(f"ls {path}")[0]
             or
@@ -110,7 +110,7 @@ def main(
     # Just for documentation in help
     access_token: Annotated[
         str | None,
-        typer.Option(envvar="XBAT_ACCESS_TOKEN", help="Alternative to keyring."),
+        typer.Option(envvar="XBAT_ACCESS_TOKEN", help="Alternative to using keyring."),
     ] = None,
 ):
     app.base_url = base_url
@@ -304,7 +304,7 @@ def ls(
 @require_valid_access_token()
 def rm(
     runs: Annotated[
-        List[int], typer.Argument(help="The IDs of the benchmark runs to delete.")
+        List[int], typer.Argument(help="The numbers of the benchmark runs to delete.")
     ],
     quiet: Annotated[
         bool,
@@ -412,7 +412,7 @@ def pull(
     # FIXME API is inconsistent and therefore not suitable for validation of selected metric (s. GH issue #177).
     # TODO Metrics should be matched against available ones.
     # available_metrics = app.api.get_job_metrics(job_id)
-    # print(available_metrics);exit()
+    # print(available_metrics); exit()
     pull_args = (job_id, output_path, group, metric, level, node, file_format)
     if not verbose:
         app.api.download_job_measurements(*pull_args)
@@ -431,16 +431,16 @@ def pull(
 @app.command(help="Plot downloaded measurements")
 @handle_errors
 def plot(
-    input_paths: List[Path] = typer.Option(
-        ...,
-        "--input-path",
-        "-i",
-        help="Downloaded JSON input file(s) containing traces for the same metric.",
-        exists=True,
-        file_okay=True,
-        dir_okay=False,
-        readable=True,
-    ),
+    input_paths: Annotated[
+        List[Path],
+        typer.Argument(
+            help="Downloaded JSON input file(s) containing traces for the same metric.",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+        ),
+    ],
     output_path: Annotated[
         Path | None,
         typer.Option("--output-path", "-o", help="Output path of the figure."),
@@ -453,19 +453,100 @@ def plot(
     )
 
 
+class StartType(str, Enum):
+    config = "config"
+    job = "job"
+
+
+def __start_job_script(
+    job_script_path: Path | str,
+    job_name: str | None,
+    share_projects_ids: Set[str],
+    ci: bool,
+) -> int:
+    if not app.check_command_exits("sbatch"):
+        raise RuntimeError(
+            f"No sbatch executable found. (Is Slurm installed on {app.exec_cmd('hostname')[1]}?)"
+        )
+    if not app.check_file_exists(job_script_path):
+        raise RuntimeError(f"No job script found at this path: {job_script_path}")
+    sbatch_args = [
+        "sbatch",
+        "--constraint=xbat",
+        "--exclusive",
+        "--wait-all-nodes=1",
+        "--parsable",
+        str(job_script_path),
+    ]
+    if job_name:
+        sbatch_args.insert(1, f"--job-name={job_name}")
+    status, stdout, stderr = app.exec_cmd(" ".join(sbatch_args))
+    if status == os.EX_OK:
+        if not ci:
+            print(
+                f"[italic white]Waiting for xbat to pick up job with ID {stdout}...[/italic white]"
+            )
+        runs: List[BenchmarkRun] = []
+        while len(runs) == 0:
+            runs = [
+                r for r in app.api.benchmark_runs.values() if int(stdout) in r.job_ids
+            ]
+            time.sleep(1)
+        run_number = runs[0].run_number
+    else:
+        raise RuntimeError((stdout + stderr).strip())
+    if len(share_projects_ids) > 0:
+        # TODO Consider resolving the benchmark run from the job ID and updating the shared projects!
+        raise NotImplementedError(
+            "Sharing Slurm job script based benchmark runs is not yet implemented. (Use the web interface!)",
+        )
+    return run_number
+
+
+def __start_config(
+    config_id: str | None,
+    job_name: str | None,
+    share_projects_ids: Set[str],
+    share: bool,
+) -> int:
+    configs: Dict[str, Configuration] = app.api.configurations
+    if config_id is None:
+        config_id = questionary.select(
+            "Select a configuration:",
+            choices=[dict(name=f"{k} {v}", value=k) for k, v in configs.items()],
+        ).ask()
+        if not config_id:
+            raise typer.Abort()
+    elif config_id not in configs:
+        raise FileNotFoundError(f"No configuration found with ID: {config_id}")
+    config = configs[config_id]
+    if share:
+        share_projects_ids.update(p.project_id for p in config.shared_projects)
+        if len(share_projects_ids) == 0:
+            warn(
+                "No shared projects found for this benchmark config:",
+                config.name,
+            )
+    return app.api.start_run(
+        config_id,
+        job_name if job_name else config.name,
+        share_projects_ids,
+    )
+
+
 @app.command(help="Start a benchmark run using a config ID or Slurm job script path.")
 @handle_errors
 @require_valid_access_token()
 def start(
-    config_id: Annotated[
-        str | None, typer.Argument(help="The config name of the benchmark to run.")
-    ] = None,
-    job_script: Annotated[
-        Path | None,
-        typer.Option(
-            "--job-script",
-            "-j",
-            help="The path to a Slurm script on the cluster to execute as a benchmark run.",
+    start_type: Annotated[StartType, typer.Argument()] = StartType.config,
+    config_id_or_job_script_path: Annotated[
+        str | None,
+        typer.Argument(
+            help=(
+                "The config ID"
+                + " or the path to a Slurm script on the cluster"
+                + " to execute as a benchmark run."
+            )
         ),
     ] = None,
     name: Annotated[
@@ -496,7 +577,7 @@ def start(
         bool,
         typer.Option(
             "--ci",
-            help="Only print the job ID to stdout on success. (Only for starting by benchmark ID.)",
+            help="Only print the benchmark run number to stdout on success.",
         ),
     ] = False,
 ):
@@ -513,67 +594,27 @@ def start(
         if project_name not in projects_by_name:
             raise ValueError(f"No such project: {project_name}")
         share_projects_ids.add(projects_by_name[project_name].project_id)
-    if config_id and job_script:
-        raise ValueError(
-            "Either a configuration ID or path to a job script may be given, not both."
+
+    run_number: int | None = None
+    if start_type == StartType.config:
+        run_number = __start_config(
+            config_id_or_job_script_path, name, share_projects_ids, share_flag
         )
-    configs: Dict[str, Configuration] = {} if job_script else app.api.configurations
-    if config_id is None and not job_script:
-        config_id = questionary.select(
-            "Select a configuration:",
-            choices=[dict(name=f"{k} {v}", value=k) for k, v in configs.items()],
-        ).ask()
-        if not config_id:
-            raise typer.Abort()
-    if job_script:
-        if not app.check_command_exits("sbatch"):
-            raise RuntimeError(
-                f"No sbatch executable found. (Is Slurm installed on {app.exec_cmd('hostname')[1]}?)"
-            )
-        if not app.check_file_exists(job_script):
-            raise RuntimeError(f"No job script found at this path: {job_script}")
-        sbatch_args = [
-            "sbatch",
-            "--constraint=xbat",
-            "--exclusive",
-            "--wait-all-nodes=1",
-            "--parsable",
-            str(job_script),
-        ]
-        if name:
-            sbatch_args.insert(1, f"--job-name={name}")
-        status, stdout, stderr = app.exec_cmd(" ".join(sbatch_args))
-        if status != os.EX_OK:
-            raise RuntimeError((stdout + stderr).strip())
-        if ci:
-            print(stdout)
-        else:
-            print(f"Started benchmark run with job ID {stdout}.")
+    elif start_type == StartType.job:
+        if config_id_or_job_script_path is None:
+            raise ValueError("No path of the job script was provided.")
         if share_flag:
             warn("No shared projects exist for Slurm job script based benchmark runs")
-        if len(share_projects_ids) > 0:
-            # TODO Consider resolving the benchmark run from the job ID and updating the shared projects
-            raise NotImplementedError(
-                "Sharing Slurm job script based benchmark runs is not yet implemented. (Use the web interface!)",
-            )
-    elif config_id not in configs:
-        raise FileNotFoundError(f"No configuration found with ID: {config_id}")
-    else:
-        assert config_id
-        config = configs[config_id]
-        if share_flag:
-            share_projects_ids.update(p.project_id for p in config.shared_projects)
-            if len(share_projects_ids) == 0:
-                warn(
-                    "No shared projects found for this benchmark config:",
-                    config.name,
-                )
-        app.api.start_run(
-            config_id,
-            name if name else config.name,
+        run_number = __start_job_script(
+            config_id_or_job_script_path,
+            name,
             share_projects_ids,
+            ci,
         )
-        print("Benchmark was started. (Open web UI for details.)")
+    else:
+        raise RuntimeError("Unreachable code somehow reached.")
+
+    print(run_number if ci else f"Started benchmark run #{run_number}.")
 
 
 class StopType(str, Enum):
@@ -586,8 +627,8 @@ class StopType(str, Enum):
 @require_valid_access_token()
 def stop(
     stop_type: Annotated[StopType, typer.Argument()],
-    ids: Annotated[
-        List[int], typer.Argument(help="The IDs benchmark runs/jobs to stop.")
+    nos_or_ids: Annotated[
+        List[int], typer.Argument(help="The numbers/IDs benchmark runs/jobs to stop.")
     ],
     quiet: Annotated[
         bool,
@@ -597,7 +638,7 @@ def stop(
     cancel_func = (
         app.api.cancel_run if stop_type == StopType.runs else app.api.cancel_job
     )
-    for i in ids:
+    for i in nos_or_ids:
         try:
             cancel_func(i)
         except Exception:
@@ -605,7 +646,7 @@ def stop(
                 raise
 
 
-# TODO Could not yet be tested due to HTTP 403
+# TODO Could not yet be tested due to HTTP 403.
 @app.command(help="Create a backup of benchmark runs.")
 @handle_errors
 @require_valid_access_token()

@@ -250,7 +250,7 @@ class Api(object):
         name: str,
         share_project_ids: Iterable[str] = [],
         variables: List[str] = [],
-    ) -> None:
+    ) -> int:
         url = f"{self.__api_url}/benchmarks"
         headers = self.__headers_auth
         payload = dict(
@@ -266,6 +266,16 @@ class Api(object):
             verify=self.__verify_ssl,
         )
         response.raise_for_status()
+        # TODO Temporary error handling. (Only necessary until API update.)
+        try:
+            return response.json()["data"]["runNr"]
+        except Exception:
+            raise RuntimeError(
+                (
+                    "Benchmark was started, but could not determine the run number."
+                    + " (Check the web UI!)"
+                )
+            )
 
     @_localhost_suppress_security_warning
     def cancel_run(self, run_id: int) -> None:

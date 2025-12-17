@@ -31,20 +31,22 @@ def plot_metric(
             data = json.loads(path.read_text())
             traces = data["traces"]
             for trace in traces:
-                variant = trace["variant"]
-                iteration = trace["iteration"]
+                job_id = trace["jobId"]
+                variant = trace.get("variant")
+                iteration = trace.get("iteration")
                 if metric and metric != trace["metric"]:
                     raise ValueError("Metrics are not the same across traces.")
                 metric = trace["metric"]
+                # Support unit-less metrics
                 interval = trace["interval"]
-                unit = trace["unit"]
+                unit = trace.get("unit", "")
                 y = trace["values"]
                 x = [i * interval for i in range(len(y))]
-                label = variant
-                if iteration_in_label:
+                label = variant if variant else f"Job {job_id}"
+                if iteration_in_label and iteration is not None:
                     label += f" #{iteration}"
                 ax.plot(x, y, label=label)
-                ax.set_ylabel(f"{metric} [{unit}]")
+                ax.set_ylabel(metric + ("[{unit}]" if len(unit) > 0 else ""))
         ax.set_xlabel("Time [s]")
         ax.legend()
     if output_path:
