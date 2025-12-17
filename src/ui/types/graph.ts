@@ -51,6 +51,7 @@ export interface GraphSettings {
 
 export interface GraphStyling {
     colorPalette: string;
+    showLegend?: boolean;
 }
 
 export interface GraphModifiers {
