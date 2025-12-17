@@ -30,6 +30,9 @@ from .api import (
     MeasurementGroup,
 )
 
+os.environ["MPLBACKEND"] = "WebAgg"  # Seems to be required when plotting from uv.
+from .plot import plot_metric
+
 
 def warn(*args: Any, category: str = "Warning", **kwargs: Any) -> None:
     print(f"[bold yellow]{category}:[/bold yellow]", *args, **kwargs, file=sys.stderr)
@@ -423,6 +426,31 @@ def pull(
     if verbose:
         df = pd.read_csv(output_path)
         print(df)
+
+
+@app.command(help="Plot downloaded measurements")
+@handle_errors
+def plot(
+    input_paths: List[Path] = typer.Option(
+        ...,
+        "--input-path",
+        "-i",
+        help="Downloaded JSON input file(s) containing traces for the same metric.",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+    ),
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output-path", "-o", help="Output path of the figure."),
+    ] = None,
+):
+    plot_metric(
+        set(input_paths),  # Deduplicate
+        show=output_path is None,
+        output_path=output_path,
+    )
 
 
 @app.command(help="Start a benchmark run using a config ID or Slurm job script path.")

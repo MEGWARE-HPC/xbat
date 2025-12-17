@@ -450,10 +450,14 @@ class Api(object):
             raise ValueError('Cannot select metric if group is "all".')
         if not metric and group != MeasurementGroup.all:
             raise ValueError('Metric must be provided if group is not "all".')
-        if not node and level == MeasurementLevel.node:
-            raise ValueError('Node must be provided if level is "node"')
+        if not node and level != MeasurementLevel.job:
+            raise ValueError('Node must be provided if level is not "job".')
         if file_format not in ["csv", "json"]:
             raise ValueError("Invalid file format.")
+        if file_format == "json" and (not metric or group == MeasurementGroup.all):
+            raise ValueError(
+                'Single group and metric must be provided if file format is "json".'
+            )
         params: Dict[str, Any] = dict(level=level)
         if group != MeasurementGroup.all:
             params["group"] = group

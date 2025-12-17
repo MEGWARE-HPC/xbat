@@ -10,6 +10,8 @@ dependencies = [
     "pandas>=2.3.3",
     "questionary>=2.1.1",
     "requests>=2.32.5",
+    "scienceplots>=2.2.0",
+    "tornado>=6.5.4",
     "typer>=0.20.0",
 ]
 
