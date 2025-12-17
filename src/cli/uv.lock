@@ -1539,6 +1539,7 @@ source = { editable = "." }
 dependencies = [
     { name = "fabric" },
     { name = "keyring" },
+    { name = "matplotlib" },
     { name = "pandas" },
     { name = "questionary" },
     { name = "requests" },
@@ -1559,6 +1560,7 @@ dev = [
 requires-dist = [
     { name = "fabric", specifier = ">=3.2.2" },
     { name = "keyring", specifier = ">=25.6.0" },
+    { name = "matplotlib", specifier = ">=3.10.8" },
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "questionary", specifier = ">=2.1.1" },
     { name = "requests", specifier = ">=2.32.5" },
