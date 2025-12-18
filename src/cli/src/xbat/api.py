@@ -33,7 +33,6 @@ class MeasurementLevel(str, Enum):
 
 
 class MeasurementGroup(str, Enum):
-    all = "all"
     cpu = "cpu"
     cache = "cache"
     memory = "memory"
@@ -390,7 +389,6 @@ class Api(object):
         output = response.json()
         return output["standardOutput"], output["standardError"]
 
-    # FIXME API is inconsistent and therefore not suitable for validation of selected metric (s. GH issue #177).
     @_localhost_suppress_security_warning
     def get_job_metrics(self, job_id: int) -> Dict[str, List[str]]:
         jobs_url = f"{self.__api_url}/metrics?jobIds={job_id}"
@@ -403,9 +401,7 @@ class Api(object):
         response.raise_for_status()
         grouped_metrics: Dict[str, List[str]] = dict()
         for group_name, group in response.json()["metrics"].items():
-            grouped_metrics[group_name] = []
-            for subgroup in group.values():
-                grouped_metrics[group_name] += list(subgroup["metrics"].keys())
+            grouped_metrics[group_name] = list(group.keys())
         return grouped_metrics
 
     @_localhost_suppress_security_warning
@@ -471,7 +467,7 @@ class Api(object):
         self,
         job_id: int,
         output_path: Path,
-        group: MeasurementGroup,
+        group: MeasurementGroup | None,
         metric: str | None,
         level: MeasurementLevel,
         node: str | None,
@@ -480,20 +476,18 @@ class Api(object):
     ) -> Path:
         if not isinstance(job_id, int):
             raise ValueError("job_id must be an integer.")
-        if metric and group == MeasurementGroup.all:
-            raise ValueError('Cannot select metric if group is "all".')
-        if not metric and group != MeasurementGroup.all:
-            raise ValueError('Metric must be provided if group is not "all".')
+        if metric and not group:
+            raise ValueError("Cannot select metric if group is not provided.")
+        if not metric and group:
+            raise ValueError("Metric must be provided if group is given.")
         if not node and level != MeasurementLevel.job:
             raise ValueError('Node must be provided if level is not "job".')
         if file_format not in ["csv", "json"]:
             raise ValueError("Invalid file format.")
-        if file_format == "json" and (not metric or group == MeasurementGroup.all):
-            raise ValueError(
-                'Single group and metric must be provided if file format is "json".'
-            )
+        if file_format == "json" and not metric:
+            raise ValueError('Single metric must be provided if file format is "json".')
         params: Dict[str, Any] = dict(level=level)
-        if group != MeasurementGroup.all:
+        if group:
             params["group"] = group
         if metric:
             params["metric"] = metric

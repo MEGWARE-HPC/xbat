@@ -351,8 +351,9 @@ def pull(
         typer.Option("--output-path", "-o", help="Path to output folder/file."),
     ] = Path().absolute(),
     group: Annotated[
-        MeasurementGroup, typer.Option("--group", "-g", help="Measurement group.")
-    ] = MeasurementGroup.all,
+        MeasurementGroup | None,
+        typer.Option("--group", "-g", help="Measurement group."),
+    ] = None,
     metric: Annotated[
         str | None, typer.Option("--metric", "-m", help="Measurement metric.")
     ] = None,
@@ -410,10 +411,25 @@ def pull(
         print(
             f'[bold yellow]Warning![/bold yellow] Output path {output_path} does not end in ".{file_format}"'
         )
-    # FIXME API is inconsistent and therefore not suitable for validation of selected metric (s. GH issue #177).
-    # TODO Metrics should be matched against available ones.
-    # available_metrics = app.api.get_job_metrics(job_id)
-    # print(available_metrics); exit()
+    if metric:
+        available_metrics = {
+            MeasurementGroup(k): v for k, v in app.api.get_job_metrics(job_id).items()
+        }
+        # Try to infer the group
+        if not group:
+            for candidate_group in available_metrics:
+                if metric in available_metrics[candidate_group]:
+                    if group:
+                        raise ValueError(
+                            f'Metric "{metric}" is ambiguous. (Specify a group!)'
+                        )
+                    group = MeasurementGroup(candidate_group)
+        assert group, '"None" should have been handled above'
+        if metric not in available_metrics[group]:
+            options_list = "\n- ".join([""] + available_metrics[group])
+            raise ValueError(
+                f'Group "{group}" has not metric "{metric}".\n\nOptions:{options_list}'
+            )
     pull_args = (job_id, output_path, group, metric, level, node, file_format)
     if not verbose:
         app.api.download_job_measurements(*pull_args)
