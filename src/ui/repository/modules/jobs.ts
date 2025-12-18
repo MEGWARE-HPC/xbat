@@ -123,6 +123,22 @@ class JobModule extends FetchFactory {
             undefined // body
         );
     }
+
+    async getInfo(jobId: number, short: true): Promise<JobListShort | JobList> {
+        let queryParameters = `?jobIds=${jobId}`;
+
+        if (short) {
+            queryParameters += "&short=true";
+        }
+
+        console.log(`[DEBUG] Calling GET ${this.RESOURCE}${queryParameters}`);
+
+        return this.call<JobListShort | JobList>(
+            "GET",
+            `${this.RESOURCE}${queryParameters}`,
+            undefined
+        ) as Promise<JobListShort | JobList>;
+    }
 }
 
 export default JobModule;
