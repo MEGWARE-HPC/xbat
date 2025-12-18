@@ -1,3 +1,4 @@
+import builtins
 import contextlib
 import os
 import sys
@@ -189,7 +190,7 @@ def login(
         assert password, "Password was None"
         access_token = app.api.authorize(user, password)
     if ci:
-        print(access_token)
+        builtins.print(access_token)
     else:
         print("Access token was updated.")
 
@@ -481,25 +482,28 @@ def __start_job_script(
     if job_name:
         sbatch_args.insert(1, f"--job-name={job_name}")
     status, stdout, stderr = app.exec_cmd(" ".join(sbatch_args))
+    job_id_str = stdout.strip()
     if status == os.EX_OK:
         if not ci:
             print(
-                f"[italic white]Waiting for xbat to pick up job with ID {stdout}...[/italic white]"
+                f"[italic white]Waiting for xbat to pick up job with ID {job_id_str}...[/italic white]"
             )
         runs: List[BenchmarkRun] = []
         while len(runs) == 0:
             runs = [
-                r for r in app.api.benchmark_runs.values() if int(stdout) in r.job_ids
+                r
+                for r in app.api.benchmark_runs.values()
+                if int(job_id_str) in r.job_ids
             ]
-            time.sleep(1)
+            try:
+                time.sleep(1)
+            except KeyboardInterrupt:
+                raise typer.Abort()
         run_number = runs[0].run_number
     else:
         raise RuntimeError((stdout + stderr).strip())
     if len(share_projects_ids) > 0:
-        # TODO Consider resolving the benchmark run from the job ID and updating the shared projects!
-        raise NotImplementedError(
-            "Sharing Slurm job script based benchmark runs is not yet implemented. (Use the web interface!)",
-        )
+        app.api.update_run(run_number, share_projects_ids=share_projects_ids)
     return run_number
 
 
@@ -570,7 +574,7 @@ def start(
         typer.Option(
             "--share-project",
             "-p",
-            help="Explicitly share the benchmark run with these projects.",
+            help="Explicitly share the benchmark run with these projects by name.",
         ),
     ] = [],
     ci: Annotated[
@@ -614,7 +618,10 @@ def start(
     else:
         raise RuntimeError("Unreachable code somehow reached.")
 
-    print(run_number if ci else f"Started benchmark run #{run_number}.")
+    if ci:
+        builtins.print(run_number)
+    else:
+        print(f"Started benchmark run #{run_number}.")
 
 
 class StopType(str, Enum):
@@ -739,7 +746,10 @@ def ui(
 
     if can_open_url():
         webbrowser.open(url)
-        time.sleep(3)
+        try:
+            time.sleep(3)
+        except KeyboardInterrupt:
+            raise typer.Abort()
         print("Web UI opened at", url)
     else:
         print("Web UI running at", url)

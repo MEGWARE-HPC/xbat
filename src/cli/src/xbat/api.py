@@ -278,6 +278,30 @@ class Api(object):
             )
 
     @_localhost_suppress_security_warning
+    def update_run(
+        self,
+        run_number: int,
+        name: str | None = None,
+        share_projects_ids: Iterable[str] | None = None,
+    ) -> None:
+        if name is None and share_projects_ids is None:
+            raise ValueError("No values to update run with provided.")
+        url = f"{self.__api_url}/benchmarks/{run_number}"
+        headers = self.__headers_auth
+        payload: Dict[str, Any] = dict()
+        if name is not None:
+            payload["name"] = name
+        if share_projects_ids is not None:
+            payload["sharedProjects"] = list(share_projects_ids)
+        response = requests.patch(
+            url,
+            headers=headers,
+            json=payload,
+            verify=self.__verify_ssl,
+        )
+        response.raise_for_status()
+
+    @_localhost_suppress_security_warning
     def cancel_run(self, run_id: int) -> None:
         cancelation_url = f"{self.__api_url}/benchmarks/{run_id}/cancel"
         headers = self.__headers_auth
