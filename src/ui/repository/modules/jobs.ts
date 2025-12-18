@@ -131,8 +131,6 @@ class JobModule extends FetchFactory {
             queryParameters += "&short=true";
         }
 
-        console.log(`[DEBUG] Calling GET ${this.RESOURCE}${queryParameters}`);
-
         return this.call<JobListShort | JobList>(
             "GET",
             `${this.RESOURCE}${queryParameters}`,

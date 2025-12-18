@@ -315,6 +315,24 @@ paths:
       security:
         - oauth2:
             - benchmarks_r
+  /jobs/{jobId}/nodes:
+    get:
+      operationId: backend.restapi.api.jobs.get_node
+      tags:
+        - jobs
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      summary: Returns system information for specified job
+      responses:
+        "200":
+          description: Retrieved nodes
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - benchmarks_r
   /nodes:
     get:
       operationId: backend.restapi.api.nodes.get_all
