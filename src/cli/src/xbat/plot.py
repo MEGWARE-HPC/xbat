@@ -4,12 +4,14 @@ from pathlib import Path
 from typing import Iterable, List, Tuple
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
+from rich import print
 
 importlib.import_module("scienceplots")
 
 
 def plot_metric(
     paths: Iterable[Path],
+    table: str | None = None,
     output_path: Path | str | None = None,
     show: bool = False,
     ax: Axes | None = None,
@@ -20,7 +22,7 @@ def plot_metric(
 ) -> Axes:
     if ax is not None and figsize is not None:
         raise ValueError('Parameters "ax" and "figsize" are mutually exclusive.')
-    metric = None
+    description = None
     with plt.style.context(style):
         if ax is None:
             if figsize is None:
@@ -29,24 +31,34 @@ def plot_metric(
             ax = fig.add_subplot(111)
         for path in paths:
             data = json.loads(path.read_text())
-            traces = data["traces"]
-            for trace in traces:
-                job_id = trace["jobId"]
-                variant = trace.get("variant")
-                iteration = trace.get("iteration")
-                if metric and metric != trace["metric"]:
-                    raise ValueError("Metrics are not the same across traces.")
-                metric = trace["metric"]
-                # Support unit-less metrics
-                interval = trace["interval"]
-                unit = trace.get("unit", "")
-                y = trace["values"]
-                x = [i * interval for i in range(len(y))]
-                label = variant if variant else f"Job {job_id}"
-                if iteration_in_label and iteration is not None:
-                    label += f" #{iteration}"
-                ax.plot(x, y, label=label)
-                ax.set_ylabel(metric + ("[{unit}]" if len(unit) > 0 else ""))
+            traces = {t["table"]: t for t in data["traces"]}
+            if len(traces) > 1:
+                if not table:
+                    raise ValueError(
+                        f"File contains multiple traces (table must be specified): {path}"
+                    )
+                if table not in traces:
+                    print(
+                        f'[bold yellow]Warning![/bold yellow] No trace for table "{table}" in this file: {path}'
+                    )
+                    continue
+            trace = traces[table] if table else list(traces.values())[0]
+            job_id = trace["jobId"]
+            variant = trace.get("variant")
+            iteration = trace.get("iteration")
+            if len(trace["description"]) != 1:
+                raise NotImplementedError()
+            description = trace["description"][0]
+            # Support unit-less metrics
+            interval = trace["interval"]
+            unit = trace.get("unit", "")
+            y = trace["values"]
+            x = [i * interval for i in range(len(y))]
+            label = variant if variant else f"Job {job_id}"
+            if iteration_in_label and iteration is not None:
+                label += f" #{iteration}"
+            ax.plot(x, y, label=label)
+            ax.set_ylabel(description + (f" [{unit}]" if len(unit) > 0 else ""))
         ax.set_xlabel("Time [s]")
         ax.legend()
     if output_path:

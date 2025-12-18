@@ -458,6 +458,14 @@ def plot(
             readable=True,
         ),
     ],
+    table: Annotated[
+        str | None,
+        typer.Option(
+            "--table",
+            "-t",
+            help="The database table of the trace to plot. (Required if file contains multiple traces.)",
+        ),
+    ] = None,
     output_path: Annotated[
         Path | None,
         typer.Option("--output-path", "-o", help="Output path of the figure."),
@@ -465,6 +473,7 @@ def plot(
 ):
     plot_metric(
         set(input_paths),  # Deduplicate
+        table,  # Deduplicate
         show=output_path is None,
         output_path=output_path,
     )
@@ -685,7 +694,7 @@ def export(
 ):
     if output_path.suffix.lower() != ".tgz":
         print(
-            f'[bold yellow]Warning![/bold yellow] Output path {output_path} does not end in ".tgz"'
+            f'[bold yellow]Warning![/bold yellow] Output path "{output_path}" does not end in ".tgz"'
         )
     pull_args = (runs, output_path, anonymise)
     if quiet:
