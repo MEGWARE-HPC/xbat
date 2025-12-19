@@ -240,6 +240,17 @@ validate_action(){
     fi
 }
 
+generate_xbatd_conf_action() {
+    if [[ -f "./scripts/create-xbatd-conf.sh" ]]; then
+        bash "./scripts/create-xbatd-conf.sh" "$@"
+    elif [[ -f "$INSTALL_PATH/create-xbatd-conf.sh" ]]; then
+        bash "$INSTALL_PATH/create-xbatd-conf.sh" "$@"
+    else
+        log_error "Script not found at ./scripts/create-xbatd-conf.sh or $INSTALL_PATH/create-xbatd-conf.sh"
+        exit 1
+    fi
+}
+
 migrate_action() {
     # Default to 'status' if no arguments provided
     if [[ $# -eq 0 ]]; then
@@ -264,7 +275,7 @@ migrate_action() {
         # Check if there are any pending migrations
         if echo "$migration_output" | grep -q "Pending"; then
             echo
-            log_info "⚠️  Pending database migrations detected!"
+            log_info "   ! Pending database migrations detected !"
             log_info "   Run the following command to upgrade the database:"
             log_info "   sudo $0 migrate up"
             echo
@@ -283,13 +294,14 @@ migrate_action() {
 }
 
 show_help() {
-    echo "$0 (install|remove|validate|migrate)"
+    echo "$0 (install|remove|validate|migrate|generate-xbatd-conf)"
     echo
     echo "Actions:"
-    echo -e "\tinstall     Install XBAT with configuration options below"
-    echo -e "\tremove      Remove XBAT installation"
-    echo -e "\tvalidate    Validate configuration file"
-    echo -e "\tmigrate     Manage database migrations"
+    echo -e "\tinstall              Install XBAT with configuration options below"
+    echo -e "\tremove               Remove XBAT installation"
+    echo -e "\tvalidate             Validate configuration file"
+    echo -e "\tmigrate              Manage database migrations"
+    echo -e "\tgenerate-xbatd-conf  Generate xbatd configuration file"
     echo
     echo "Install configuration options:"
     echo -e "\t[--help] Print this message"
@@ -309,10 +321,15 @@ show_help() {
     echo -e "\t$0 migrate up           Apply all pending migrations"
     echo -e "\t$0 migrate down         Rollback last migration"
     echo
+    echo "Generate xbatd configuration commands:"
+    echo -e "\t$0 generate-xbatd-conf               Generate config to /etc/xbat/xbatd.conf"
+    echo -e "\t$0 generate-xbatd-conf --stdout      Print config to stdout"
+    echo
     echo "Examples:"
     echo -e "\t$0 install --port 8080 --workers 4"
     echo -e "\t$0 migrate status"
     echo -e "\t$0 validate"
+    echo -e "\t$0 generate-xbatd-conf --stdout"
 }
 
 #########################################
@@ -324,7 +341,7 @@ ACTION_FOUND=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    install|remove|validate|migrate)
+    install|remove|validate|migrate|generate-xbatd-conf)
       if [[ "$ACTION_FOUND" == false ]]; then
         ACTION_FOUND=true
         POSITIONAL_ARGS+=("$1")
@@ -379,6 +396,7 @@ case "$ACTION" in
     remove) remove_action "$@";;
     migrate) migrate_action "$@";;
     validate) validate_action "$@";;
+    generate-xbatd-conf) generate_xbatd_conf_action "$@";;
     *) log_error "Unknown action: $ACTION"; show_help; exit 1;;
     
 esac
