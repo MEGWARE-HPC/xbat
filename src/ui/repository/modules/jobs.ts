@@ -1,5 +1,6 @@
 import FetchFactory from "../factory";
 import type { Configuration } from "./configurations";
+import type { NodeMap } from "./nodes";
 
 export interface JobList {
     data: Job[];
@@ -136,6 +137,12 @@ class JobModule extends FetchFactory {
             `${this.RESOURCE}${queryParameters}`,
             undefined
         ) as Promise<JobListShort | JobList>;
+    }
+
+    async getNodes(jobId: number): Promise<NodeMap> {
+        const url = `${this.RESOURCE}/${jobId}/nodes`;
+
+        return this.call<NodeMap>("GET", url, undefined) as Promise<NodeMap>;
     }
 }
 
