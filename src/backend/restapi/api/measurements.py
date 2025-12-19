@@ -268,7 +268,7 @@ async def calculate_metrics(jobId, group, metric, level, node, deciles):
     for metric_table in metric_tables:
 
         parts = [
-            f"SELECT DISTINCT level FROM {metric_table} WHERE jobId='{jobId}'"
+            f"SELECT DISTINCT level FROM {metric_table} WHERE job_id='{jobId}'"
         ]
         if level != "job" and node:
             parts.append(f"AND node='{node}'")
@@ -860,7 +860,7 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
             tableQueries.append(
                 f"SELECT DISTINCT '{table}' as table_name, node, level "
                 f"FROM {table} "
-                f"WHERE jobId='{jobId}'{time_clause}")
+                f"WHERE job_id='{jobId}'{time_clause}")
         # instead of using single large query split into multiple smaller queries due to problems with questdb sometimes only returning partial results for very large queries
         queries = []
         for i in range(0, len(tableQueries), MAX_QUERY_COUNT):

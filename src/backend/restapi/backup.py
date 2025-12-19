@@ -55,7 +55,7 @@ class QuestDBAPI:
         """
         query = f"SELECT * FROM {table_name}"
         if job_id:
-            query += f" WHERE jobId IN {job_id}"
+            query += f" WHERE job_id IN {job_id}"
         url = f"http://{self.host}:{self.port}/exp"
         params = {"query": query}
         auth = self._get_auth()
@@ -739,7 +739,7 @@ async def process_table(csvs_path, jobId_map):
         jobId_list_str = [f"'{x}'" for x in jobId_list]
         jobIds = f"({', '.join(jobId_list_str)})"
         data_count = await questdb.execute_query(
-            f"SELECT COUNT(*) AS count FROM cpu_usage WHERE jobId IN {jobIds};"
+            f"SELECT COUNT(*) AS count FROM cpu_usage WHERE job_id IN {jobIds};"
         )
         if data_count:
             data_count = int(data_count[0]['count'])
