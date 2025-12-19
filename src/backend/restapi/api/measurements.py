@@ -2,6 +2,7 @@ import itertools
 import csv
 import re
 import logging
+import asyncio
 import numpy as np
 from io import StringIO
 from flask import request, Response, jsonify
@@ -78,7 +79,7 @@ def calculate_interval(records):
 def filter_interval(records, capture_start, capture_end):
     """
     Filters out all records that are not within the specified timestamps.
-    
+
     :param records: measurement records
     :param capture_start: starting timestamp
     :param capture_end: end timestamp
@@ -109,7 +110,7 @@ def filter_interval(records, capture_start, capture_end):
 def aggregate(records, level, type):
     """
     Aggregates all records on the specified level as sum or average.
-    
+
     :param records: measurement records
     :param level: aggregation level
     :param type: sum or average
@@ -176,7 +177,9 @@ def _create_query(jobId: int,
                   level: str,
                   filter_level: str,
                   node: str | None = None,
-                  type: str = "avg") -> str:
+                  type: str = "avg",
+                  capture_start=None,
+                  capture_end=None) -> str:
 
     value_calculation = "SUM(value)"
 
@@ -188,6 +191,10 @@ def _create_query(jobId: int,
     filters = [f"jobId='{jobId}'", f"level='{filter_level}'"]
     if level != "job" and node:
         filters.append(f"node='{node}'")
+    if capture_start:
+        filters.append(f"timestamp >= '{capture_start.isoformat()}'")
+    if capture_end:
+        filters.append(f"timestamp <= '{capture_end.isoformat()}'")
 
     columns = [f"{value_calculation} as val", "timestamp"]
     groups = ["timestamp"]
@@ -218,7 +225,7 @@ def _sanitize_uid(s):
 async def calculate_metrics(jobId, group, metric, level, node, deciles):
     """
     Retrieves and calculates metrics based on the provided parameters.
-    
+
     :param jobId: ID of job
     :param group: group of metric
     :param metric: metric name
@@ -260,12 +267,16 @@ async def calculate_metrics(jobId, group, metric, level, node, deciles):
     # check which aggregation levels are available
     for metric_table in metric_tables:
 
-        query = f"SELECT level FROM {metric_table} where jobId='{jobId}'"
+        parts = [
+            f"SELECT DISTINCT level FROM {metric_table} WHERE jobId='{jobId}'"
+        ]
         if level != "job" and node:
-            query += f" and node='{node}'"
-
-        query += " GROUP BY level"
-        queries.append(query)
+            parts.append(f"AND node='{node}'")
+        if capture_start:
+            parts.append(f"AND timestamp >= '{capture_start.isoformat()}'")
+        if capture_end:
+            parts.append(f"AND timestamp <= '{capture_end.isoformat()}'")
+        queries.append(" ".join(parts))
 
     all_levels = await questdb.execute_queries(queries)
 
@@ -290,7 +301,7 @@ async def calculate_metrics(jobId, group, metric, level, node, deciles):
 
         queries.append(
             _create_query(jobId, metric_table, level, filter_level, node,
-                          aggregation_type))
+                          aggregation_type, capture_start, capture_end))
 
         available_metric_tables.append(metric_table)
 
@@ -590,13 +601,18 @@ def generate_csv(result):
             0] else 'values'
         if value_key not in result["traces"][0]:
             return ""
-        fieldnames = ['jobId', 'metric'] + [
+        fieldnames = ['jobId', 'group', 'metric', 'trace'] + [
             f'interval {i}' for i in range(len(result["traces"][0][value_key]))
         ]
         writer = csv.DictWriter(output, fieldnames=fieldnames)
         writer.writeheader()
         for item in result["traces"]:
-            row_data = {'jobId': item['jobId'], 'metric': item['rawName']}
+            row_data = {
+                'jobId': item['jobId'],
+                'group': item['group'],
+                'metric': item['metric'],
+                'trace': item['name']
+            }
             row_data.update({
                 f'interval {i}': value
                 for i, value in enumerate(item[value_key])
@@ -607,6 +623,149 @@ def generate_csv(result):
         output.close()
 
     return csv_content
+
+
+async def _get_statistics_rows(jobId, group="", metric="", level="", node=""):
+    """
+    Get statistics rows.
+    """
+    if not jobId:
+        raise httpErrors.BadRequest("jobId is required")
+
+    result, _ = await get_measurements(jobId=jobId,
+                                       group=group,
+                                       metric=metric,
+                                       level=level,
+                                       node=node,
+                                       deciles=False)
+
+    traces = result.get("traces", [])
+    if not traces:
+        raise httpErrors.NotFound("No statistics data available")
+
+    rows = []
+    for trace in traces:
+        stats = trace.get("statistics", {})
+        rows.append({
+            "jobId": trace.get("jobId", ""),
+            "group": trace.get("group", ""),
+            "metric": trace.get("metric", ""),
+            "rawName": trace.get("rawName", ""),
+            "unit": trace.get("unit", ""),
+            "min": stats.get("min", ""),
+            "max": stats.get("max", ""),
+            "avg": stats.get("avg", ""),
+            "sum": stats.get("sum", ""),
+            "median": stats.get("median", ""),
+            "std": stats.get("std", ""),
+            "var": stats.get("var", "")
+        })
+
+    return rows
+
+
+async def export_statistics(
+    jobId,
+    group="",
+    metric="",
+    level="",
+    node="",
+):
+    """
+    Export statistics (min, max, avg, sum, median, std, var).
+    """
+    rows = await _get_statistics_rows(
+        jobId=jobId,
+        group=group,
+        metric=metric,
+        level=level,
+        node=node,
+    )
+    return jsonify(rows), 200
+
+
+async def export_statistics_csv(jobId, group="", metric="", level="", node=""):
+    """
+    Export statistics (min, max, avg, sum, median, std, var) as CSV.
+    """
+    rows = await _get_statistics_rows(
+        jobId=jobId,
+        group=group,
+        metric=metric,
+        level=level,
+        node=node,
+    )
+
+    output = StringIO()
+    try:
+        fieldnames = [
+            "jobId", "group", "metric", "rawName", "unit", "min", "max", "avg",
+            "sum", "median", "std", "var"
+        ]
+        writer = csv.DictWriter(
+            output,
+            fieldnames=fieldnames,
+            extrasaction="ignore",
+        )
+        writer.writeheader()
+        writer.writerows(rows)
+
+        csv_content = output.getvalue()
+    finally:
+        output.close()
+
+    level_part = level or "job"
+    if group and metric:
+        filename = f"{jobId}_{group}_{metric}_{level_part}_statistics.csv"
+    else:
+        filename = f"{jobId}_all_statistics_{level_part}.csv"
+
+    return Response(
+        csv_content,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+async def calculate_energy(jobId):
+    """
+    Calculates energy usage metrics for a given job.
+
+    Total energy consumption is an estimate based on the sum of all subsystems excluding core power and the system power itself.
+    This is necessary as, depending on the platform, system power does not include certain subsystems like for example GPU.
+
+    :param jobId: ID of job
+    """
+
+    result = {}
+    energy_metrics = [
+        "CPU Power", "Core Power", "DRAM Power", "FPGA Power", "GPU Power",
+        "System Power"
+    ]
+
+    tasks = [
+        calculate_metrics(jobId, "energy", energy_metric, "job", "", False)
+        for energy_metric in energy_metrics
+    ]
+    responses = await asyncio.gather(*tasks, return_exceptions=True)
+
+    for energy_metric, power_json in zip(energy_metrics, responses):
+        key = energy_metric.split()[0].lower()
+        try:
+            if "traces" in power_json and len(power_json["traces"]) > 0:
+                interval = power_json["traces"][0]["interval"] / 3600 / 1000
+                values = power_json["traces"][0]["values"]
+                energy_usage = round(sum(values) * interval, 3)
+            else:
+                energy_usage = None
+
+        except Exception as e:
+            logger.error(f"Error processing {energy_metric}: {e}")
+            energy_usage = None
+
+        result[key] = energy_usage
+
+    return result, 200
 
 
 def get_request_uri():
@@ -626,12 +785,7 @@ def jobs_cacheable(jobIds):
             cacheable = False
             break
         state = job["jobInfo"]["jobState"]
-        cacheable_job_states = [
-            "FAILED",
-            "COMPLETED",
-            "CANCELLED",
-            "TIMEOUT",
-        ]
+        cacheable_job_states = ["FAILED", "COMPLETED", "CANCELLED", "TIMEOUT"]
         if not any(cacheable_state in state
                    for cacheable_state in cacheable_job_states):
             cacheable = False
@@ -643,10 +797,11 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
     """
     Check all available metrics and nodes by querying each table for a single entry containing the specified jobId.
     Assume homogeneous nodes and thus same metrics available for all of them.
-    Use UNION ALL to combine to single query, however this requires checking for the existence of each table first.
-    Otherwise UNION ALL will fail if any table is not present.
+    Use INTERSECT ALL to combine to single query, however this requires checking for the existence of each table first.
+    Otherwise INTERSECT ALL will fail if any table is not present.
 
     :param jobId: ID of job
+    :param jobIds: List of job IDs
     """
 
     # do not cache default metrics to prevent invalid cache entries after update
@@ -678,28 +833,47 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
 
     result = []
     for jobId in jobIds:
+        job = mongodb.getOne("jobs", {"jobId": jobId})
+        raw_cs = job.get("captureStart") if job else None
+        raw_ce = job.get("captureEnd") if job else None
+        capture_start = iso8601_to_datetime(raw_cs) if isinstance(
+            raw_cs, str) else raw_cs
+        capture_end = iso8601_to_datetime(raw_ce) if isinstance(
+            raw_ce, str) else raw_ce
+
         tableQueries = []
         # query all present tables that are also part of the metric specification
         for table in METRIC_TABLES:
-            if not (table in available_tables): continue
-            tableQueries.append(
-                f"SELECT '{table}' as table_name, node, level FROM {table} where jobId='{jobId}' GROUP by node, level"
-            )
-        # instead of using single large query split into multiple smaller queries due to problems with questdb sometimes only returning partial results for very large queries
-        queryLength = int(len(tableQueries) / MAX_QUERY_COUNT)
-        remainder = len(tableQueries) % MAX_QUERY_COUNT
-        queries = []
+            if table not in available_tables:
+                continue
 
-        slice = 0
-        while (slice + 1) * queryLength < len(tableQueries):
-            start = slice * queryLength
-            stop = start + queryLength
-            if len(tableQueries) - stop < queryLength:
-                stop += remainder
-            queries.append(" UNION ALL ".join(tableQueries[start:stop]))
-            slice += 1
+            time_filters = []
+            if capture_start:
+                time_filters.append(
+                    f"timestamp >= '{capture_start.isoformat()}'")
+            if capture_end:
+                time_filters.append(
+                    f"timestamp <= '{capture_end.isoformat()}'")
+            time_clause = (" AND " +
+                           " AND ".join(time_filters)) if time_filters else ""
+
+            tableQueries.append(
+                f"SELECT DISTINCT '{table}' as table_name, node, level "
+                f"FROM {table} "
+                f"WHERE jobId='{jobId}'{time_clause}")
+        # instead of using single large query split into multiple smaller queries due to problems with questdb sometimes only returning partial results for very large queries
+        queries = []
+        for i in range(0, len(tableQueries), MAX_QUERY_COUNT):
+            chunk = tableQueries[i:i + MAX_QUERY_COUNT]
+            if len(chunk) == 1:
+                queries.append(chunk[0])
+            else:
+                queries.append(" UNION ALL ".join(chunk))
+
         logger.debug(f"QUERIES: {queries}")
+
         jobResult = await questdb.execute_queries(queries)
+
         result.append([x for xs in jobResult for x in xs])
 
     aggregated = {}
@@ -712,11 +886,12 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
         # aggregate all tables containing measurements for <jobId>
         for table in tables:
             if not table or not ("table_name" in table): continue
-            if not table["table_name"] in available_job_tables:
+            if table["table_name"] not in available_job_tables:
                 available_job_tables[table["table_name"]] = {"levels": []}
             available_job_tables[table["table_name"]]["levels"].append(
                 table["level"])
-            if not (table["node"] in nodes): nodes.append(table["node"])
+            if table["node"] not in nodes:
+                nodes.append(table["node"])
 
         # create custom metrics.json specific to <jobId>
         for group in METRICS:
@@ -726,7 +901,8 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
                 available_metrics = []
                 available_levels = []
                 for table in metricInfo["metrics"]:
-                    if not (table in available_job_tables): continue
+                    if table not in available_job_tables:
+                        continue
 
                     available_metrics.append(table)
 
@@ -734,16 +910,14 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
                         available_levels.append(level)
 
                 if len(available_metrics):
-                    if not (group) in available:
+                    if group not in available:
                         available[group] = {}
                     available_min_level = min(
                         [LEVEL_MAPPING[x] for x in available_levels])
                     available[group][metricName] = {
-                        **metricInfo,
-                        "metrics": {
+                        **metricInfo, "metrics": {
                             k: v
                             for k, v in metricInfo["metrics"].items()
-                            # if k in available_metrics
                         },
                         "level_min":
                         dict_get_key(LEVEL_MAPPING, available_min_level)
@@ -756,9 +930,11 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
         })
 
     if len(jobIds) == 1:
+        response = aggregated[jobIds[0]]
+        response["missing"] = [] if response["metrics"] else [jobIds[0]]
         if cacheable:
-            valkey.set(valkey_key, aggregated[jobIds[0]])
-        return aggregated[jobIds[0]], 200
+            valkey.set(valkey_key, response)
+        return response, 200
 
     if not intersect:
         if cacheable:
@@ -776,7 +952,10 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
     ]
 
     if not len(aggregated_metrics):
-        raise httpErrors.BadRequest()
+        response = {"metrics": {}, "nodes": [], "missing": skipped_jobs}
+        if cacheable:
+            valkey.set(valkey_key, response)
+        return response, 200
 
     # check that metrics are available in all jobs
     groups = set.intersection(*map(set, [x.keys()
@@ -817,5 +996,239 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
     }
     if cacheable:
         valkey.set(valkey_key, response)
+
+    return response, 200
+
+
+async def get_roofline(jobIds=None):
+    """
+    Returns Roofline metrics for jobIds
+
+    Each job returns Peak Memory_bandwidth
+    and Peak, Median, Average of:
+    operational_intensity (SP/DP)
+    """
+
+    ids_args = request.args.get("jobIds") if jobIds is None else jobIds
+    if not ids_args:
+        return {"error": "jobIds is required"}, 400
+    job_Ids = [
+        s.strip()
+        for s in (ids_args.split(",")
+                  if isinstance(ids_args, str) else [str(x) for x in ids_args])
+        if s.strip()
+    ]
+
+    valkey_key = get_request_uri()
+    cache = valkey.get(valkey_key)
+    if cache is not None:
+        return cache, 200
+
+    def _safe_float(v):
+        if v is None:
+            return None
+        if isinstance(v, (int, float)):
+            return float(v)
+        if isinstance(v, str):
+            s = v.strip()
+            if not s:
+                return None
+            try:
+                return float(s)
+            except Exception:
+                return None
+        return None
+
+    def _pick_trace(traces, want_name):
+        for t in traces or []:
+            if t.get("name") == want_name:
+                return t
+        for t in traces or []:
+            if t.get("rawName") == want_name:
+                return t
+        return None
+
+    def _pick_raw_values(trace):
+        if not trace:
+            return []
+        vals = trace.get("rawValues")
+        if not isinstance(vals, list):
+            vals = trace.get("values", [])
+        out = []
+        for v in vals:
+            fv = _safe_float(v)
+            if fv is not None:
+                out.append(fv)
+        return out
+
+    def _pick_volume_raw_values(trace):
+        if not trace:
+            return []
+        if isinstance(trace.get("rawValues"), list):
+            return _pick_raw_values(trace)
+        vals = _pick_raw_values(trace)
+        unit = (trace.get("unit") or "").strip().lower()
+        if unit in ("gb", "gbytes", "gbyte", "gib", "gibibyte"):
+            return [v * 1e9 for v in vals]
+        return vals
+
+    def _get_interval(*traces):
+        for tr in traces:
+            if not tr:
+                continue
+            iv = _safe_float(tr.get("interval"))
+            if iv is not None and iv > 0.0:
+                return iv
+        return None
+
+    def _get_stats(flop_series, bytes_series, interval_s):
+        if not flop_series or not bytes_series:
+            zero = {"operational_intensity": 0.0, "performance": 0.0}
+            return {
+                "peak": zero,
+                "median": zero,
+                "average": zero,
+                "total": zero
+            }
+
+        n = min(len(flop_series), len(bytes_series))
+        if not interval_s or interval_s <= 0.0:
+            zero = {"operational_intensity": 0.0, "performance": 0.0}
+            return {
+                "peak": zero,
+                "median": zero,
+                "average": zero,
+                "total": zero
+            }
+
+        points = []
+        total_flops = 0.0
+        total_bytes = 0.0
+
+        for i in range(n):
+            f = flop_series[i]  # FLOPS/s
+            byt = bytes_series[i]  # bytes per interval
+            if f and byt and f > 0.0 and byt > 0.0:
+                y = f / 1e9  # GFLOPS/s
+                flops_i = f * interval_s  # FLOPs in interval
+                x = flops_i / byt  # FLOPs/byte
+                points.append((x, y))
+                total_flops += flops_i
+                total_bytes += byt
+
+        if not points:
+            zero = {"operational_intensity": 0.0, "performance": 0.0}
+            return {
+                "peak": zero,
+                "median": zero,
+                "average": zero,
+                "total": zero
+            }
+
+        xs = np.fromiter((p[0] for p in points), dtype=float)
+        ys = np.fromiter((p[1] for p in points), dtype=float)
+
+        # peak by y
+        peak_idx = int(np.argmax(ys))
+        peak = {
+            "operational_intensity": float(xs[peak_idx]),
+            "performance": float(ys[peak_idx])
+        }
+
+        # median by y (closest to median(y))
+        y_med = float(np.median(ys))
+        med_idx = int(np.argmin(np.abs(ys - y_med)))
+        median = {
+            "operational_intensity": float(xs[med_idx]),
+            "performance": float(ys[med_idx])
+        }
+
+        # average (component-wise)
+        average = {
+            "operational_intensity": float(np.mean(xs)),
+            "performance": float(np.mean(ys))
+        }
+
+        # aggregate / total (global OI & global Performance)
+        if total_bytes > 0.0:
+            total_time = interval_s * len(points)  # seconds
+            global_oi = total_flops / total_bytes  # FLOPs/byte
+            global_perf = (total_flops / total_time) / 1e9  # GFLOPS/s
+            aggregate = {
+                "operational_intensity": float(global_oi),
+                "performance": float(global_perf)
+            }
+        else:
+            aggregate = {
+                "operational_intensity": float(np.mean(xs)),
+                "performance": float(np.mean(ys))
+            }
+
+        return {
+            "peak": peak,
+            "median": median,
+            "average": average,
+            "total": aggregate
+        }
+
+    data, missing = {}, []
+
+    for job_Id in job_Ids:
+        try:
+            jobId = int(job_Id)
+        except ValueError:
+            missing.append(job_Id)
+            continue
+
+        try:
+            cpu_res = await calculate_metrics(jobId, "cpu", "FLOPS", "job", "",
+                                              False)
+            cpu_traces = cpu_res.get("traces", []) if isinstance(
+                cpu_res, dict) else []
+            sp_trace = _pick_trace(cpu_traces, "SP")
+            dp_trace = _pick_trace(cpu_traces, "DP")
+            sp_flops = _pick_raw_values(sp_trace)
+            dp_flops = _pick_raw_values(dp_trace)
+
+            if not sp_flops and not dp_flops:
+                missing.append(job_Id)
+        except Exception as e:
+            logger.error("roofline_punkt: cpu FLOPS failed for job %s: %s",
+                         job_Id, e)
+            data[job_Id] = {"points": {"sp": {}, "dp": {}}}
+            missing.append(job_Id)
+            continue
+
+        try:
+            mem_res = await calculate_metrics(jobId, "memory", "Data Volume",
+                                              "job", "", False)
+            mem_traces = mem_res.get("traces", []) if isinstance(
+                mem_res, dict) else []
+            mem_total_trace = _pick_trace(mem_traces, "total")
+            mem_bytes = _pick_volume_raw_values(mem_total_trace)
+        except Exception as e:
+            logger.error(
+                "roofline_punkt: memory Data Volume failed for job %s: %s",
+                job_Id, e)
+            mem_total_trace = None
+            mem_bytes = []
+
+        interval_s = _get_interval(sp_trace, dp_trace, mem_total_trace)
+
+        sp_pts4 = _get_stats(sp_flops, mem_bytes, interval_s)
+        dp_pts4 = _get_stats(dp_flops, mem_bytes, interval_s)
+
+        data[job_Id] = {"sp": sp_pts4, "dp": dp_pts4}
+
+    response = {"data": data}
+    if missing:
+        response["missing"] = sorted(set(missing))
+
+    try:
+        numeric_ids = [int(x) for x in job_Ids if x.isdigit()]
+        if numeric_ids and jobs_cacheable(numeric_ids):
+            valkey.set(valkey_key, response)
+    except Exception:
+        pass
 
     return response, 200

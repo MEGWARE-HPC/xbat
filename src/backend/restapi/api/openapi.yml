@@ -3,7 +3,7 @@ openapi: 3.0.0
 info:
   title: xbat rest API
   description: xbat rest API
-  version: 1.0.0
+  version: 1.1.0
   contact:
     name: MEGWARE Computer Vertrieb und Service GmbH
     url: https://megware.com
@@ -133,8 +133,15 @@ paths:
               $ref: "#/components/schemas/BenchmarkPost"
         required: true
       responses:
-        "204":
+        "201":
           description: Successfully submitted benchmark
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/BenchmarkCreated"
       security:
         - oauth2:
             - benchmarks_submit
@@ -199,6 +206,31 @@ paths:
       security:
         - oauth2:
             - benchmarks_w
+  /benchmarks/backup:
+    post:
+      operationId: backend.restapi.api.benchmarks.backup_mongoDB
+      tags:
+        - maintenance
+      summary: Backup the entire mongodb database
+      responses:
+        "200":
+          description: Successfully created MongoDB backup
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              description: Indicates that the response contains an attachment file
+              schema:
+                type: string
+                example: attachment; filename="MongoDB_backup_<timestamp>.tgz"
+        "204":
+          description: No benchmark data available for backup
+      security:
+        - oauth2:
+            - benchmarks_r
   /jobs:
     get:
       operationId: backend.restapi.api.jobs.get_all
@@ -534,7 +566,7 @@ paths:
       tags:
         - measurements
       summary: Measurement results
-      description: Returns all results for all measurements of the specified runNr
+      description: Returns all results for all measurements of the specified job
       responses:
         "200":
           description: Successfully retrieved measurements
@@ -546,7 +578,7 @@ paths:
         - oauth2:
             - benchmarks_r
   /measurements/{jobId}/json:
-   get:
+    get:
       operationId: backend.restapi.api.measurements.export_json
       parameters:
         - $ref: "#/components/parameters/JobId"
@@ -575,8 +607,11 @@ paths:
               schema:
                 type: string
                 example: attachment; filename="<jobId>_<group>.json"
+      security:
+        - oauth2:
+            - benchmarks_r
   /measurements/{jobId}/csv:
-   get:
+    get:
       operationId: backend.restapi.api.measurements.export_csv
       parameters:
         - $ref: "#/components/parameters/JobId"
@@ -602,6 +637,81 @@ paths:
               schema:
                 type: string
                 example: attachment; filename="<jobId>_<group>.csv"
+      security:
+        - oauth2:
+            - benchmarks_r
+  /measurements/{jobId}/statistics:
+    get:
+      operationId: backend.restapi.api.measurements.export_statistics
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - $ref: "#/components/parameters/GroupQuery"
+          required: true
+        - $ref: "#/components/parameters/MetricQuery"
+          required: true
+        - $ref: "#/components/parameters/LevelQuery"
+          required: true
+        - $ref: "#/components/parameters/NodeQuery"
+      tags:
+        - measurements
+      summary: Returns statistics results
+      responses:
+        "200":
+          description: Successfully retrieved statistics
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - benchmarks_r
+  /measurements/{jobId}/statistics/csv:
+    get:
+      operationId: backend.restapi.api.measurements.export_statistics_csv
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - $ref: "#/components/parameters/GroupQuery"
+        - $ref: "#/components/parameters/MetricQuery"
+        - $ref: "#/components/parameters/LevelQuery"
+        - $ref: "#/components/parameters/NodeQuery"
+      tags:
+        - measurements
+      summary: Export statistics results in CSV format
+      responses:
+        "200":
+          description: Successfully exported statistics results in CSV format
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              description: Indicates that the response contains an attachment file
+              schema:
+                type: string
+                example: attachment; filename="<jobId>_<group>.csv"
+      security:
+        - oauth2:
+            - benchmarks_r
+  /measurements/{jobId}/energy:
+    get:
+      operationId: backend.restapi.api.measurements.calculate_energy
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      tags:
+        - measurements
+      summary: Energy consumption
+      responses:
+        "200":
+          description: Successfully calculated the energy consumption (kWh)
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - benchmarks_r
   /metrics:
     get:
       operationId: backend.restapi.api.measurements.get_available_metrics
@@ -625,6 +735,24 @@ paths:
             application/json:
               schema:
                 type: object
+      security:
+        - oauth2:
+            - benchmarks_r
+  /metrics/roofline:
+    get:
+      operationId: backend.restapi.api.measurements.get_roofline
+      parameters:
+        - $ref: "#/components/parameters/JobIdsCommaQuery"
+      tags:
+        - measurements
+      summary: Roofline model
+      responses:
+        "200":
+          description: Successfully obtained roofline model data
+          content:
+              application/json:
+                schema:
+                  type: object
       security:
         - oauth2:
             - benchmarks_r
@@ -901,6 +1029,17 @@ components:
         items:
           type: integer
       description: Job IDs
+    JobIdsCommaQuery:
+      name: jobIds
+      in: query
+      description: Comma-separated Job IDs
+      required: true
+      style: form
+      explode: false
+      schema:
+        type: array
+        items:
+          type: integer
     NodeHash:
       name: node_hash
       in: path
@@ -1136,6 +1275,12 @@ components:
             type: string
         name:
           type: string
+    BenchmarkCreated:
+      description: Response when creating a benchmark
+      properties:
+        runNr:
+          type: integer
+          description: The run number of the created benchmark
     BenchmarkExport:
       description: Export benchmarks
       properties:

@@ -86,7 +86,7 @@ services:
             - "#FRONTEND_NETWORK#:27017:27017"
 
     xbat-questdb:
-        image: docker.io/questdb/questdb:8.1.4
+        image: docker.io/questdb/questdb:9.0.3
         restart: unless-stopped
         container_name: xbat-questdb
         user: "#XBAT_UID#:#XBAT_GID#"
@@ -128,29 +128,27 @@ services:
             - "#FRONTEND_NETWORK#:9000:9000" # native protocol
             - "#FRONTEND_NETWORK#:9005:9005" # postgreSQL-compatible protocol
     xbat-valkey:
-        image: docker.io/valkey/valkey:7.2
+        image: docker.io/valkey/valkey:7.2-alpine
         restart: unless-stopped
         container_name: xbat-valkey
         user: "#XBAT_UID#:#XBAT_GID#"
         volumes:
             - /etc/localtime:/etc/localtime:ro
-            - /etc/xbat/valkey.conf:/usr/local/etc/valkey/valkey.conf
+            - /etc/xbat/valkey.conf:/usr/local/etc/valkey/valkey.conf:ro
             #-  #VAR_LIB#/valkey:/data
         expose:
             - 6379
         command: ["/usr/local/etc/valkey/valkey.conf"]
     xbat-pgbouncer:
-        image: docker.io/bitnami/pgbouncer:1.23.1
+        image: docker.io/edoburu/pgbouncer:v1.24.1-p1
         restart: unless-stopped
         container_name: xbat-pgbouncer
         user: "#XBAT_UID#:#XBAT_GID#"
         volumes:
             - /etc/localtime:/etc/localtime:ro
-            - /etc/xbat/pgbouncer.ini:/bitnami/pgbouncer/conf/pgbouncer.ini:ro
-            - /etc/xbat/userlists.txt:/bitnami/pgbouncer/conf/userlists.txt:ro
+            - /etc/xbat/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+            - /etc/xbat/userlists.txt:/etc/pgbouncer/userlists.txt:ro
         depends_on:
             - xbat-questdb
         expose:
             - 6432
-        entrypoint: ["/opt/bitnami/pgbouncer/bin/pgbouncer"]
-        command: ["/bitnami/pgbouncer/conf/pgbouncer.ini"]

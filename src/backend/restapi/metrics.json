@@ -332,6 +332,7 @@
                 "mem_cached": "cached"
             },
             "unit": "byte",
+            "aggregation": "sum",
             "uri": "memory#dram-used"
         },
         "Load To Store Ratio": {
@@ -408,6 +409,7 @@
                 "gpu_mem_bar1_used": "bar1"
             },
             "unit": "byte",
+            "aggregation": "sum",
             "uri": "gpu#memory-used"
         },
         "P-States": {

@@ -2,14 +2,11 @@ import { storeToRefs } from "pinia";
 
 export default defineNuxtRouteMiddleware(async (to, from) => {
     const { $authStore } = useNuxtApp();
-
     const { isAuthenticated, user, userLevel } = storeToRefs($authStore);
 
     if (!isAuthenticated.value) {
         if (to.path !== "/login") return navigateTo("/login");
         return;
-    } else if (to.path === "/login") {
-        return navigateTo("/");
     }
 
     if (!user.value) {
@@ -17,8 +14,14 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
             await $authStore.loadUser();
         } catch (error) {
             console.error("Error loading user:", error);
+            $authStore.clearToken(true);
             return navigateTo("/login");
         }
+        if (!user.value) return navigateTo("/login");
+    }
+
+    if (to.path === "/login") {
+        return navigateTo("/");
     }
 
     if (

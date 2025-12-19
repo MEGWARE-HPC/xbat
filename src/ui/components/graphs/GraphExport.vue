@@ -13,7 +13,7 @@
                         language="json"
                     ></Editor
                 ></v-window-item>
-                <v-window-item value="csv" class="mt-2">
+                <v-window-item value="csv" class="mt-2" eager>
                     <div class="d-flex align-center justify-space-between">
                         <div class="font-italic">
                             {{ exportCSV.unit }}
@@ -28,6 +28,7 @@
                         </div>
                     </div>
                     <Editor
+                        :key="'csv-editor-' + state.tab"
                         readonly
                         :modelValue="exportCSV.value"
                         height="700"
@@ -140,7 +141,15 @@
                                         >
                                         </v-number-input>
                                     </v-col>
-                                    <v-col sm="12" md="12">
+                                    <v-col cols="12" md="6">
+                                        <v-switch
+                                            class="ml-3"
+                                            v-model="legendVisible"
+                                            label="Show legend"
+                                            hide-details
+                                        />
+                                    </v-col>
+                                    <v-col cols="12" md="6">
                                         <v-select
                                             label="Legend Location"
                                             :items="[
@@ -150,8 +159,8 @@
                                             ]"
                                             v-model="state.legendLocation"
                                             hide-details
-                                        >
-                                        </v-select>
+                                            :disabled="!legendVisible"
+                                        />
                                     </v-col>
                                     <v-col
                                         sm="12"
@@ -229,6 +238,7 @@
                     <ReactiveGraph
                         :graphId="exportGraphId"
                         ref="exportGraphRef"
+                        :type="props.type"
                         :graph="modifiedGraph"
                         :style="'display: none'"
                     ></ReactiveGraph>
@@ -254,6 +264,10 @@ const props = defineProps({
         type: String,
         required: true
     },
+    type: {
+        type: String,
+        default: "default"
+    },
     noJson: {
         type: Boolean,
         default: false
@@ -266,8 +280,21 @@ const props = defineProps({
 
 const exportGraphId = nanoid(6);
 
-const storeGraph = $graphStore.useStoreGraph(props.graphId);
-const exportStoreGraph = $graphStore.useStoreGraph(exportGraphId);
+const storeGraph = $graphStore.useStoreGraph(props.graphId, props.type);
+const exportStoreGraph = $graphStore.useStoreGraph(exportGraphId, props.type);
+
+const legendVisible = computed({
+    get() {
+        const styling = storeGraph.styling.value || {};
+        return styling.showLegend ?? true;
+    },
+    set(v) {
+        storeGraph.styling.value = {
+            ...storeGraph.styling.value,
+            showLegend: v
+        };
+    }
+});
 
 const state = reactive({
     tab: "image",
@@ -350,8 +377,9 @@ const modifiedGraph = computed(() => {
 
     g.layout.font.size = state.fontsize;
 
-    g.layout.xaxis.title = state.xTitle;
-    g.layout.yaxis.title = state.yTitle;
+    // Set x-axis and y-axis titles, also set the title for the graph
+    g.layout.xaxis.title = { text: state.xTitle || "x-axis" };
+    g.layout.yaxis.title = { text: state.yTitle || "Y-axis" };
     g.layout.title = {
         text: state.title,
         font: {

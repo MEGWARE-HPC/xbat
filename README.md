@@ -3,7 +3,6 @@
     <h2 align="center"> <strong>xbat – Extended Benchmarking Automation Tool</strong> </h2>
 </p>
 
-
 Simplify HPC application benchmarking and optimization. Dive deep into application performance with xbat - an easy to use, fully automated tool providing comprehensive metrics and insights for analysis and optimization.
 
 <p align="center">
@@ -24,7 +23,8 @@ Check out our [public roadmap](https://github.com/orgs/MEGWARE-HPC/projects/2) t
 <!-- KEEP IN SYNC WITH about.md -->
 
 -   [**xbat: a continuous benchmarking tool for HPC software**](https://openhsu.ub.hsu-hh.de/entities/publication/16783) Nico Tippmann et al.
--   **xbat – An Easy-to-Use and Universally Applicable Benchmarking Automation Tool for HPC Software within the Project hpc.bw (dtec.bw)** - Poster to be presented at ISC 2025 by Willi Leinen et al.
+-   [**xbat – An Easy-to-Use and Universally Applicable Benchmarking Automation Tool for HPC Software within the Project hpc.bw (dtec.bw)**](https://openhsu.ub.hsu-hh.de/entities/publication/20152) - Poster presented at ISC 2025 by Willi Leinen et al.
+-   [**Balancing energy and performance: efficient allocation of solver jobs on high-performance computing systems**](https://openhsu.ub.hsu-hh.de/entities/publication/20237) - Talk at 34th European Conference on Operational Research by Willi Leinen et al.
 
 ### Acknowledgements
 

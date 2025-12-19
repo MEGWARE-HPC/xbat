@@ -83,13 +83,20 @@ import {
     mdiContentSaveMove,
     mdiDatabaseImportOutline,
     mdiCloudUpload,
-    mdiFileDocument,
     mdiRead,
-    mdiInformation
+    mdiInformation,
+    mdiFolderZip,
+    mdiGestureTapButton,
+    mdiLightningBoltOutline,
+    mdiDrag,
+    mdiSort,
+    mdiSortNumericAscending,
+    mdiSortNumericDescending,
+    mdiFormatListGroupPlus,
+    mdiCheckboxMarked,
+    mdiCheckboxBlankOutline,
+    mdiBackupRestore
 } from "@mdi/js";
-
-// TODO remove when out of lab stage
-import { VTreeview } from "vuetify/labs/VTreeview";
 
 /*
  * Opacity is not supported in vue themes.
@@ -103,7 +110,6 @@ export default defineNuxtPlugin((app) => {
     const vuetify = createVuetify({
         ssr: true,
         components: {
-            VTreeview,
             VFileUpload
         },
         theme: {
@@ -218,9 +224,18 @@ export default defineNuxtPlugin((app) => {
                 saveMove: mdiContentSaveMove,
                 dataImport: mdiDatabaseImportOutline,
                 cloudUpload: mdiCloudUpload,
-                "mdi-file-document": mdiFileDocument,
                 read: mdiRead,
-                info: mdiInformation
+                info: mdiInformation,
+                gestureTap: mdiGestureTapButton,
+                lightningBolt: mdiLightningBoltOutline,
+                sortDrag: mdiDrag,
+                sortCustom: mdiSort,
+                sortNumAsc: mdiSortNumericAscending,
+                sortNumDesc: mdiSortNumericDescending,
+                addArray: mdiFormatListGroupPlus,
+                checkboxMark: mdiCheckboxMarked,
+                checkboxBlank: mdiCheckboxBlankOutline,
+                backupRestore: mdiBackupRestore
             },
             sets: {
                 mdi
@@ -281,6 +296,9 @@ export default defineNuxtPlugin((app) => {
             },
             VTreeview: {
                 density: "compact"
+            },
+            VFileUploadItem: {
+                fileIcon: mdiFolderZip
             }
         }
     });

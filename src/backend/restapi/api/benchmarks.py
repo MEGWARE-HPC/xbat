@@ -169,7 +169,7 @@ def post():
     """
     Start benchmark by forwarding request to controld.
     
-    :return: empty response
+    :return: created benchmark resource with runNr
     """
 
     data = request.get_json()
@@ -193,10 +193,56 @@ def post():
         data["sharedProjects"] if "sharedProjects" in data else [],
     })
 
-    if not response:
+    if not response or response.get("runNr") is None:
         raise httpErrors.InternalServerError("Failed to submit benchmark")
 
-    return {}, 204
+    return {"data": {"runNr": response["runNr"]}}, 201
+
+
+def backup_mongoDB():
+    """
+    Backup the entire MongoDB database (admin only).
+    """
+    user = get_user_from_token()
+    if user is None or user["user_type"] != "admin":
+        raise httpErrors.Forbidden(
+            "Only administrators are allowed to perform this action")
+
+    backup_uuid = str(uuid.uuid1())
+    folder_path = EXPORT_PATH / backup_uuid
+    folder_path.mkdir(parents=True, exist_ok=True)
+
+    try:
+        collections = db.list_collection_names()
+        if not collections:
+            return {}, 204
+
+        for collection_name in collections:
+            file_path = folder_path / f"{collection_name}.json"
+            database = db.getMany(collection_name, {})
+            with open(file_path, "w") as f:
+                json.dump(sanitize_mongo(database), f)
+    except Exception as e:
+        app.logger.error("MongoDB backup failed: %s", e)
+        raise httpErrors.InternalServerError("MongoDB backup failed")
+
+    try:
+        compress_status = pigz_compress(EXPORT_PATH, backup_uuid)
+    except Exception as e:
+        app.logger.error("Error occurred while compressing backup: %s", e)
+        raise httpErrors.InternalServerError("Error compressing files")
+
+    if compress_status:
+        response = send_from_directory(
+            directory=EXPORT_PATH,
+            path=f"{backup_uuid}.tgz",
+            mimetype="application/octet-stream",
+            as_attachment=True,
+            download_name=f"MongoDB_{backup_uuid}.tgz",
+        )
+        return response, 200
+    else:
+        return {}, 204
 
 
 async def export_benchmark():

@@ -29,7 +29,7 @@
             </v-card>
         </v-dialog>
         <div class="build-info text-medium-emphasis text-caption">
-            beta v{{ runtimeConfig.public.buildVersion }}
+            v{{ runtimeConfig.public.buildVersion }}
         </div>
         <ClientOnly>
             <VLayoutItem
@@ -65,6 +65,12 @@ const { $store, $authStore } = useNuxtApp();
 // TODO cookies should be synchonized as per https://github.com/nuxt/nuxt/pull/20970
 // but this is somehow not working here (and with graph settings)
 // remove update:theme emit when fixed
+useHead({
+    htmlAttrs: {
+        lang: "en"
+    }
+});
+
 const theme = useCookie("xbat_theme", { default: () => "light" });
 
 const state = reactive({
