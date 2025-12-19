@@ -73,8 +73,8 @@ def main():
     db.set(db_settings["address"], db_settings["database"],
            db_settings["user"], db_settings["password"])
 
-    if BUILD == "prod":
-        questdb_maintenance()
+    # if BUILD == "prod":
+    #     questdb_maintenance()
 
     grpc_t = threading.Thread(target=serve, args=(cancelled, ), daemon=True)
 
