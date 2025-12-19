@@ -15,24 +15,6 @@ db = MongoDB()
 register_lock = FileLock("/tmp/register-jobs.lock")
 
 
-# TODO remove
-# TEMPORARY IMPLEMENTATION TO MIGRATE TO NEW SCHEMA
-def _job_maintenance():
-    if "outputs" in db.list_collection_names():
-        return
-
-    jobs = db.getMany("jobs", {})
-
-    for job in jobs:
-        db.insertOne(
-            "outputs", {
-                "runNr": job["runNr"],
-                "jobId": job["jobId"],
-                "output": job["slurmOutput"],
-            })
-    db.updateMany("jobs", {}, {"$unset": {"slurmOutput": ""}})
-
-
 def get_all(runNrs=None, jobIds=None, short=False):
     """
     Retrieves jobs based on user access permissions and specified filters.
@@ -42,8 +24,6 @@ def get_all(runNrs=None, jobIds=None, short=False):
     :param short: shortened output
     :return: all jobs matching filter and user permissions
     """
-
-    _job_maintenance()
 
     user = get_user_from_token()
 
