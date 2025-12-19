@@ -64,8 +64,7 @@ export const useGraph = () => {
 
             if (!measurements?.traces?.length) continue;
 
-            const unit = measurements.traces[0]?.unit;
-            if (!unit) continue;
+            const unit = measurements.traces[0]?.unit ?? "";
 
             const parsed = parseGeneralUnit(unit);
             unitInfoList.push({
