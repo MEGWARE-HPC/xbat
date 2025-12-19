@@ -43,6 +43,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   src
   src/external/clickhouse-cpp
   src/external/clickhouse-cpp/contrib/absl
+  src/external/nlohmann-json/include
+  src/external/clipp/include
   /usr/local/share/xbatd/include
   /usr/local/cuda-12.2/targets/x86_64-linux/include
   /opt/rocm-6.4.1/include

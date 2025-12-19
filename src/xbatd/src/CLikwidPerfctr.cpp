@@ -16,7 +16,7 @@
 #include <regex>
 #include <thread>
 
-#include "nlohmann/json.hpp"
+#include "external/nlohmann-json/include/nlohmann/json.hpp"
 
 /**
  * @brief Construct a new CLikwidPerfctr::CLikwidPerfctr object and initialize parameters

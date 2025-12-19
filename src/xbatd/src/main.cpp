@@ -26,9 +26,9 @@
 #include "CLogging.hpp"
 #include "CQueue.hpp"
 #include "CurlClient.hpp"
-#include "clipp.h"
+#include "external/clipp/include/clipp.h"
 #include "helper.hpp"
-#include "nlohmann/json.hpp"
+#include "external/nlohmann-json/include/nlohmann/json.hpp"
 #include "threadhelper.hpp"
 
 #define WATCHDOGSLEEP 3

@@ -10,7 +10,7 @@
 
 #include <iostream>
 
-#include "nlohmann/json.hpp"
+#include "external/nlohmann-json/include/nlohmann/json.hpp"
 
 /**
  * @brief Construct a new CIOStat::CIOStat object and initialize parameters
