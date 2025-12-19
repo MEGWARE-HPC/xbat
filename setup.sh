@@ -286,6 +286,19 @@ migrate_action() {
         fi
         
         exit $migration_exit_code
+    elif [[ "$1" == "down" ]]; then
+        # Warn about potential data loss for rollback
+        echo
+        log_error "! WARNING: Rolling back migrations may result in DATA LOSS !"
+        log_error "This operation will revert the last applied migration."
+        echo
+        read -rp "Are you sure you want to proceed? Type 'yes' to confirm: " confirm
+        if [[ "$confirm" != "yes" ]]; then
+            log_info "Migration rollback cancelled."
+            exit 0
+        fi
+        # Proceed with rollback
+        /usr/local/share/xbat/clickhouse/migrate.sh "$@"
     else
         # For non-status commands, just pass through to migrate script
         /usr/local/share/xbat/clickhouse/migrate.sh "$@"
