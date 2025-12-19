@@ -204,49 +204,17 @@ watch(
         if (!m) return;
 
         try {
-            const jobDetailsRes = await $api.jobs.getInfo(v, true);
-            const jobDetailsList = jobDetailsRes?.data || [];
-
-            const nodeHashes = new Set();
-            const jobNodesMap = {};
-            for (const jobDetail of jobDetailsList) {
-                const jobId = jobDetail.jobId;
-                jobNodesMap[jobId] = {};
-                if (jobDetail.nodes) {
-                    for (const [nodeName, nodeInfo] of Object.entries(
-                        jobDetail.nodes
-                    )) {
-                        if (nodeInfo && nodeInfo.hash) {
-                            nodeHashes.add(nodeInfo.hash);
-                            jobNodesMap[jobId][nodeName] = nodeInfo.hash;
-                        }
-                    }
-                }
-            }
-            let nodesRawData = {};
-            if (nodeHashes.size > 0) {
-                nodesRawData = await $api.nodes.get(Array.from(nodeHashes));
-            }
+            const nodesPromises = v.map((jobId) => $api.jobs.getNodes(jobId));
+            const nodesResults = await Promise.all(nodesPromises);
 
             const nodesByJobAndName = {};
-            for (const [jobIdStr, nodeMap] of Object.entries(jobNodesMap)) {
-                const jobId = parseInt(jobIdStr);
-                nodesByJobAndName[jobId] = {};
-                for (const [nodeName, nodeHash] of Object.entries(nodeMap)) {
-                    if (nodesRawData[nodeHash]) {
-                        nodesByJobAndName[jobId][nodeName] =
-                            nodesRawData[nodeHash];
-                    } else {
-                        console.warn(
-                            `Node data not found for hash: ${nodeHash} on job ${jobId}, node ${nodeName}`
-                        );
-                    }
-                }
-            }
+            v.forEach((jobId, index) => {
+                nodesByJobAndName[jobId] = nodesResults[index];
+            });
             nodes.value = nodesByJobAndName;
         } catch (error) {
             console.error(
-                "Error fetching job details or nodes for comparison:",
+                "Error fetching nodes by job IDs for comparison:",
                 error
             );
         }
