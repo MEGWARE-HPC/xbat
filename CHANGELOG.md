@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 -   API endpoint for measurement roofline (#111)
 -   duplicate checks in manual mode to job variables (#138)
 -   input restrictions (+ error messages) in job variables and optimize support for Firefox (#138)
+-   validation for required benchmarks to prevent incomplete data from breaking the roofline model (#139)
 -   API endpoint for graph statistics and frontend button to export the statistics data as CSV (#9)
 -   support to toggle legend visibility in graph styling and export, including layout syncing and improved export UI (#164)
 -   auto-redirect for nonexistent pages (#159)
@@ -41,6 +42,7 @@ All notable changes to this project will be documented in this file.
 -   focus and improved drag-and-drop experience
 -   benchmark submission failures with internal server error (#171)
 -   error message for nonexistent pages (#159)
+-   metrics with empty or missing units were treated as having no data (#172)
 
 ## v1.1.0 - 2025-09-12
 
