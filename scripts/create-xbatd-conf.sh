@@ -40,10 +40,14 @@ password=${CLICKHOUSE_DAEMON_PASSWORD}
 EOF
 )
 
+output_path="/etc/xbat/xbatd.conf"
+output_dir="$(dirname "$output_path")"
+
 if [[ $use_stdout -eq 1 ]]; then
   echo "$config_contents"
 else
-  output_path="/etc/xbat/xbatd.conf"
+  mkdir -p -m 0700 "$output_dir"
   echo "$config_contents" > "$output_path"
   echo "Configuration written to $output_path"
+  echo "Tip: Use --stdout to print to standard output instead."
 fi
