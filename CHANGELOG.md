@@ -6,6 +6,17 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+### Changed
+
+-   migrated MongoDB from v5 to v8 (to retain data from the previous database, please follow the migration guide.) (#90)
+
+
+### Fixed
+
+## v1.2.0 - 2025-xx-xx
+
+### Added
+
 -   API endpoint and frontend button to backup entire MongoDB database (admin only) (#131)
 -   automatic subgroup opening and collapsing in docs navigation
 -   match highlighting to the search function in docs
