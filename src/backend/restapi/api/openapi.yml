@@ -133,8 +133,15 @@ paths:
               $ref: "#/components/schemas/BenchmarkPost"
         required: true
       responses:
-        "204":
+        "201":
           description: Successfully submitted benchmark
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/BenchmarkCreated"
       security:
         - oauth2:
             - benchmarks_submit
@@ -1268,6 +1275,12 @@ components:
             type: string
         name:
           type: string
+    BenchmarkCreated:
+      description: Response when creating a benchmark
+      properties:
+        runNr:
+          type: integer
+          description: The run number of the created benchmark
     BenchmarkExport:
       description: Export benchmarks
       properties:
