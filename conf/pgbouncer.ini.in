@@ -8,7 +8,7 @@ auth_type = md5
 auth_file = /etc/pgbouncer/userlists.txt
 
 # Disable TLS for server connections (internal docker network)
-client_tls_sslmode = disable
+server_tls_sslmode = disable
 
 # Connection Pooling Settings
 pool_mode = transaction
