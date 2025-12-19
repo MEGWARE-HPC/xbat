@@ -188,22 +188,22 @@ def _create_query(jobId: int,
         # this is required as LIKWID sometimes reports NaN values on unused (inactive) cores which we substitute with 0
         value_calculation = "COALESCE(AVG(CASE WHEN value != 0 THEN value END), 0)"
 
-    filters = [f"jobId='{jobId}'", f"level='{filter_level}'"]
+    filters = [f"job_id='{jobId}'", f"level='{filter_level}'"]
     if level != "job" and node:
         filters.append(f"node='{node}'")
     if capture_start:
-        filters.append(f"timestamp >= '{capture_start.isoformat()}'")
+        filters.append(f"ts >= '{capture_start.isoformat()}'")
     if capture_end:
-        filters.append(f"timestamp <= '{capture_end.isoformat()}'")
+        filters.append(f"ts <= '{capture_end.isoformat()}'")
 
-    columns = [f"{value_calculation} as val", "timestamp"]
-    groups = ["timestamp"]
+    columns = [f"{value_calculation} as val", "ts"]
+    groups = ["ts"]
 
     if level != "job":
         columns.insert(0, level)
         groups.insert(0, level)
 
-    query = f"SELECT {', '.join(columns)} FROM {metric_table} WHERE {' and '.join(filters)} GROUP BY {', '.join(groups)} ORDER BY timestamp"
+    query = f"SELECT {', '.join(columns)} FROM {metric_table} WHERE {' and '.join(filters)} GROUP BY {', '.join(groups)} ORDER BY ts"
 
     return query
 
