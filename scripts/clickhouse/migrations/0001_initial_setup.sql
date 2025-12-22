@@ -6,78 +6,74 @@
 --  Device is string as it can be either numerical values or identifiers like "nvme0n1".
 --  LowCardinality(String) is used for node, level, and device to optimize storage (only viable when the number of distinct values is smaller than 10.000).
 --  Level uses LowCardinality(String) instead of Enum to allow for more flexibility in the future.
-
---  TODO:
---  - Scale all memory volumes to kB? Use int for volumes etc?
---  - Level as Enum or LowCardinality(String)?
---
+--  ZSTD(3) compression is used for better storage efficiency (20-40% better than default LZ4).
 
 CREATE TABLE IF NOT EXISTS template_float (
-    job_id UInt32,
+    job_id UInt32 CODEC(ZSTD(3)),
     node LowCardinality(String),
     level LowCardinality(String),
-    value Float64,
-    ts DateTime64(3, 'UTC')
+    value Float64 CODEC(ZSTD(3)),
+    ts DateTime64(3, 'UTC') CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (job_id, node, level, ts)
 PARTITION BY toYYYYMM(ts);
 
 CREATE TABLE IF NOT EXISTS template_int (
-    job_id UInt32,
+    job_id UInt32 CODEC(ZSTD(3)),
     node LowCardinality(String),
     level LowCardinality(String),
-    value UInt64,
-    ts DateTime64(3, 'UTC')
+    value UInt64 CODEC(ZSTD(3)),
+    ts DateTime64(3, 'UTC') CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (job_id, node, level, ts)
 PARTITION BY toYYYYMM(ts);
 
 CREATE TABLE IF NOT EXISTS template_device_float (
-    job_id UInt32,
+    job_id UInt32 CODEC(ZSTD(3)),
     node LowCardinality(String),
     level LowCardinality(String),
     device LowCardinality(String),
-    value Float64,
-    ts DateTime64(3, 'UTC')
+    value Float64 CODEC(ZSTD(3)),
+    ts DateTime64(3, 'UTC') CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (job_id, node, level, ts)
 PARTITION BY toYYYYMM(ts);
 
 CREATE TABLE IF NOT EXISTS template_device_int (
-    job_id UInt32,
+    job_id UInt32 CODEC(ZSTD(3)),
     node LowCardinality(String),
     level LowCardinality(String),
     device LowCardinality(String),
-    value UInt64,
-    ts DateTime64(3, 'UTC')
+    value UInt64 CODEC(ZSTD(3)),
+    ts DateTime64(3, 'UTC') CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (job_id, node, level, ts)
 PARTITION BY toYYYYMM(ts);
 
 CREATE TABLE IF NOT EXISTS template_topology_float (
-    job_id UInt32,
+    job_id UInt32 CODEC(ZSTD(3)),
     node LowCardinality(String),
     level LowCardinality(String),
-    thread UInt16,
-    core UInt16,
-    numa UInt8,
-    socket UInt8,
-    value Float64,
-    ts DateTime64(3, 'UTC')
+    thread UInt16 CODEC(ZSTD(3)),
+    core UInt16 CODEC(ZSTD(3)),
+    numa UInt8 CODEC(ZSTD(3)),
+    socket UInt8 CODEC(ZSTD(3)),
+    value Float64 CODEC(ZSTD(3)),
+    ts DateTime64(3, 'UTC') CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (job_id, node, level, ts)
 PARTITION BY toYYYYMM(ts);
 
 CREATE TABLE IF NOT EXISTS template_topology_int (
-    job_id UInt32,
+    job_id UInt32 CODEC(ZSTD(3)),
     node LowCardinality(String),
     level LowCardinality(String),
-    thread UInt16,
-    core UInt16,
-    numa UInt8,
-    socket UInt8,
-    value UInt64,
-    ts DateTime64(3, 'UTC')
+    thread UInt16 CODEC(ZSTD(3)),
+    core UInt16 CODEC(ZSTD(3)),
+    numa UInt8 CODEC(ZSTD(3)),
+    socket UInt8 CODEC(ZSTD(3)),
+    value UInt64 CODEC(ZSTD(3)),
+    ts DateTime64(3, 'UTC') CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (job_id, node, level, ts)
 PARTITION BY toYYYYMM(ts);
