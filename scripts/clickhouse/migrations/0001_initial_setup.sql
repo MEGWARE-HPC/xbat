@@ -8,8 +8,6 @@
 --  Level uses LowCardinality(String) instead of Enum to allow for more flexibility in the future.
 
 --  TODO:
---  - Int64 vs UInt64 for value?
---  - condense float and int tables?
 --  - Scale all memory volumes to kB? Use int for volumes etc?
 --  - Level as Enum or LowCardinality(String)?
 --

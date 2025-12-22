@@ -377,23 +377,3 @@ async def import_benchmark():
                            str(e))
 
     return {}, 204
-
-
-def purge():
-    """
-    Purge benchmarks from QuestDB.
-    
-    :return: empty response
-    """
-
-    user = get_user_from_token()
-    if user is None or user["user_type"] != "admin":
-        raise httpErrors.Forbidden(
-            "Only administrators are allowed to perform this action")
-
-    response = rpcClient.purge_questdb()
-
-    if not response:
-        raise httpErrors.InternalServerError("Failed to purge benchmarks")
-
-    return {}, 204

@@ -7,7 +7,6 @@ from concurrent import futures
 from google.protobuf import empty_pb2
 from google.protobuf import json_format
 from google.protobuf.json_format import MessageToJson
-from shared.questdb import questdb_purge
 from xbatctld.users import get_user_info
 from xbatctld.slurm import SlurmConnector
 from xbatctld.submission import create_benchmark_record, submit_benchmark_jobs
@@ -90,10 +89,6 @@ class XbatCtldServicer(xbat_pb2_grpc.xbatctldServicer):
         json_format.Parse(json.dumps(user_info), user_data)
 
         return user_data
-
-    def PurgeQuestDB(self, request, context):
-        threading.Thread(target=questdb_purge, args=(), daemon=True).start()
-        return empty_pb2.Empty()
 
 
 def serve(cancelled):

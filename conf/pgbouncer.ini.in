@@ -1,5 +1,5 @@
 [databases]
-questdb = host=#HOST# port=#PORT# dbname=#DATABASE# user=#USER# password=#PASSWORD#
+clickhouse = host=#HOST# port=#PORT# dbname=#DATABASE# user=#USER# password=#PASSWORD#
 
 [pgbouncer]
 listen_addr = 0.0.0.0

@@ -111,8 +111,8 @@ services:
         user: "#XBAT_UID#:#XBAT_GID#"
         volumes:
             - /etc/localtime:/etc/localtime:ro
-            -  #VAR_LIB#/clickhouse:/var/lib/clickhouse
-            -  #VAR_LOG#/clickhouse:/var/log/clickhouse-server
+            -  #VAR_LIB#/clickhouse:/var/lib/clickhouse/
+            -  #VAR_LOG#/clickhouse:/var/log/clickhouse-server/
             - /etc/xbat/clickhouse/config/:/etc/clickhouse-server/config.d/:ro
             - /etc/xbat/clickhouse/users/:/etc/clickhouse-server/users.d/:ro
         cap_add:
