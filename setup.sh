@@ -42,6 +42,7 @@ CONF_FILE="xbat.conf"
 #########################################
 
 log_info() { echo -e "[INFO] $*"; }
+log_warning() { echo -e "[WARNING] $*" >&2; }
 log_error() { echo -e "[ERROR] $*" >&2; }
 
 check_root() {
@@ -289,8 +290,8 @@ migrate_action() {
     elif [[ "$1" == "down" ]]; then
         # Warn about potential data loss for rollback
         echo
-        log_error "! WARNING: Rolling back migrations may result in DATA LOSS !"
-        log_error "This operation will revert the last applied migration."
+        log_warning "Rolling back migrations may result in DATA LOSS!"
+        log_warning "This operation will revert the last applied migration."
         echo
         read -rp "Are you sure you want to proceed? Type 'yes' to confirm: " confirm
         if [[ "$confirm" != "yes" ]]; then
