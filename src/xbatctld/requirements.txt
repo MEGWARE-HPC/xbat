@@ -4,5 +4,5 @@ chardet==5.2.0
 filelock==3.20.1
 grpcio==1.75.1
 grpcio-tools==1.75.1
-psycopg[binary]==3.2.12
-numpy==2.3.4 # for shared/helpers
+psycopg[binary]==3.2.13
+numpy==2.3.5 # for shared/helpers
