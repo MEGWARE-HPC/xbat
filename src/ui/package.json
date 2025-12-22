@@ -26,7 +26,7 @@
     "constrained-editor-plugin": "^1.4.0",
     "monaco-editor": "^0.52.2",
     "nanoid": "^5.1.5",
-    "nuxt": "3.17.7",
+    "nuxt": "^3.17.7",
     "ofetch": "^1.4.1",
     "pinia": "^3.0.3",
     "plotly.js-basic-dist-min": "^3.2.0",
