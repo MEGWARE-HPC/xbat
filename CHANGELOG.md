@@ -22,6 +22,7 @@ All notable changes to this project will be documented in this file.
 -   support for custom legends for peak values (#151)
 -   support to retain peaks information when switching between levels (#151)
 -   group name for peaks within traces (#151)
+-   API endpoint for accessing node information via jobId
 
 ### Changed
 
@@ -43,6 +44,7 @@ All notable changes to this project will be documented in this file.
 -   benchmark submission failures with internal server error (#171)
 -   error message for nonexistent pages (#159)
 -   metrics with empty or missing units were treated as having no data (#172)
+-   peak values loading issue in the compare feature (#142)
 
 ## v1.1.0 - 2025-09-12
 

@@ -7,6 +7,7 @@ from shared.helpers import sanitize_mongo
 from shared.date import get_current_timestamp
 from backend.restapi.access_control import check_user_permissions
 from backend.restapi.user_helper import get_user_from_token, create_user_benchmark_filter
+from backend.restapi.api.nodes import get_all as get_node_by_hash
 
 BENCHMARKING_WINDOW = 900  # 15 minutes
 
@@ -99,6 +100,48 @@ def get_all(runNrs=None, jobIds=None, short=False):
     return {
         "data": sanitize_mongo(list(result)) if result is not None else []
     }, 200
+
+
+def get_node(jobId=None):
+    """
+    Retrieves detailed node information for the specified job ID.
+
+    :param jobId: filter by jobId.
+    :return: node information
+    """
+    try:
+        job_short, _ = get_all(None, [jobId], short=False)
+        job_list = job_short.get("data", [])
+    except Exception as e:
+        raise e
+
+    if not job_list:
+        return {}, 200
+
+    job_detail = job_list[0]
+    if job_detail.get("jobId") != jobId:
+        raise httpErrors.InternalServerError(
+            "Unexpected job data returned by get_all")
+
+    node_hashes = set()
+    nodes_info = job_detail.get("nodes", {})
+    for node_name, node_ref in nodes_info.items():
+        node_hash = node_ref.get("hash")
+        if node_hash:
+            node_hashes.add(node_hash)
+
+    nodes_raw_data = {}
+    if node_hashes:
+        node_hashes_list = list(node_hashes)
+        nodes_raw_data, _ = get_node_by_hash(node_hashes_list)
+
+    result = {}
+    for node_name, node_ref in nodes_info.items():
+        node_hash = node_ref.get("hash")
+        if node_hash and node_hash in nodes_raw_data:
+            result[node_name] = nodes_raw_data[node_hash]
+
+    return result, 200
 
 
 @check_user_permissions

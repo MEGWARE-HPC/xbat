@@ -459,13 +459,24 @@ export const useGraph = () => {
                     .replace(/\s*×[0-9.+\-eE]+\s*$/u, "");
 
             modifiers.systemBenchmarks.forEach((benchmark) => {
-                const nodeNames = Object.keys(nodes[query.jobIds[0]]);
-                const node =
-                    nodes[query.jobIds[0]]?.[
-                        query.level == "job" ? nodeNames[0] : query.node
-                    ];
+                const jobWithNodes = query.jobIds.find((id) => {
+                    const jobNodes = nodes?.[id];
+                    return jobNodes && Object.keys(jobNodes).length > 0;
+                });
+                if (!jobWithNodes) return;
+
+                const jobNodes = nodes[jobWithNodes]!;
+                const nodeNames = Object.keys(jobNodes);
+                if (!nodeNames.length) return;
+
+                const selectedNodeName =
+                    query.level === "job"
+                        ? nodeNames[0]
+                        : query.node ?? nodeNames[0];
+
+                const node = jobNodes?.[selectedNodeName];
                 let peak = node?.benchmarks?.[benchmark];
-                if (!node || !peak) return;
+                if (!peak) return;
 
                 peak *= modifiers.systemBenchmarksScalingFactor;
 
