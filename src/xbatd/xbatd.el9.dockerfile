@@ -50,7 +50,7 @@ RUN git clone --depth 1 --branch "${CQUESTDB_VERSION}" https://github.com/questd
     cmake --build build
 
 # install LIKWID
-ENV LIKWID_VERSION="v5.5.1rc1"
+ENV LIKWID_VERSION="v5.5.1"
 RUN git clone --depth 1 --branch "${LIKWID_VERSION}" https://github.com/RRZE-HPC/likwid.git && \
     cd likwid && \
     sed -i -e 's!PREFIX ?= /usr/local#NO SPACE!PREFIX ?= /usr/local/share/xbatd/#NO SPACE!g' config.mk && \
