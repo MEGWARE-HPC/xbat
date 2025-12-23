@@ -1,4 +1,4 @@
-import { deepClone} from "~/utils/misc";
+import { deepClone } from "~/utils/misc";
 import { toDDHHMMSS } from "~/utils/date";
 import Plotly from "plotly.js-basic-dist-min";
 
@@ -121,7 +121,8 @@ export const useGraphBase = () => {
         xType = "-",
         yType = "-",
         xAutotick = false,
-        noData = false
+        noData = false,
+        showLegend
     }: {
         dataCount: number;
         yTitle?: string;
@@ -132,6 +133,7 @@ export const useGraphBase = () => {
         yType?: Plotly.LayoutAxis["type"];
         xAutotick?: Plotly.LayoutAxis["autotick"];
         noData?: boolean;
+        showLegend?: boolean;
     }): Partial<Plotly.Layout> => {
         let layout = deepClone(defaultLayout);
         // always retrieve current colors as they may change when switching themes
@@ -139,6 +141,21 @@ export const useGraphBase = () => {
 
         layout = { ...layout, ...layoutColors };
 
+        layout.showlegend = showLegend;
+
+        if (!showLegend) {
+            layout.margin = { ...graphMargins, r: 60 };
+        } else {
+            layout.margin = graphMargins;
+        }
+
+        if (rangeslider) {
+            if (!showLegend) {
+                layout.margin = { ...graphMarginsWithRangeslider, r: 60 };
+            } else {
+                layout.margin = graphMarginsWithRangeslider;
+            }
+        }
         // for proper non-zero x-axis on missing data
         dataCount = dataCount || 100;
 
@@ -167,7 +184,9 @@ export const useGraphBase = () => {
 
             if (rangeslider) {
                 layout.xaxis.rangeslider = {};
-                layout.margin = graphMarginsWithRangeslider;
+                if (showLegend) {
+                    layout.margin = graphMarginsWithRangeslider;
+                }
             }
         }
 
