@@ -32,6 +32,8 @@ All notable changes to this project will be documented in this file.
 -   switched to an improved PgBouncer image and optimized the Valkey image (#169)
 -   optimized jobs API and improve error page handling
 -   optimized scaling factor for peak values and improved its representation in legends (#151)
+-   upgraded LIKWID to v5.5.1 (#107)
+-   optimized and streamlined xbatd container
 
 ### Fixed
 
