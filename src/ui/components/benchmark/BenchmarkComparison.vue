@@ -91,6 +91,7 @@
                                 title="Comparison - Modify Graph"
                                 :job-ids="state.selected"
                                 :metrics="metrics"
+                                :nodes="nodes"
                                 default-level="job"
                                 default-group="cpu"
                                 default-metric="FLOPS"
@@ -108,16 +109,16 @@
                             class="mt-3"
                             @click="state.graphCount += 1"
                             v-show="state.graphCount < 2"
-                            >Add Graph</v-btn
-                        >
+                            >Add Graph
+                        </v-btn>
                     </div>
                 </div>
             </v-card-text>
             <v-card-actions>
                 <v-spacer />
                 <v-btn variant="text" @click="emit('update:modelValue', false)"
-                    >Close</v-btn
-                >
+                    >Close
+                </v-btn>
             </v-card-actions>
         </v-card>
     </v-dialog>
@@ -135,6 +136,7 @@ const state = reactive({
 });
 
 const metrics = ref({});
+const nodes = ref({});
 const benchmarks = ref([]);
 const jobs = ref([]);
 const { jobItems } = useJobs({ benchmarks, jobs, hideUnfinished: true });
@@ -193,6 +195,7 @@ watch(
     async ([v, m]) => {
         if (!v.length) {
             metrics.value = {};
+            nodes.value = {};
             state.missing = [];
             state.noData = false;
             return;
@@ -200,10 +203,27 @@ watch(
 
         if (!m) return;
 
-        const res = await $api.metrics.get(v, true);
-        metrics.value = res.metrics;
-        state.noData = !Object.keys(res.metrics).length;
-        state.missing = res.missing || [];
+        try {
+            const nodesPromises = v.map((jobId) => $api.jobs.getNodes(jobId));
+            const nodesResults = await Promise.all(nodesPromises);
+
+            const nodesByJobAndName = {};
+            v.forEach((jobId, index) => {
+                nodesByJobAndName[jobId] = nodesResults[index];
+            });
+            nodes.value = nodesByJobAndName;
+        } catch (error) {
+            console.error(
+                "Error fetching nodes by job IDs for comparison:",
+                error
+            );
+        }
+
+        const metricsRes = await $api.metrics.get(v, true);
+        metrics.value = metricsRes.metrics;
+
+        state.noData = !Object.keys(metricsRes.metrics).length;
+        state.missing = metricsRes.missing || [];
     },
     { immediate: true }
 );
