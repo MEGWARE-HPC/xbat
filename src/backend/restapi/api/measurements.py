@@ -625,6 +625,108 @@ def generate_csv(result):
     return csv_content
 
 
+async def _get_statistics_rows(jobId, group="", metric="", level="", node=""):
+    """
+    Get statistics rows.
+    """
+    if not jobId:
+        raise httpErrors.BadRequest("jobId is required")
+
+    result, _ = await get_measurements(jobId=jobId,
+                                       group=group,
+                                       metric=metric,
+                                       level=level,
+                                       node=node,
+                                       deciles=False)
+
+    traces = result.get("traces", [])
+    if not traces:
+        raise httpErrors.NotFound("No statistics data available")
+
+    rows = []
+    for trace in traces:
+        stats = trace.get("statistics", {})
+        rows.append({
+            "jobId": trace.get("jobId", ""),
+            "group": trace.get("group", ""),
+            "metric": trace.get("metric", ""),
+            "rawName": trace.get("rawName", ""),
+            "unit": trace.get("unit", ""),
+            "min": stats.get("min", ""),
+            "max": stats.get("max", ""),
+            "avg": stats.get("avg", ""),
+            "sum": stats.get("sum", ""),
+            "median": stats.get("median", ""),
+            "std": stats.get("std", ""),
+            "var": stats.get("var", "")
+        })
+
+    return rows
+
+
+async def export_statistics(
+    jobId,
+    group="",
+    metric="",
+    level="",
+    node="",
+):
+    """
+    Export statistics (min, max, avg, sum, median, std, var).
+    """
+    rows = await _get_statistics_rows(
+        jobId=jobId,
+        group=group,
+        metric=metric,
+        level=level,
+        node=node,
+    )
+    return jsonify(rows), 200
+
+
+async def export_statistics_csv(jobId, group="", metric="", level="", node=""):
+    """
+    Export statistics (min, max, avg, sum, median, std, var) as CSV.
+    """
+    rows = await _get_statistics_rows(
+        jobId=jobId,
+        group=group,
+        metric=metric,
+        level=level,
+        node=node,
+    )
+
+    output = StringIO()
+    try:
+        fieldnames = [
+            "jobId", "group", "metric", "rawName", "unit", "min", "max", "avg",
+            "sum", "median", "std", "var"
+        ]
+        writer = csv.DictWriter(
+            output,
+            fieldnames=fieldnames,
+            extrasaction="ignore",
+        )
+        writer.writeheader()
+        writer.writerows(rows)
+
+        csv_content = output.getvalue()
+    finally:
+        output.close()
+
+    level_part = level or "job"
+    if group and metric:
+        filename = f"{jobId}_{group}_{metric}_{level_part}_statistics.csv"
+    else:
+        filename = f"{jobId}_all_statistics_{level_part}.csv"
+
+    return Response(
+        csv_content,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
 async def calculate_energy(jobId):
     """
     Calculates energy usage metrics for a given job.
@@ -894,5 +996,239 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
     }
     if cacheable:
         valkey.set(valkey_key, response)
+
+    return response, 200
+
+
+async def get_roofline(jobIds=None):
+    """
+    Returns Roofline metrics for jobIds
+
+    Each job returns Peak Memory_bandwidth
+    and Peak, Median, Average of:
+    operational_intensity (SP/DP)
+    """
+
+    ids_args = request.args.get("jobIds") if jobIds is None else jobIds
+    if not ids_args:
+        return {"error": "jobIds is required"}, 400
+    job_Ids = [
+        s.strip()
+        for s in (ids_args.split(",")
+                  if isinstance(ids_args, str) else [str(x) for x in ids_args])
+        if s.strip()
+    ]
+
+    valkey_key = get_request_uri()
+    cache = valkey.get(valkey_key)
+    if cache is not None:
+        return cache, 200
+
+    def _safe_float(v):
+        if v is None:
+            return None
+        if isinstance(v, (int, float)):
+            return float(v)
+        if isinstance(v, str):
+            s = v.strip()
+            if not s:
+                return None
+            try:
+                return float(s)
+            except Exception:
+                return None
+        return None
+
+    def _pick_trace(traces, want_name):
+        for t in traces or []:
+            if t.get("name") == want_name:
+                return t
+        for t in traces or []:
+            if t.get("rawName") == want_name:
+                return t
+        return None
+
+    def _pick_raw_values(trace):
+        if not trace:
+            return []
+        vals = trace.get("rawValues")
+        if not isinstance(vals, list):
+            vals = trace.get("values", [])
+        out = []
+        for v in vals:
+            fv = _safe_float(v)
+            if fv is not None:
+                out.append(fv)
+        return out
+
+    def _pick_volume_raw_values(trace):
+        if not trace:
+            return []
+        if isinstance(trace.get("rawValues"), list):
+            return _pick_raw_values(trace)
+        vals = _pick_raw_values(trace)
+        unit = (trace.get("unit") or "").strip().lower()
+        if unit in ("gb", "gbytes", "gbyte", "gib", "gibibyte"):
+            return [v * 1e9 for v in vals]
+        return vals
+
+    def _get_interval(*traces):
+        for tr in traces:
+            if not tr:
+                continue
+            iv = _safe_float(tr.get("interval"))
+            if iv is not None and iv > 0.0:
+                return iv
+        return None
+
+    def _get_stats(flop_series, bytes_series, interval_s):
+        if not flop_series or not bytes_series:
+            zero = {"operational_intensity": 0.0, "performance": 0.0}
+            return {
+                "peak": zero,
+                "median": zero,
+                "average": zero,
+                "total": zero
+            }
+
+        n = min(len(flop_series), len(bytes_series))
+        if not interval_s or interval_s <= 0.0:
+            zero = {"operational_intensity": 0.0, "performance": 0.0}
+            return {
+                "peak": zero,
+                "median": zero,
+                "average": zero,
+                "total": zero
+            }
+
+        points = []
+        total_flops = 0.0
+        total_bytes = 0.0
+
+        for i in range(n):
+            f = flop_series[i]  # FLOPS/s
+            byt = bytes_series[i]  # bytes per interval
+            if f and byt and f > 0.0 and byt > 0.0:
+                y = f / 1e9  # GFLOPS/s
+                flops_i = f * interval_s  # FLOPs in interval
+                x = flops_i / byt  # FLOPs/byte
+                points.append((x, y))
+                total_flops += flops_i
+                total_bytes += byt
+
+        if not points:
+            zero = {"operational_intensity": 0.0, "performance": 0.0}
+            return {
+                "peak": zero,
+                "median": zero,
+                "average": zero,
+                "total": zero
+            }
+
+        xs = np.fromiter((p[0] for p in points), dtype=float)
+        ys = np.fromiter((p[1] for p in points), dtype=float)
+
+        # peak by y
+        peak_idx = int(np.argmax(ys))
+        peak = {
+            "operational_intensity": float(xs[peak_idx]),
+            "performance": float(ys[peak_idx])
+        }
+
+        # median by y (closest to median(y))
+        y_med = float(np.median(ys))
+        med_idx = int(np.argmin(np.abs(ys - y_med)))
+        median = {
+            "operational_intensity": float(xs[med_idx]),
+            "performance": float(ys[med_idx])
+        }
+
+        # average (component-wise)
+        average = {
+            "operational_intensity": float(np.mean(xs)),
+            "performance": float(np.mean(ys))
+        }
+
+        # aggregate / total (global OI & global Performance)
+        if total_bytes > 0.0:
+            total_time = interval_s * len(points)  # seconds
+            global_oi = total_flops / total_bytes  # FLOPs/byte
+            global_perf = (total_flops / total_time) / 1e9  # GFLOPS/s
+            aggregate = {
+                "operational_intensity": float(global_oi),
+                "performance": float(global_perf)
+            }
+        else:
+            aggregate = {
+                "operational_intensity": float(np.mean(xs)),
+                "performance": float(np.mean(ys))
+            }
+
+        return {
+            "peak": peak,
+            "median": median,
+            "average": average,
+            "total": aggregate
+        }
+
+    data, missing = {}, []
+
+    for job_Id in job_Ids:
+        try:
+            jobId = int(job_Id)
+        except ValueError:
+            missing.append(job_Id)
+            continue
+
+        try:
+            cpu_res = await calculate_metrics(jobId, "cpu", "FLOPS", "job", "",
+                                              False)
+            cpu_traces = cpu_res.get("traces", []) if isinstance(
+                cpu_res, dict) else []
+            sp_trace = _pick_trace(cpu_traces, "SP")
+            dp_trace = _pick_trace(cpu_traces, "DP")
+            sp_flops = _pick_raw_values(sp_trace)
+            dp_flops = _pick_raw_values(dp_trace)
+
+            if not sp_flops and not dp_flops:
+                missing.append(job_Id)
+        except Exception as e:
+            logger.error("roofline_punkt: cpu FLOPS failed for job %s: %s",
+                         job_Id, e)
+            data[job_Id] = {"points": {"sp": {}, "dp": {}}}
+            missing.append(job_Id)
+            continue
+
+        try:
+            mem_res = await calculate_metrics(jobId, "memory", "Data Volume",
+                                              "job", "", False)
+            mem_traces = mem_res.get("traces", []) if isinstance(
+                mem_res, dict) else []
+            mem_total_trace = _pick_trace(mem_traces, "total")
+            mem_bytes = _pick_volume_raw_values(mem_total_trace)
+        except Exception as e:
+            logger.error(
+                "roofline_punkt: memory Data Volume failed for job %s: %s",
+                job_Id, e)
+            mem_total_trace = None
+            mem_bytes = []
+
+        interval_s = _get_interval(sp_trace, dp_trace, mem_total_trace)
+
+        sp_pts4 = _get_stats(sp_flops, mem_bytes, interval_s)
+        dp_pts4 = _get_stats(dp_flops, mem_bytes, interval_s)
+
+        data[job_Id] = {"sp": sp_pts4, "dp": dp_pts4}
+
+    response = {"data": data}
+    if missing:
+        response["missing"] = sorted(set(missing))
+
+    try:
+        numeric_ids = [int(x) for x in job_Ids if x.isdigit()]
+        if numeric_ids and jobs_cacheable(numeric_ids):
+            valkey.set(valkey_key, response)
+    except Exception:
+        pass
 
     return response, 200

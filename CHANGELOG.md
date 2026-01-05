@@ -6,25 +6,55 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## v1.2.0 - 2026-01-05
+
+### Added
+
 -   API endpoint and frontend button to backup entire MongoDB database (admin only) (#131)
 -   automatic subgroup opening and collapsing in docs navigation
 -   match highlighting to the search function in docs
+-   documentation about backup the MongoDB database (#86)
+-   API endpoint for measurement roofline (#111)
 -   duplicate checks in manual mode to job variables (#138)
 -   input restrictions (+ error messages) in job variables and optimize support for Firefox (#138)
+-   validation for required benchmarks to prevent incomplete data from breaking the roofline model (#139)
+-   API endpoint for graph statistics and frontend button to export the statistics data as CSV (#9)
+-   support to toggle legend visibility in graph styling and export, including layout syncing and improved export UI (#164)
+-   auto-redirect for nonexistent pages (#159)
+-   validation to ensure peaks and metrics are matched (#151)
+-   support to retain previous modifiers settings (#151)
+-   support for custom legends for peak values (#151)
+-   support to retain peaks information when switching between levels (#151)
+-   group name for peaks within traces (#151)
+-   API endpoint for accessing node information via jobId
 
 ### Changed
 
 -   upgraded Nuxt/Content from v2 to v3 (#82)
 -   upgraded QuestDB from v8 to v9 (#135)
 -   optimized queries for accessing QuestDB
+-   switched to an improved PgBouncer image and optimized the Valkey image (#169)
+-   optimized jobs API and improve error page handling
+-   optimized scaling factor for peak values and improved its representation in legends (#151)
+-   upgraded LIKWID to v5.5.1 (#107)
+-   optimized and streamlined xbatd container
 
 ### Fixed
 
 -   x-axis titles in roofline (#117)
 -   show x-axis title in the graph (#137)
 -   optimized the docs mobile experience
+-   false positive error logs related to gRPC (#15)
 -   data types and sorting strategies in job variables (#138)
 -   focus and improved drag-and-drop experience
+-   benchmark submission failures with internal server error (#171)
+-   error message for nonexistent pages (#159)
+-   metrics with empty or missing units were treated as having no data (#172)
+-   peak values loading issue in the compare feature (#142)
 
 ## v1.1.0 - 2025-09-12
 

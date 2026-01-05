@@ -7,6 +7,7 @@ from shared.helpers import sanitize_mongo
 from shared.date import get_current_timestamp
 from backend.restapi.access_control import check_user_permissions
 from backend.restapi.user_helper import get_user_from_token, create_user_benchmark_filter
+from backend.restapi.api.nodes import get_all as get_node_by_hash
 
 BENCHMARKING_WINDOW = 900  # 15 minutes
 
@@ -50,35 +51,39 @@ def get_all(runNrs=None, jobIds=None, short=False):
     benchmarkQuery = create_user_benchmark_filter(user)
 
     benchmarks = db.getMany("benchmarks", benchmarkQuery, {"runNr": True})
-    accessable_runs = [b["runNr"] for b in benchmarks]
+    accessible_runs = {b["runNr"] for b in benchmarks}
     jobs = db.getMany("jobs", {"runNr": {
-        "$in": accessable_runs
+        "$in": list(accessible_runs)
     }}, {"jobId": True})
-    accessable_jobs = [j["jobId"] for j in jobs]
+    accessible_jobs = {j["jobId"] for j in jobs}
 
     if runNrs is not None:
-        for run in runNrs:
-            if not (run in accessable_runs): raise httpErrors.Unauthorized()
+        if not runNrs:
+            raise httpErrors.BadRequest("'runNrs' must not be empty.")
+        invalid_runs = set(runNrs) - accessible_runs
+        if invalid_runs:
+            raise httpErrors.NotFound(
+                f"Access denied for runNrs: {list(invalid_runs)}")
 
     if jobIds is not None:
-        for job in jobIds:
-            if not (job in accessable_jobs): raise httpErrors.Unauthorized()
+        if not jobIds:
+            raise httpErrors.BadRequest("'jobIds' must not be empty.")
+        invalid_jobs = set(jobIds) - accessible_jobs
+        if invalid_jobs:
+            raise httpErrors.NotFound(
+                f"Access denied for jobIds: {list(invalid_jobs)}")
 
-    query_filter = {}
     if runNrs is not None:
         query_filter = {"runNr": {"$in": runNrs}}
     elif jobIds is not None:
         query_filter = {"jobId": {"$in": jobIds}}
     else:
-        query_filter = {"runNr": {"$in": accessable_runs}}
+        query_filter = {"runNr": {"$in": list(accessible_runs)}}
 
-    exclude_filter = {
-        "_id": False,
-    }
+    exclude_filter = {"_id": False}
 
     if short:
-        exclude_filter = {
-            **exclude_filter,
+        exclude_filter.update({
             "runNr": True,
             "jobId": True,
             "iteration": True,
@@ -88,13 +93,55 @@ def get_all(runNrs=None, jobIds=None, short=False):
             "nodes": True,
             "jobInfo.jobState": True,
             "variables": True,
-        }
+        })
 
     result = db.getMany("jobs", query_filter, exclude_filter)
 
     return {
         "data": sanitize_mongo(list(result)) if result is not None else []
     }, 200
+
+
+def get_node(jobId=None):
+    """
+    Retrieves detailed node information for the specified job ID.
+
+    :param jobId: filter by jobId.
+    :return: node information
+    """
+    try:
+        job_short, _ = get_all(None, [jobId], short=False)
+        job_list = job_short.get("data", [])
+    except Exception as e:
+        raise e
+
+    if not job_list:
+        return {}, 200
+
+    job_detail = job_list[0]
+    if job_detail.get("jobId") != jobId:
+        raise httpErrors.InternalServerError(
+            "Unexpected job data returned by get_all")
+
+    node_hashes = set()
+    nodes_info = job_detail.get("nodes", {})
+    for node_name, node_ref in nodes_info.items():
+        node_hash = node_ref.get("hash")
+        if node_hash:
+            node_hashes.add(node_hash)
+
+    nodes_raw_data = {}
+    if node_hashes:
+        node_hashes_list = list(node_hashes)
+        nodes_raw_data, _ = get_node_by_hash(node_hashes_list)
+
+    result = {}
+    for node_name, node_ref in nodes_info.items():
+        node_hash = node_ref.get("hash")
+        if node_hash and node_hash in nodes_raw_data:
+            result[node_name] = nodes_raw_data[node_hash]
+
+    return result, 200
 
 
 @check_user_permissions
@@ -252,12 +299,24 @@ def register(jobId):
         else:
             # check when node was last updated since benchmarking may have failed and therefore a new benchmark is required
             # if no benchmarks are present
-            benchmarks_present = ("benchmarks" in node) and bool(
-                node["benchmarks"])
+
+            # determine whether required benchmarks are present: require bandwidth_mem, peakflops, peakflops_sp entry
+            benchmarks = node.get("benchmarks") or {}
+            # check presence of memory bandwidth benchmark
+            has_bandwidth = "bandwidth_mem" in benchmarks
+            # check presence of peakflops_dp and peakflops_sp
+            has_peakflops_dp = ("peakflops" in benchmarks
+                                and benchmarks.get("peakflops") is not None)
+            has_peakflops_sp = ("peakflops_sp" in benchmarks
+                                and benchmarks.get("peakflops_sp") is not None)
+            # required benchmark completeness
+            has_required_benchmarks = has_bandwidth and has_peakflops_dp and has_peakflops_sp
+            # check if benchmarking window expired
             benchmarking_window_expired = not (
                 "lastUpdate" in node) or get_current_timestamp(
                 ) - node["lastUpdate"] > BENCHMARKING_WINDOW
-            if not benchmarks_present and benchmarking_window_expired:
+
+            if not has_required_benchmarks and benchmarking_window_expired:
                 hash_missing = True
                 db.updateOne("nodes", {"hash": node_hash},
                              {"$set": {
