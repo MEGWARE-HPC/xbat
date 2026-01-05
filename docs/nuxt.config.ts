@@ -28,7 +28,7 @@ export default defineNuxtConfig({
             {
                 name: "Source Sans 3",
                 provider: "google",
-                weights: [400, 500, 600, 700],
+                weights: [400, 500, 600],
                 styles: ["normal", "italic"],
                 subsets: ["latin"],
                 display: "swap"
@@ -36,8 +36,8 @@ export default defineNuxtConfig({
             {
                 name: "Source Code Pro",
                 provider: "google",
-                weights: [400, 500, 600, 700],
-                styles: ["normal", "italic"],
+                weights: [400],
+                styles: ["normal"],
                 subsets: ["latin"],
                 display: "swap"
             }
