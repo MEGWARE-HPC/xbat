@@ -23,6 +23,26 @@ export default defineNuxtConfig({
         "@pinia/nuxt",
         "@nuxtjs/sitemap"
     ],
+    fonts: {
+        families: [
+            {
+                name: "Source Sans 3",
+                provider: "google",
+                weights: [400, 500, 600, 700],
+                styles: ["normal", "italic"],
+                subsets: ["latin"],
+                display: "swap"
+            },
+            {
+                name: "Source Code Pro",
+                provider: "google",
+                weights: [400, 500, 600, 700],
+                styles: ["normal", "italic"],
+                subsets: ["latin"],
+                display: "swap"
+            }
+        ]
+    },
     nitro: {
         prerender: {
             routes: [...routes]
