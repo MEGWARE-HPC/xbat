@@ -8,6 +8,8 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+-   unified font usage across browsers in the documentation (#184) and switched to Source Sans 3
+
 ### Fixed
 
 ## v1.2.0 - 2026-01-05
