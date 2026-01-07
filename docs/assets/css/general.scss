@@ -1,7 +1,6 @@
 @use "~/assets/css/colors.scss" as *;
 
-html,
-body {
+html {
     font-family:
         "Source Sans 3",
         system-ui,
@@ -10,7 +9,12 @@ body {
         "Segoe UI",
         Arial,
         sans-serif;
-    font-size: 14px;
+    font-size: 0.975rem;
+    margin: 0;
+    padding: 0;
+}
+
+body {
     margin: 0;
     padding: 0;
 }
