@@ -10,10 +10,7 @@
         >
             <v-card>
                 <v-toolbar>
-                    <v-btn
-                        icon="$arrowLeft"
-                        @click="fullscreen = false"
-                    ></v-btn>
+                    <v-btn icon="$arrowLeft" @click="fullscreen = false" />
 
                     <v-toolbar-title>{{ props.title }}</v-toolbar-title>
                 </v-toolbar>
@@ -39,13 +36,11 @@
                                         :graph-id="graphId"
                                         v-model:fullscreen="fullscreen"
                                         :height="600"
+                                        :nodes="props.nodes"
                                         flat
-                                    ></component>
+                                    />
                                 </v-col>
-                                <v-divider
-                                    vertical
-                                    style="height: 85vh"
-                                ></v-divider>
+                                <v-divider vertical style="height: 85vh" />
                                 <v-col sm="12" md="4">
                                     <v-expansion-panels
                                         variant="accordion"
@@ -92,7 +87,10 @@
                             ></GraphStatistics>
                         </v-window-item>
                         <v-window-item value="export">
-                            <GraphExport :graph-id="graphId" :type="props.roofline ? 'roofline' : 'default'"></GraphExport>
+                            <GraphExport
+                                :graph-id="graphId"
+                                :type="props.roofline ? 'roofline' : 'default'"
+                            ></GraphExport>
                         </v-window-item>
                     </v-tabs-window>
                 </v-card-text>
@@ -103,12 +101,14 @@
             v-bind="$attrs"
             v-model:fullscreen="fullscreen"
             :graph-id="graphId"
+            :nodes="props.nodes"
         ></component>
     </div>
 </template>
 <script setup lang="ts">
 import { nanoid } from "nanoid";
 import type { Metrics } from "~/types/graph";
+import type { NodeMap } from "~/repository/modules/nodes";
 import RooflineGraph from "./RooflineGraph.vue";
 import Graph from "./Graph.vue";
 
@@ -116,6 +116,7 @@ interface Props {
     title?: string;
     fullscreen?: boolean;
     metrics?: Metrics;
+    nodes?: Record<string, NodeMap>;
     roofline?: boolean;
 }
 
@@ -125,6 +126,7 @@ const graphId = nanoid(6);
 
 const props = withDefaults(defineProps<Props>(), {
     title: "Modify Graph",
+    nodes: () => ({}),
     roofline: false
 });
 
