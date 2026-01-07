@@ -121,23 +121,6 @@
                                         ></v-icon></div></template
                                 >Backup MongoDB</v-list-item
                             >
-                            <v-list-item
-                                v-if="
-                                    $authStore.userLevel ==
-                                    $authStore.UserLevelEnum.admin
-                                "
-                                value="purge"
-                                v-bind:title.attr="'Purge deleted jobs from QuestDB'"
-                                @click="setAction('purge')"
-                            >
-                                <template #prepend>
-                                    <div class="mr-2">
-                                        <v-icon
-                                            size="small"
-                                            icon="$purge"
-                                        ></v-icon></div></template
-                                >Purge QuestDB</v-list-item
-                            >
                         </v-list>
                     </v-card>
                 </v-menu>
@@ -412,28 +395,6 @@
                             overwrite all existing settings!
                         </div>
                     </template>
-                    <template v-else>
-                        <div class="warning mb-3">
-                            <p>
-                                WARNING - THIS ACTION MAY LEAD TO PERMANENT DATA
-                                LOSS!
-                            </p>
-                            <p>
-                                CONSULT
-                                <NuxtLink
-                                    to="https://xbat.dev/docs/admin/maintenance#purging-questdb-data"
-                                    target="_blank"
-                                    >DOCUMENTATION</NuxtLink
-                                >
-                                AND BACKUP QUESTDB DATA BEFORE PURGING!
-                            </p>
-                        </div>
-
-                        <p>
-                            Do you really want to purge all deleted jobs from
-                            QuestDB?
-                        </p>
-                    </template>
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
@@ -442,7 +403,6 @@
                     </v-btn>
                     <v-btn
                         v-if="
-                            action.type === 'purge' ||
                             action.type === 'backup' ||
                             (action.eligible.length && action.type !== 'import')
                         "
@@ -539,7 +499,6 @@ const setAction = (type: string) => {
 
     if (
         !props.selected.length &&
-        type != "purge" &&
         type != "import" &&
         type != "backup"
     )
@@ -551,7 +510,7 @@ const setAction = (type: string) => {
             action[x.state == "running" ? "eligible" : "ineligible"].push(x);
         });
     } else {
-        if (type != "backup" && type != "purge") {
+        if (type != "backup") {
             action.eligible = props.selected;
         }
     }
@@ -587,7 +546,6 @@ const executeAction = async () => {
     }
 
     if (
-        action.type != "purge" &&
         action.type != "import" &&
         action.type != "backup" &&
         !props.selected.length
@@ -681,9 +639,6 @@ const executeAction = async () => {
 
         message = "Created backup from MongoDB";
         state.isExporting = false;
-    } else if (action.type == "purge") {
-        await $api.benchmarks.purge();
-        message = "Purged deleted jobs from QuestDB";
     }
 
     $snackbar.show(message);
