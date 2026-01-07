@@ -221,7 +221,6 @@ def _transform_query_result(result, level):
         key = entry[level] if level != "job" else "job"
         if not key in values:
             values[key] = []
-        print(entry)
         # Convert val to float if it's a string (from ClickHouse)
         val = entry["val"]
         if isinstance(val, str):
