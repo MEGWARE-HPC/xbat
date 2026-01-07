@@ -13,8 +13,11 @@ from backend.restapi.grpc_client import XbatCtldRpcClient
 from backend.restapi.access_control import check_user_permissions
 from backend.restapi.user_helper import get_user_from_token, create_user_benchmark_filter
 from backend.restapi.backup import save_benchmarks, get_import_runNr, get_new_jobIds, process_collection, replace_jobId_json, process_table, pigz_compress, pigz_decompress
+from shared.clickhouse import ClickHouse
+import asyncio
 
 db = MongoDB()
+clickhouse = ClickHouse()
 rpcClient = XbatCtldRpcClient()
 
 EXPORT_PATH = Path("/tmp/xbat/export")
@@ -157,10 +160,15 @@ def delete(runNr):
     jobIds = db.getMany("jobs", run_nr_filter, {"jobId": True})
     if jobIds is not None:
         jobIds = [j["jobId"] for j in jobIds]
+    else:
+        jobIds = []
 
     db.deleteMany("jobs", run_nr_filter)
 
     db.deleteMany("outputs", {"jobId": {"$in": jobIds}})
+
+    if len(jobIds):
+        asyncio.run(clickhouse.delete_jobs(jobIds))
 
     return {}, 204
 

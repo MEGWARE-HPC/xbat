@@ -5,7 +5,7 @@ from psycopg.rows import dict_row
 from shared.helpers import format_error
 from shared.configuration import get_logger, get_config
 
-CONCURRENT_QUERY_LIMIT = 64  # Limit concurrent queries to prevent exhausting the database connections
+CONCURRENT_QUERY_LIMIT = 16  # Limit concurrent queries to prevent exhausting the database connections
 
 logger = logging.getLogger(get_logger())
 
@@ -79,3 +79,38 @@ class ClickHouse:
     async def execute_query(self, query):
         """Execute a single query"""
         return (await self.execute_queries([query]))[0]
+
+    async def delete_job(self, job_id: int):
+        """
+        Lightweight delete a job from ClickHouse.
+        
+        See https://clickhouse.com/docs/guides/developer/lightweight-delete for more details.
+        """
+        await self.delete_jobs([job_id])
+
+    async def delete_jobs(self, job_ids: list[int]):
+        """
+        Lightweight delete multiple jobs from ClickHouse.
+        
+        See https://clickhouse.com/docs/guides/developer/lightweight-delete for more details.
+        """
+        if not job_ids:
+            return
+
+        self.setup()
+
+        tables = await self._execute("SHOW TABLES")
+
+        tables = [
+            table for table in tables
+            if not (table['name'].startswith('template')
+                    or table['name'].startswith('goose'))
+        ]
+
+        job_ids_str = ",".join(str(job_id) for job_id in job_ids)
+        queries = [
+            f"DELETE FROM {table['name']} WHERE job_id IN ({job_ids_str})"
+            for table in tables
+        ]
+
+        await self.execute_queries(queries)
