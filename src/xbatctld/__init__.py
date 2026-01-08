@@ -36,7 +36,7 @@ configuration.set_config(service_configuration)
 configuration.set_build(BUILD)
 
 DEMO = service_configuration["demo"][
-    "enabled"] if "demo" in service_configuration and "enabled" in service_configuration[
+    "enabled"] == "true" if "demo" in service_configuration and "enabled" in service_configuration[
         "demo"] else False
 
 configuration.set_demo(DEMO)
