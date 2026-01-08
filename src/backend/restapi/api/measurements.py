@@ -103,9 +103,13 @@ def filter_interval(records, capture_start, capture_end):
         tzinfo=None) if capture_end is not None else None
 
     for entry in records:
-        if capture_start is not None and entry["ts"] < capture_start:
+        ts = entry["ts"]
+        if isinstance(ts, str):
+            ts = datetime.fromisoformat(ts)
+
+        if capture_start is not None and ts < capture_start:
             continue
-        if capture_end is not None and entry["ts"] > capture_end:
+        if capture_end is not None and ts > capture_end:
             continue
         filtered.append(entry)
 
@@ -860,11 +864,9 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
 
             time_filters = []
             if capture_start:
-                time_filters.append(
-                    f"ts >= '{capture_start.isoformat()}'")
+                time_filters.append(f"ts >= '{capture_start.isoformat()}'")
             if capture_end:
-                time_filters.append(
-                    f"ts <= '{capture_end.isoformat()}'")
+                time_filters.append(f"ts <= '{capture_end.isoformat()}'")
             time_clause = (" AND " +
                            " AND ".join(time_filters)) if time_filters else ""
 
@@ -926,10 +928,9 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
                     available_min_level = min(
                         [LEVEL_MAPPING[x] for x in available_levels])
                     available[group][metricName] = {
-                        **metricInfo, "metrics": {
-                            k: v
-                            for k, v in metricInfo["metrics"].items()
-                        },
+                        **metricInfo, "metrics":
+                        {k: v
+                         for k, v in metricInfo["metrics"].items()},
                         "level_min":
                         dict_get_key(LEVEL_MAPPING, available_min_level)
                     }
