@@ -1134,6 +1134,8 @@ components:
           type: object
         _id:
           type: string
+        folderId:
+          type: string
     UserType:
       description: User Types
       type: string

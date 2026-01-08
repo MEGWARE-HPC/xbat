@@ -9,6 +9,7 @@ from backend.restapi.user_helper import get_user_from_token, get_user_projects
 db = MongoDB()
 
 COLLECTION_NAME = "configurations"
+CONFIGURATION_FOLDERS_COLLECTION = "configuration_folders"
 
 
 def transform_shared(c):
@@ -32,6 +33,8 @@ def get_user_configurations(_id=None):
     # TODO remove when there a no configurations left with old format
     def transform_configurations(configurations):
         for configuration in configurations:
+            if "folderId" not in configuration:
+                configuration["folderId"] = None
             cfg = configuration["configuration"]
             for jobscript in cfg["jobscript"]:
                 jobscript = convert_jobscript_to_v0160(jobscript)
@@ -114,6 +117,9 @@ def post():
     if config is None:
         raise httpErrors.BadRequest("No configuration provided")
 
+    if "folderId" not in config:
+        config["folderId"] = None
+
     timestamp = get_current_datetime()
     config["misc"] = {
         "created": timestamp,
@@ -143,6 +149,9 @@ def put(_id):
 
     if config is None:
         raise httpErrors.BadRequest("No configuration provided")
+
+    if "folderId" not in config:
+        config["folderId"] = None
 
     config["misc"]["edited"] = get_current_datetime()
     config = transform_shared(config)
