@@ -137,7 +137,7 @@ useSeoMeta({
     justify-content: space-between;
     align-items: stretch;
     padding: 3rem 3rem 0 3rem;
-    min-height: 75vh;
+    min-height: 74vh;
     margin-top: 24px;
 
     .card {
