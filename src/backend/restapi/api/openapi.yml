@@ -477,6 +477,101 @@ paths:
       security:
         - oauth2:
             - configurations_w
+  /configuration_folders:
+    get:
+      operationId: backend.restapi.api.configuration_folders.get_all
+      tags:
+        - configuration
+      parameters:
+        - $ref: "#/components/parameters/ProjectIdQuery"
+      summary: Returns all configuration folders the user has access to
+      responses:
+        "200":
+          description: Successfully retrieved folders
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigurationFolder"
+      security:
+        - oauth2:
+            - configurations_r
+    post:
+      operationId: backend.restapi.api.configuration_folders.post
+      tags:
+        - configuration
+      summary: Create a new configuration folder
+      requestBody:
+        description: Folder object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigurationFolder"
+      responses:
+        "201":
+          description: Successfully added folder
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - configurations_w
+  /configuration_folders/{_id}:
+    get:
+      operationId: backend.restapi.api.configuration_folders.get
+      parameters:
+        - $ref: "#/components/parameters/DatabaseId"
+      tags:
+        - configuration
+      summary: Return a single configuration folder by ID
+      responses:
+        "200":
+          description: Successfully retrieved folder
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigurationFolder"
+      security:
+        - oauth2:
+            - configurations_r
+    put:
+      operationId: backend.restapi.api.configuration_folders.put
+      parameters:
+        - $ref: "#/components/parameters/DatabaseId"
+      tags:
+        - configuration
+      requestBody:
+        description: Folder object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigurationFolder"
+      summary: Replace entire folder document!
+      responses:
+        "200":
+          description: Successfully updated folder
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - configurations_w
+    delete:
+      operationId: backend.restapi.api.configuration_folders.delete
+      parameters:
+        - $ref: "#/components/parameters/DatabaseId"
+      tags:
+        - configuration
+      summary: Delete a configuration folder by ID
+      responses:
+        "204":
+          description: Successfully deleted folder
+      security:
+        - oauth2:
+            - configurations_w
   /projects:
     get:
       operationId: backend.restapi.api.projects.get_all
