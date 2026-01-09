@@ -1136,6 +1136,21 @@ components:
           type: string
         folderId:
           type: string
+    ConfigurationFolder:
+      description: Configuration folder
+      required:
+        - folder
+      properties:
+        folder:
+          type: object
+        sharedProjects:
+          type: array
+          items:
+            type: string
+        misc:
+          type: object
+        _id:
+          type: string
     UserType:
       description: User Types
       type: string
