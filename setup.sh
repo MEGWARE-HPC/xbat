@@ -138,10 +138,8 @@ prepare_databases() {
         sudo -u "$XBAT_USER" mkdir -p "$MONGODB_PATH" "$MONGODB_LOG_PATH" "$QUESTDB_PATH" "$QUESTDB_LOG_PATH" "$QUESTDB_CONF_PATH" "$CLICKHOUSE_PATH" "$CLICKHOUSE_LOG_PATH"
         sudo -u "$XBAT_USER" touch "$MONGODB_LOG_PATH/mongod.log"
 
-        cp --no-clobber "$CONF_SRC_PATH/mongod.conf" "$CONF_DEST_PATH/mongod.conf"
-        cp --no-clobber "$CONF_SRC_PATH/questdb.conf" "$CONF_DEST_PATH/questdb.conf"
-        cp --no-clobber "$CONF_SRC_PATH/questdb-log.conf" "$CONF_DEST_PATH/questdb-log.conf"
-        cp --no-clobber --recursive "$CONF_SRC_PATH/clickhouse" "$CONF_DEST_PATH/"
+        cp "$CONF_SRC_PATH/mongod.conf" "$CONF_DEST_PATH/mongod.conf"
+        cp --recursive "$CONF_SRC_PATH/clickhouse" "$CONF_DEST_PATH/"
 
         # TODO find out why this file is missing
         # temporary fix for missing mime.types file in questdb
