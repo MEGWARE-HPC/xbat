@@ -28,23 +28,27 @@ def get_user_folders(_id=None):
     filters = []
 
     user = get_user_from_token()
+
     if user is None:
         return None
 
     if user["user_type"] not in ["admin", "demo"]:
-        filters.append({"owner": user["user_name"]})
-        project_ids = [p["_id"] for p in get_user_projects(user)]
-        if project_ids:
-            filters.append({"sharedProjects": {"$in": project_ids}})
+        filters.append({"misc.owner": user["user_name"]})
 
-    filter_query = {"$or": filters} if filters else {}
+        project_ids = [p["_id"] for p in get_user_projects(user)]
+
+        if project_ids:
+            filters.append({"folder.sharedProjects": {"$in": project_ids}})
+
+    filterQuery = {}
+    if (len(filters)): filterQuery["$or"] = filters
 
     if _id is None:
-        return sanitize_mongo(db.getMany(COLLECTION_NAME, filter_query))
+        return sanitize_mongo(db.getMany(COLLECTION_NAME, filterQuery))
 
-    filter_query["_id"] = ObjectId(_id)
+    filterQuery["_id"] = ObjectId(_id)
 
-    folder = db.getOne(COLLECTION_NAME, filter_query)
+    folder = db.getOne(COLLECTION_NAME, filterQuery)
 
     if folder is None:
         return None
@@ -54,15 +58,17 @@ def get_user_folders(_id=None):
 
 def get_all():
     """
-    Return all configuration folders the user has access to
+    Return all configuration folders visible to the user.
     """
     result = get_user_folders()
-    return {"data": sorted(result, key=lambda x: x.get("folderName", ""))}, 200
+    return {
+        "data": sorted(result, key=lambda x: x["folder"]["folderName"])
+    }, 200
 
 
 def get(_id):
     """
-    Return a single folder by _id
+    Return a single configuration folder by ID.
     """
     result = get_user_folders(_id)
 
@@ -85,9 +91,11 @@ def post():
         raise httpErrors.BadRequest("No folder data provided")
 
     timestamp = get_current_datetime()
-    folder["owner"] = user["user_name"]
-    folder["created"] = timestamp
-    folder["edited"] = timestamp
+    folder["misc"] = {
+        "owner": user["user_name"],
+        "created": timestamp,
+        "edited": timestamp,
+    }
 
     folder = transform_shared(folder)
 
@@ -108,10 +116,12 @@ def put(_id):
     if folder is None:
         raise httpErrors.BadRequest("No folder data provided")
 
-    folder["edited"] = get_current_datetime()
+    folder["misc"]["edited"] = get_current_datetime()
     folder = transform_shared(folder)
 
-    del folder["_id"]
+    if "_id" in folder:
+        del folder["_id"]
+
     identifier = {"_id": ObjectId(_id)}
 
     result = db.replaceOne(COLLECTION_NAME, identifier, folder)
@@ -124,7 +134,7 @@ def put(_id):
 
 def delete(_id):
     """
-    Delete folder. Only owner, manager, or admin can delete.
+    Delete folder with specified _id. Folders may only be deleted by the owner or users of type 'manager' and 'admin'.
     """
     user = get_user_from_token()
 
@@ -136,9 +146,8 @@ def delete(_id):
     if folder is None:
         raise httpErrors.NotFound()
 
-    if user["user_name"] != folder.get("owner") and user["user_type"] not in [
-            "manager", "admin"
-    ]:
+    if (user["user_name"] != folder["misc"]["owner"]
+            and user["user_type"] not in ("manager", "admin")):
         raise httpErrors.Forbidden()
 
     result = db.deleteOne(COLLECTION_NAME, {"_id": ObjectId(_id)})
