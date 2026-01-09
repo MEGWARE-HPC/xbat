@@ -16,7 +16,10 @@ def transform_shared(v):
     Convert sharedProjects strings to ObjectId if they exist
     """
     if "sharedProjects" in v:
-        v["sharedProjects"] = [ObjectId(p) for p in v["sharedProjects"]]
+        v["folder"]["sharedProjects"] = [
+            ObjectId(p) for p in v["folder"]["sharedProjects"]
+        ]
+
     return v
 
 
