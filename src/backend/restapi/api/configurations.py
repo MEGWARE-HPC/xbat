@@ -12,11 +12,18 @@ COLLECTION_NAME = "configurations"
 CONFIGURATION_FOLDERS_COLLECTION = "configuration_folders"
 
 
-def transform_shared(c):
+def transform_objectId(c):
+    # transform folderId
+    if ("folderId" in c["configuration"]
+            and c["configuration"]["folderId"] is not None):
+        c["configuration"]["folderId"] = ObjectId(
+            c["configuration"]["folderId"])
+    # transform projectId(s)
     if ("sharedProjects" in c["configuration"]):
         c["configuration"]["sharedProjects"] = [
             ObjectId(p) for p in c["configuration"]["sharedProjects"]
         ]
+
     return c
 
 
@@ -33,11 +40,11 @@ def get_user_configurations(_id=None):
     # TODO remove when there a no configurations left with old format
     def transform_configurations(configurations):
         for configuration in configurations:
-            if "folderId" not in configuration:
-                configuration["folderId"] = None
             cfg = configuration["configuration"]
             for jobscript in cfg["jobscript"]:
                 jobscript = convert_jobscript_to_v0160(jobscript)
+            if "folderId" not in cfg:
+                cfg["folderId"] = None
         return configurations
 
     filters = []
@@ -117,8 +124,8 @@ def post():
     if config is None:
         raise httpErrors.BadRequest("No configuration provided")
 
-    if "folderId" not in config:
-        config["folderId"] = None
+    if "folderId" not in config["configuration"]:
+        config["configuration"]["folderId"] = None
 
     timestamp = get_current_datetime()
     config["misc"] = {
@@ -127,7 +134,7 @@ def post():
         "edited": timestamp,
     }
 
-    config = transform_shared(config)
+    config = transform_objectId(config)
 
     result = db.insertOne(COLLECTION_NAME, config)
 
@@ -150,11 +157,11 @@ def put(_id):
     if config is None:
         raise httpErrors.BadRequest("No configuration provided")
 
-    if "folderId" not in config:
-        config["folderId"] = None
+    if "folderId" not in config["configuration"]:
+        config["configuration"]["folderId"] = None
 
     config["misc"]["edited"] = get_current_datetime()
-    config = transform_shared(config)
+    config = transform_objectId(config)
 
     del config["_id"]
 
