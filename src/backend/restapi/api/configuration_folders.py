@@ -11,10 +11,14 @@ db = MongoDB()
 COLLECTION_NAME = "configuration_folders"
 
 
-def transform_shared(v):
+def transform_objectId(v):
     """
     Convert sharedProjects strings to ObjectId if they exist
     """
+    # transform parentFolderId
+    if ("parentFolderId" in v and v["folder"]["parentFolderId"] is not None):
+        v["folder"]["parentFolderId"] = ObjectId(v["folder"]["parentFolderId"])
+    # transform projectId(s)
     if "sharedProjects" in v:
         v["folder"]["sharedProjects"] = [
             ObjectId(p) for p in v["folder"]["sharedProjects"]
@@ -93,6 +97,9 @@ def post():
     if folder is None:
         raise httpErrors.BadRequest("No folder data provided")
 
+    if "parentFolderId" not in folder["folder"]:
+        folder["folder"]["parentFolderId"] = None
+
     timestamp = get_current_datetime()
     folder["misc"] = {
         "owner": user["user_name"],
@@ -100,7 +107,7 @@ def post():
         "edited": timestamp,
     }
 
-    folder = transform_shared(folder)
+    folder = transform_objectId(folder)
 
     result = db.insertOne(COLLECTION_NAME, folder)
 
@@ -120,7 +127,7 @@ def put(_id):
         raise httpErrors.BadRequest("No folder data provided")
 
     folder["misc"]["edited"] = get_current_datetime()
-    folder = transform_shared(folder)
+    folder = transform_objectId(folder)
 
     if "_id" in folder:
         del folder["_id"]
