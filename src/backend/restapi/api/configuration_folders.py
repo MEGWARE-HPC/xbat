@@ -144,14 +144,22 @@ def put(_id):
 
 def delete(_id):
     """
-    Delete folder with specified _id. Folders may only be deleted by the owner or users of type 'manager' and 'admin'.
+    Delete folder with specified _id recursively (rm -rf style).
+
+    This deletes:
+    - the folder itself
+    - all subfolders recursively
+    - all configurations contained in these folders
+
+    Only the owner or users of type 'manager' and 'admin' are allowed.
     """
     user = get_user_from_token()
 
     if user is None:
         raise httpErrors.Unauthorized()
 
-    folder = db.getOne(COLLECTION_NAME, {"_id": ObjectId(_id)})
+    folder_id = ObjectId(_id)
+    folder = db.getOne(COLLECTION_NAME, {"_id": folder_id})
 
     if folder is None:
         raise httpErrors.NotFound()
@@ -160,6 +168,33 @@ def delete(_id):
             and user["user_type"] not in ("manager", "admin")):
         raise httpErrors.Forbidden()
 
-    result = db.deleteOne(COLLECTION_NAME, {"_id": ObjectId(_id)})
+    def collect_folder_ids(folder_id):
+        visited = set()
+        folder_ids = [folder_id]
+        queue = [folder_id]
 
-    return {}, 204 if result.acknowledged else 400
+        while queue:
+            current_id = queue.pop(0)
+            children = db.getMany(COLLECTION_NAME,
+                                  {"folder.parentFolderId": current_id},
+                                  projection={"_id": 1})
+            for child in children:
+                cid = child["_id"]
+                if cid not in visited:
+                    visited.add(cid)
+                    folder_ids.append(cid)
+                    queue.append(cid)
+
+        return folder_ids
+
+    folder_ids = collect_folder_ids(folder_id)
+
+    # delete all configurations in there folders
+    db.deleteMany("configurations",
+                  {"configuration.folderId": {
+                      "$in": folder_ids
+                  }})
+    # delete the folder and all subfolders
+    db.deleteMany(COLLECTION_NAME, {"_id": {"$in": folder_ids}})
+
+    return {}, 204

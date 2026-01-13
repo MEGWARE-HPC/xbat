@@ -565,7 +565,7 @@ paths:
         - $ref: "#/components/parameters/DatabaseId"
       tags:
         - configuration
-      summary: Delete a configuration folder by ID
+      summary: Deletes the specified folder and all its subfolders recursively, along with all configurations contained in those folders.
       responses:
         "204":
           description: Successfully deleted folder
