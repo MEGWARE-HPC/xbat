@@ -405,6 +405,18 @@ class Api(object):
         return grouped_metrics
 
     @_localhost_suppress_security_warning
+    def get_job_roofline(self, job_ids: List[int]) -> dict[str, dict]:
+        jobs_url = f"{self.__api_url}/metrics/roofline?jobIds={','.join([str(i) for i in job_ids])}"
+        headers = self.__headers_accept("application/json") | self.__headers_auth
+        response = requests.get(
+            jobs_url,
+            headers=headers,
+            verify=self.__verify_ssl,
+        )
+        response.raise_for_status()
+        return response.json()["data"]
+
+    @_localhost_suppress_security_warning
     def cancel_job(self, job_id: int) -> None:
         cancelation_url = f"{self.__api_url}/slurm/jobs/{job_id}/cancel"
         headers = self.__headers_auth

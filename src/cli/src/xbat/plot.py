@@ -1,12 +1,16 @@
 import importlib
 import json
 from pathlib import Path
+import sys
 from typing import Iterable, List, Tuple
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from rich import print
 
-importlib.import_module("scienceplots")
+try:
+    importlib.import_module("scienceplots")
+except ModuleNotFoundError:
+    print("[yellow]Could not import additional styles.[/yellow]", file=sys.stderr)
 
 
 def plot_metric(

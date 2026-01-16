@@ -52,6 +52,8 @@ The following commands are available (use `--help` for documentation of argument
 | `rm` | Delete benchmark runs. |
 | `log` | Show the output and error of a job. |
 | `pull` | Download measurements for a finished job. |
+| `roofline` | Show the roofline model data of one or more finished jobs. |
+| `plot` | Plot downloaded measurements. |
 | `start` | Start a benchmark run. |
 | `stop` | Stop benchmark runs/jobs. |
 | `export` | Create a backup of benchmark runs. |

@@ -1,5 +1,6 @@
 import builtins
 import contextlib
+import json
 import os
 import sys
 import time
@@ -445,7 +446,48 @@ def pull(
         print(df)
 
 
-@app.command(help="Plot downloaded measurements")
+@app.command(help="Show the roofline model data of one or more finished jobs.")
+@handle_errors
+def roofline(
+    job_ids: Annotated[
+        List[int],
+        typer.Argument(help="ID(s) of finished jobs"),
+    ],
+    as_json: Annotated[
+        bool, typer.Option("--json", help="Output as JSON instead of CSV.")
+    ] = False,
+):
+    roofline_model_data = app.api.get_job_roofline(job_ids)
+    if as_json:
+        print(json.dumps(roofline_model_data, indent=3))
+    else:
+
+        def flatten_metrics(data: dict[str, Any], prefix: str | None = None) -> dict:
+            metrics: dict[str, float] = dict()
+            for k, v in data.items():
+                full_k = f"{prefix}__{k}" if prefix else k
+                if isinstance(v, dict):
+                    metrics |= flatten_metrics(v, full_k)
+                else:
+                    assert isinstance(v, float)
+                    metrics[full_k] = v
+            return metrics
+
+        data: dict[str, List[float | str | None]] = dict(job_id=[])
+        for job_id, job_data in roofline_model_data.items():
+            job_data_flat = flatten_metrics(job_data)
+            job_data_flat["job_id"] = job_id
+            for k in data:
+                if k not in job_data_flat:
+                    job_data_flat[k] = None  # Ensure job has all keys
+            for k, v in job_data_flat.items():
+                if k not in data:
+                    data[k] = [None] * len(data["job_id"])  # Fill new key
+                data[k].append(v)
+        print(pd.DataFrame(data).to_csv(index=False))
+
+
+@app.command(help="Plot downloaded measurements.")
 @handle_errors
 def plot(
     input_paths: Annotated[
