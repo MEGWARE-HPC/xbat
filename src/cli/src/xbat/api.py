@@ -79,6 +79,7 @@ class Job:
     state: str
     run_number: int
     variant: str | None
+    node_hashes: set[str]
 
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -330,9 +331,8 @@ class Api(object):
         self,
         run_ids: List[int] | None = None,
         job_ids: List[int] | None = None,
-        short: bool = True,
     ) -> List[Job]:
-        jobs_url = f"{self.__api_url}/jobs?short={short}"
+        jobs_url = f"{self.__api_url}/jobs?short=true"
         if run_ids:
             jobs_url += "&runNrs="
             for i, run in enumerate(run_ids):
@@ -372,6 +372,7 @@ class Api(object):
                 str(job_state),
                 int(job_dict["runNr"]),
                 variant,
+                {n["hash"] for n in job_dict["nodes"].values()},
             )
 
         return [parse_job(j) for j in response.json()["data"]]
@@ -406,10 +407,10 @@ class Api(object):
 
     @_localhost_suppress_security_warning
     def get_job_roofline(self, job_ids: List[int]) -> dict[str, dict]:
-        jobs_url = f"{self.__api_url}/metrics/roofline?jobIds={','.join([str(i) for i in job_ids])}"
+        roofline_model_data_url = f"{self.__api_url}/metrics/roofline?jobIds={','.join([str(i) for i in job_ids])}"
         headers = self.__headers_accept("application/json") | self.__headers_auth
         response = requests.get(
-            jobs_url,
+            roofline_model_data_url,
             headers=headers,
             verify=self.__verify_ssl,
         )
@@ -428,6 +429,22 @@ class Api(object):
         response.raise_for_status()
 
     # endregion jobs
+
+    # region nodes
+    @property
+    @_localhost_suppress_security_warning
+    def nodes(self) -> dict[str, dict]:
+        nodes_url = f"{self.__api_url}/nodes"
+        headers = self.__headers_accept("application/json") | self.__headers_auth
+        response = requests.get(
+            nodes_url,
+            headers=headers,
+            verify=self.__verify_ssl,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    # endregion nodes
 
     # region configurations
     @property

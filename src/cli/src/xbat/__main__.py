@@ -448,6 +448,7 @@ def pull(
 
 @app.command(help="Show the roofline model data of one or more finished jobs.")
 @handle_errors
+@require_valid_access_token()
 def roofline(
     job_ids: Annotated[
         List[int],
@@ -457,9 +458,26 @@ def roofline(
         bool, typer.Option("--json", help="Output as JSON instead of CSV.")
     ] = False,
 ):
+    job_id_node_hashes = {
+        j.job_id: j.node_hashes for j in app.api.get_jobs(job_ids=job_ids)
+    }
+    node_hashes = set.union(*job_id_node_hashes.values())
+    node_hash_benchmarks = {
+        n["hash"]: n["benchmarks"]
+        for n in app.api.nodes.values()
+        if "benchmarks" in n and n["hash"] in node_hashes
+    }
     roofline_model_data = app.api.get_job_roofline(job_ids)
     if as_json:
-        print(json.dumps(roofline_model_data, indent=3))
+        output_json_data = dict(
+            node_benchmarks=node_hash_benchmarks,
+            jobs=dict(),
+        )
+        for job_id, job_data in roofline_model_data.items():
+            output_json_data["jobs"][job_id] = dict(
+                results=job_data, node_hashes=list(job_id_node_hashes[int(job_id)])
+            )
+        print(json.dumps(output_json_data, indent=3))
     else:
 
         def flatten_metrics(data: dict[str, Any], prefix: str | None = None) -> dict:
@@ -473,18 +491,35 @@ def roofline(
                     metrics[full_k] = v
             return metrics
 
-        data: dict[str, List[float | str | None]] = dict(job_id=[])
+        def dict_to_csv_data(
+            data_row: dict, data_csv: dict, index_key: str, index_value: Any
+        ):
+            data_row[index_key] = index_value
+            for k in data_csv:
+                if k not in data_row:
+                    data_row[k] = None  # Ensure row has all columns
+            for k, v in data_row.items():
+                if k not in data_csv:
+                    data_csv[k] = [None] * len(data_csv[index_key])  # Fill new key
+                data_csv[k].append(v)
+
+        output_csv_data: dict = dict(
+            node_hash=[],
+        )
+        for node_hash, benchmarks in node_hash_benchmarks.items():
+            dict_to_csv_data(benchmarks, output_csv_data, "node_hash", node_hash)
+        print(pd.DataFrame(output_csv_data).to_csv(index=False))
+        output_csv_data = dict(
+            job_id=[],
+            node_hashes=[],
+        )
         for job_id, job_data in roofline_model_data.items():
-            job_data_flat = flatten_metrics(job_data)
-            job_data_flat["job_id"] = job_id
-            for k in data:
-                if k not in job_data_flat:
-                    job_data_flat[k] = None  # Ensure job has all keys
-            for k, v in job_data_flat.items():
-                if k not in data:
-                    data[k] = [None] * len(data["job_id"])  # Fill new key
-                data[k].append(v)
-        print(pd.DataFrame(data).to_csv(index=False))
+            row_data = flatten_metrics(job_data)
+            row_data["node_hashes"] = (
+                "[" + ",".join(f"'{h}'" for h in job_id_node_hashes[int(job_id)]) + "]"
+            )
+            dict_to_csv_data(row_data, output_csv_data, "job_id", job_id)
+        print(pd.DataFrame(output_csv_data).to_csv(index=False))
 
 
 @app.command(help="Plot downloaded measurements.")
