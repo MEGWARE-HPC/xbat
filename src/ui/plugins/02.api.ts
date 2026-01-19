@@ -2,6 +2,7 @@ import type { NitroFetchRequest, $Fetch } from "nitropack";
 
 import BenchmarkModule from "~/repository/modules/benchmarks";
 import ConfigurationModule from "~/repository/modules/configurations";
+import ConfigurationFolderModule from "~/repository/modules/configurationFolders";
 import SlurmModule from "~/repository/modules/slurm";
 import ProjectModule from "~/repository/modules/projects";
 import UserModule from "~/repository/modules/users";
@@ -16,6 +17,7 @@ interface ApiInstance {
     benchmarks: BenchmarkModule;
     slurm: SlurmModule;
     configurations: ConfigurationModule;
+    configurationFolders: ConfigurationFolderModule;
     projects: ProjectModule;
     users: UserModule;
     settings: SettingsModule;
@@ -67,7 +69,10 @@ export default defineNuxtPlugin((nuxtApp) => {
             } else if (response.status === 404) {
                 await nuxtApp.runWithContext(() => {
                     const { $snackbar } = useNuxtApp();
-                    $snackbar.show("The requested resource was not found.", "warning");
+                    $snackbar.show(
+                        "The requested resource was not found.",
+                        "warning"
+                    );
                     console.error("Resource not found:", response._data);
                 });
             } else if (!response.ok) {
@@ -85,6 +90,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         benchmarks: new BenchmarkModule(apiFetcher),
         slurm: new SlurmModule(apiFetcher),
         configurations: new ConfigurationModule(apiFetcher),
+        configurationFolders: new ConfigurationFolderModule(apiFetcher),
         projects: new ProjectModule(apiFetcher),
         users: new UserModule(apiFetcher),
         settings: new SettingsModule(apiFetcher),
