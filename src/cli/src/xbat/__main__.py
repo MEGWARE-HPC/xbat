@@ -8,7 +8,7 @@ import webbrowser
 from enum import Enum
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Set, Tuple
+from typing import Any, Callable
 from urllib.parse import urlparse
 
 import click
@@ -33,7 +33,7 @@ from .api import (
 )
 
 os.environ["MPLBACKEND"] = "WebAgg"  # Seems to be required when plotting from uv.
-from .plot import plot_metric
+from . import plot
 
 
 def warn(*args: Any, category: str = "Warning", **kwargs: Any) -> None:
@@ -56,7 +56,7 @@ class App(typer.Typer):
             if self.connection:
                 self.connection.close()
 
-    def exec_cmd(self, cmd: str) -> Tuple[int, str, str]:
+    def exec_cmd(self, cmd: str) -> tuple[int, str, str]:
         runner = self.connection if self.connection is not None else Context()
         result = runner.run(cmd, hide=True, warn=True)
         assert result is not None
@@ -167,7 +167,7 @@ def login(
     user = os.getenv("XBAT_USER")
     password = os.getenv("XBAT_PASS")
     if not ci:
-        print(f"[italic white]Setting credentials for {app.base_url}[/italic white]")
+        print(f"[italic white]setting credentials for {app.base_url}[/italic white]")
     if ci and (not user or not password):
         raise ValueError(
             " ".join(
@@ -228,7 +228,7 @@ def ls(
     list_jobs: Annotated[
         bool,
         typer.Option(
-            "--list-jobs", "-j", help="List individual jobs instead of benchmark runs."
+            "--list-jobs", "-j", help="list individual jobs instead of benchmark runs."
         ),
     ] = False,
     filter_variant: Annotated[
@@ -248,7 +248,7 @@ def ls(
 
     configs = app.api.configurations
 
-    def get_config(run: BenchmarkRun) -> Tuple[str, str]:
+    def get_config(run: BenchmarkRun) -> tuple[str, str]:
         if run.config_id:
             return (
                 run.config_id,
@@ -260,7 +260,7 @@ def ls(
     if filter_config:
         runs = [r for r in runs if get_config(r) == filter_config]
     columns = ["run", "name", "config", "config_name", "issuer", "run_state"]
-    job_variant_state: Dict[int, Tuple[str, str]] = {}
+    job_variant_state: dict[int, tuple[str, str]] = {}
     if filter_variant and not list_jobs:
         print(
             "[bold yellow]Warning![/bold yellow] Option [italic]--variant[/italic]/[italic]-v[/italic] implies option [italic]--list-jobs[/italic]/[italic]-j[/italic]."
@@ -280,7 +280,7 @@ def ls(
     for column in columns:
         table.add_column(column)
     for run in runs:
-        values: List[str] = [
+        values: list[str] = [
             str(v)
             for v in [
                 run.run_number,
@@ -306,7 +306,7 @@ def ls(
 @require_valid_access_token()
 def rm(
     runs: Annotated[
-        List[int], typer.Argument(help="The numbers of the benchmark runs to delete.")
+        list[int], typer.Argument(help="The numbers of the benchmark runs to delete.")
     ],
     quiet: Annotated[
         bool,
@@ -451,7 +451,7 @@ def pull(
 @require_valid_access_token()
 def roofline(
     job_ids: Annotated[
-        List[int],
+        list[int],
         typer.Argument(help="ID(s) of finished jobs"),
     ],
     as_json: Annotated[
@@ -522,11 +522,15 @@ def roofline(
         print(pd.DataFrame(output_csv_data).to_csv(index=False))
 
 
-@app.command(help="Plot downloaded measurements.")
+plotting_app = typer.Typer(help="Plotting commands.")
+app.add_typer(plotting_app, name="plot")
+
+
+@plotting_app.command(help="Plot downloaded trace(s).", name="metric")
 @handle_errors
-def plot(
+def plot_metric(
     input_paths: Annotated[
-        List[Path],
+        list[Path],
         typer.Argument(
             help="Downloaded JSON input file(s) containing traces for the same metric.",
             exists=True,
@@ -547,12 +551,70 @@ def plot(
         Path | None,
         typer.Option("--output-path", "-o", help="Output path of the figure."),
     ] = None,
+    style: Annotated[
+        list[str] | None,
+        typer.Option("--style", "-s", help="Matplotlib style(s) to use."),
+    ] = None,
 ):
-    plot_metric(
-        set(input_paths),  # Deduplicate
-        table,  # Deduplicate
-        show=output_path is None,
+    kwargs: dict[str, list[str]] = dict()
+    if style is not None:
+        kwargs["style"] = style
+    plot.metric(
+        paths=set(input_paths),  # Deduplicate
+        table=table,
         output_path=output_path,
+        show=output_path is None,
+        ax=None,
+        figsize=None,
+        iteration_in_label=True,
+        dpi=300,
+        **kwargs,
+    )
+
+
+class PrecisionType(str, Enum):
+    SP = "SP"
+    DP = "DP"
+
+
+@plotting_app.command(help="Plot roofline model.", name="roofline")
+@handle_errors
+def plot_roofline_model(
+    input_path: Annotated[
+        Path,
+        typer.Argument(
+            help="Downloaded JSON input file containing roofline model data.",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+        ),
+    ],
+    precision: Annotated[
+        PrecisionType,
+        typer.Option("--precision", "-p", help="Floating point precision."),
+    ] = PrecisionType.DP,
+    output_path: Annotated[
+        Path | None,
+        typer.Option("--output-path", "-o", help="Output path of the figure."),
+    ] = None,
+    style: Annotated[
+        list[str] | None,
+        typer.Option("--style", "-s", help="Matplotlib style(s) to use."),
+    ] = None,
+):
+    kwargs: dict[str, list[str]] = dict()
+    if style is not None:
+        kwargs["style"] = style
+    plot.roofline_model(
+        path=input_path,
+        precision=precision.lower(),
+        output_path=output_path,
+        show=output_path is None,
+        ax=None,
+        figsize=None,
+        dpi=300,
+        **kwargs,
     )
 
 
@@ -564,7 +626,7 @@ class StartType(str, Enum):
 def __start_job_script(
     job_script_path: Path | str,
     job_name: str | None,
-    share_projects_ids: Set[str],
+    share_projects_ids: set[str],
     ci: bool,
 ) -> int:
     if not app.check_command_exits("sbatch"):
@@ -590,7 +652,7 @@ def __start_job_script(
             print(
                 f"[italic white]Waiting for xbat to pick up job with ID {job_id_str}...[/italic white]"
             )
-        runs: List[BenchmarkRun] = []
+        runs: list[BenchmarkRun] = []
         while len(runs) == 0:
             runs = [
                 r
@@ -612,10 +674,10 @@ def __start_job_script(
 def __start_config(
     config_id: str | None,
     job_name: str | None,
-    share_projects_ids: Set[str],
+    share_projects_ids: set[str],
     share: bool,
 ) -> int:
-    configs: Dict[str, Configuration] = app.api.configurations
+    configs: dict[str, Configuration] = app.api.configurations
     if config_id is None:
         config_id = questionary.select(
             "Select a configuration:",
@@ -672,7 +734,7 @@ def start(
         ),
     ] = False,
     share_projects: Annotated[
-        List[str],
+        list[str],
         typer.Option(
             "--share-project",
             "-p",
@@ -737,7 +799,7 @@ class StopType(str, Enum):
 def stop(
     stop_type: Annotated[StopType, typer.Argument()],
     nos_or_ids: Annotated[
-        List[int], typer.Argument(help="The numbers/IDs benchmark runs/jobs to stop.")
+        list[int], typer.Argument(help="The numbers/IDs benchmark runs/jobs to stop.")
     ],
     quiet: Annotated[
         bool,
@@ -760,7 +822,7 @@ def stop(
 @handle_errors
 @require_valid_access_token()
 def export(
-    runs: Annotated[List[int], typer.Argument(help="IDs of benchmark runs to export.")],
+    runs: Annotated[list[int], typer.Argument(help="IDs of benchmark runs to export.")],
     output_path: Annotated[Path, typer.Argument(help="CSV output path.")],
     anonymise: Annotated[
         bool, typer.Option("--anonymise", "-a", help="Anonymise data on export.")

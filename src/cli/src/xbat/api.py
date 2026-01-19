@@ -6,7 +6,7 @@ import warnings
 from enum import Enum
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Tuple, TypeVar, cast
+from typing import Any, Callable, Iterable, TypeVar, cast
 from urllib.parse import urlparse
 
 import keyring
@@ -53,7 +53,7 @@ class Project:
 class Configuration:
     config_id: str
     name: str
-    shared_projects: List[Project]
+    shared_projects: list[Project]
 
     def __str__(self) -> str:
         if len(self.shared_projects) > 0:
@@ -70,7 +70,7 @@ class BenchmarkRun:
     config_id: str | None
     config_name: str | None
     state: str
-    job_ids: List[int]
+    job_ids: list[int]
 
 
 @dataclass
@@ -119,7 +119,7 @@ class Api(object):
         self.__keyring_system = f"xbat-{self.__client_id}"
         self.__verify_ssl = self.__host != "localhost"
 
-    def __headers_accept(self, mime_type: str) -> Dict[str, str]:
+    def __headers_accept(self, mime_type: str) -> dict[str, str]:
         return {"accept": mime_type}
 
     @_localhost_suppress_security_warning
@@ -161,7 +161,7 @@ class Api(object):
         return access_token
 
     @property
-    def __headers_auth(self) -> Dict[str, str]:
+    def __headers_auth(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.access_token}"}
 
     @_localhost_suppress_security_warning
@@ -178,7 +178,7 @@ class Api(object):
     # region benchmarks
     @property
     @_localhost_suppress_security_warning
-    def benchmark_runs(self) -> Dict[int, BenchmarkRun]:
+    def benchmark_runs(self) -> dict[int, BenchmarkRun]:
         benchmark_runs_url = f"{self.__api_url}/benchmarks"
         headers = self.__headers_accept("application/json") | self.__headers_auth
         response = requests.get(
@@ -206,7 +206,7 @@ class Api(object):
     @_localhost_suppress_security_warning
     def export_runs(
         self,
-        run_ids: List[int],
+        run_ids: list[int],
         output_path: Path,
         anonymise: bool = False,
         progress_callback: Callable[[float], None] | None = None,
@@ -249,7 +249,7 @@ class Api(object):
         config_id: str,
         name: str,
         share_project_ids: Iterable[str] = [],
-        variables: List[str] = [],
+        variables: list[str] = [],
     ) -> int:
         url = f"{self.__api_url}/benchmarks"
         headers = self.__headers_auth
@@ -288,7 +288,7 @@ class Api(object):
             raise ValueError("No values to update run with provided.")
         url = f"{self.__api_url}/benchmarks/{run_number}"
         headers = self.__headers_auth
-        payload: Dict[str, Any] = dict()
+        payload: dict[str, Any] = dict()
         if name is not None:
             payload["name"] = name
         if share_projects_ids is not None:
@@ -329,9 +329,9 @@ class Api(object):
     @_localhost_suppress_security_warning
     def get_jobs(
         self,
-        run_ids: List[int] | None = None,
-        job_ids: List[int] | None = None,
-    ) -> List[Job]:
+        run_ids: list[int] | None = None,
+        job_ids: list[int] | None = None,
+    ) -> list[Job]:
         jobs_url = f"{self.__api_url}/jobs?short=true"
         if run_ids:
             jobs_url += "&runNrs="
@@ -353,7 +353,7 @@ class Api(object):
         )
         response.raise_for_status()
 
-        def parse_job(job_dict: Dict[str, Any]) -> Job:
+        def parse_job(job_dict: dict[str, Any]) -> Job:
             variant: str | None = None
             try:
                 variant = str(job_dict["configuration"]["jobscript"]["variantName"])
@@ -378,7 +378,7 @@ class Api(object):
         return [parse_job(j) for j in response.json()["data"]]
 
     @_localhost_suppress_security_warning
-    def get_job_output(self, job_id: int) -> Tuple[str, str]:
+    def get_job_output(self, job_id: int) -> tuple[str, str]:
         jobs_url = f"{self.__api_url}/jobs/{job_id}/output"
         headers = self.__headers_accept("application/json") | self.__headers_auth
         response = requests.get(
@@ -391,7 +391,7 @@ class Api(object):
         return output["standardOutput"], output["standardError"]
 
     @_localhost_suppress_security_warning
-    def get_job_metrics(self, job_id: int) -> Dict[str, List[str]]:
+    def get_job_metrics(self, job_id: int) -> dict[str, list[str]]:
         jobs_url = f"{self.__api_url}/metrics?jobIds={job_id}"
         headers = self.__headers_accept("application/json") | self.__headers_auth
         response = requests.get(
@@ -400,13 +400,13 @@ class Api(object):
             verify=self.__verify_ssl,
         )
         response.raise_for_status()
-        grouped_metrics: Dict[str, List[str]] = dict()
+        grouped_metrics: dict[str, list[str]] = dict()
         for group_name, group in response.json()["metrics"].items():
             grouped_metrics[group_name] = list(group.keys())
         return grouped_metrics
 
     @_localhost_suppress_security_warning
-    def get_job_roofline(self, job_ids: List[int]) -> dict[str, dict]:
+    def get_job_roofline(self, job_ids: list[int]) -> dict[str, dict]:
         roofline_model_data_url = f"{self.__api_url}/metrics/roofline?jobIds={','.join([str(i) for i in job_ids])}"
         headers = self.__headers_accept("application/json") | self.__headers_auth
         response = requests.get(
@@ -449,7 +449,7 @@ class Api(object):
     # region configurations
     @property
     @_localhost_suppress_security_warning
-    def configurations(self) -> Dict[str, Configuration]:
+    def configurations(self) -> dict[str, Configuration]:
         configurations_url = f"{self.__api_url}/configurations"
         headers = self.__headers_accept("application/json") | self.__headers_auth
         response = requests.get(
@@ -478,7 +478,7 @@ class Api(object):
     # region projects
     @property
     @_localhost_suppress_security_warning
-    def projects(self) -> List[Project]:
+    def projects(self) -> list[Project]:
         projects_url = f"{self.__api_url}/projects"
         headers = self.__headers_accept("application/json") | self.__headers_auth
         response = requests.get(
@@ -515,7 +515,7 @@ class Api(object):
             raise ValueError("Invalid file format.")
         if file_format == "json" and not metric:
             raise ValueError('Single metric must be provided if file format is "json".')
-        params: Dict[str, Any] = dict(level=level)
+        params: dict[str, Any] = dict(level=level)
         if group:
             params["group"] = group
         if metric:
