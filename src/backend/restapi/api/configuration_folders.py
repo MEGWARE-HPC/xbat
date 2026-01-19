@@ -63,14 +63,68 @@ def get_user_folders(_id=None):
     return sanitize_mongo(folder)
 
 
-def get_all():
+def build_folder_tree(raw_folders):
+    """
+    Builds a hierarchical tree structure from a sanitized list of folder documents.
+    """
+    folder_map = {}
+    root_items = []
+
+    for raw_folder in raw_folders:
+        folder_id = raw_folder["_id"]
+        parent_id = raw_folder["folder"].get("parentFolderId")
+
+        folder_node = {
+            "id": str(folder_id),
+            "name": raw_folder["folder"]["folderName"],
+            "type": "folder",
+            "children": []
+        }
+
+        folder_map[folder_id] = folder_node
+
+        if parent_id is None:
+            root_items.append(folder_node)
+
+    for raw_folder in raw_folders:
+        folder_id = raw_folder["_id"]
+        parent_id = raw_folder["folder"].get("parentFolderId")
+
+        if parent_id is not None and parent_id in folder_map:
+            parent_node = folder_map[parent_id]
+            parent_node["children"].append(folder_map[folder_id])
+
+    def sort_children(node):
+        node["children"].sort(key=lambda x: x["name"])
+        for child in node["children"]:
+            sort_children(child)
+
+    for root in root_items:
+        sort_children(root)
+
+    root_items.sort(key=lambda x: x["name"])
+
+    return root_items
+
+
+def get_all(structure='tree'):
     """
     Return all configuration folders visible to the user.
     """
-    result = get_user_folders()
-    return {
-        "data": sorted(result, key=lambda x: x["folder"]["folderName"])
-    }, 200
+    raw_folders = get_user_folders()
+
+    if raw_folders is None:
+        pass
+
+    if structure == 'flat':
+        return {
+            "data": sorted(raw_folders,
+                           key=lambda x: x["folder"]["folderName"])
+        }, 200
+
+    else:
+        tree_structure = build_folder_tree(raw_folders)
+        return {"data": tree_structure}, 200
 
 
 def get(_id):
