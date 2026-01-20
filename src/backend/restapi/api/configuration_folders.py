@@ -27,6 +27,39 @@ def transform_objectId(v):
     return v
 
 
+def sanitize_folder_document(doc):
+    """
+    Ensures a folder document has all required fields with default values if missing.
+    This is particularly useful for handling legacy documents.
+    """
+    if doc is None:
+        return None
+
+    # Ensure the top-level structure is correct based on your schema
+    # Assuming structure: {"_id": ..., "folder": {...}, "misc": {...}}
+    folder_part = doc.get("folder", {})
+    misc_part = doc.get("misc", {})
+
+    sanitized_folder = {
+        "folderName": folder_part.get("folderName", "Unnamed Folder"),
+        "parentFolderId": folder_part.get("parentFolderId"),
+    }
+
+    sanitized_misc = {
+        "owner": misc_part.get("owner", ""),
+        "created": misc_part.get("created"),
+        "edited": misc_part.get("edited")
+    }
+
+    sanitized_doc = {
+        "_id": doc.get("_id"),
+        "folder": sanitized_folder,
+        "misc": sanitized_misc
+    }
+
+    return sanitized_doc
+
+
 def get_user_folders(_id=None):
     """
     Retrieves folders based on user's permissions and project access.
@@ -51,7 +84,11 @@ def get_user_folders(_id=None):
     if (len(filters)): filterQuery["$or"] = filters
 
     if _id is None:
-        return sanitize_mongo(db.getMany(COLLECTION_NAME, filterQuery))
+        raw_results = db.getMany(COLLECTION_NAME, filterQuery)
+        return [
+            sanitize_folder_document(r) for r in sanitize_mongo(raw_results)
+            if r is not None
+        ]
 
     filterQuery["_id"] = ObjectId(_id)
 
@@ -60,7 +97,7 @@ def get_user_folders(_id=None):
     if folder is None:
         return None
 
-    return sanitize_mongo(folder)
+    return sanitize_folder_document(sanitize_mongo(folder))
 
 
 def build_folder_tree(raw_folders):
@@ -70,7 +107,14 @@ def build_folder_tree(raw_folders):
     folder_map = {}
     root_items = []
 
-    for raw_folder in raw_folders:
+    sanitized_folders = [
+        sanitize_folder_document(f) for f in raw_folders if f is not None
+    ]
+
+    for raw_folder in sanitized_folders:
+        if not raw_folder:
+            continue
+
         folder_id = raw_folder["_id"]
         parent_id = raw_folder["folder"].get("parentFolderId")
 
@@ -86,7 +130,7 @@ def build_folder_tree(raw_folders):
         if parent_id is None:
             root_items.append(folder_node)
 
-    for raw_folder in raw_folders:
+    for raw_folder in sanitized_folders:
         folder_id = raw_folder["_id"]
         parent_id = raw_folder["folder"].get("parentFolderId")
 
