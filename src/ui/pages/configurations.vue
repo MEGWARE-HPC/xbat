@@ -463,9 +463,92 @@
                 class="sidebar"
                 width="300"
             >
-                <template #prepend
-                    ><div class="header">CONFIGURATIONS</div></template
-                >
+                <template #prepend>
+                    <div class="header">CONFIGURATIONS</div>
+                    <div class="folder-actions">
+                        <v-btn
+                            size="small"
+                            variant="outlined"
+                            @click="showNewFolderDialog = true"
+                            :disabled="
+                                $authStore.userLevel <
+                                $authStore.UserLevelEnum.user
+                            "
+                        >
+                            New Folder
+                        </v-btn>
+
+                        <v-btn
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            @click="showDeleteFolderDialog = true"
+                            :disabled="
+                                !folderIdSelected ||
+                                $authStore.userLevel <
+                                    $authStore.UserLevelEnum.user
+                            "
+                        >
+                            Delete Folder
+                        </v-btn>
+                    </div>
+                </template>
+
+                <v-divider class="my-2"></v-divider>
+
+                <v-treeview
+                    :items="folderTree"
+                    item-title="name"
+                    item-value="id"
+                    activatable
+                    open-on-click
+                    :active.sync="activeFolderIds"
+                    @update:active="onFolderSelected"
+                    dense
+                />
+
+                <v-dialog v-model="showNewFolderDialog" width="500">
+                    <v-card>
+                        <v-card-title>New Folder</v-card-title>
+                        <v-card-text>
+                            <v-form ref="newFolderForm">
+                                <v-text-field
+                                    v-model="newFolderName"
+                                    label="Folder Name"
+                                    :rules="[vNotEmpty]"
+                                />
+                            </v-form>
+                        </v-card-text>
+                        <v-card-actions>
+                            <v-spacer></v-spacer>
+                            <v-btn text @click="showNewFolderDialog = false"
+                                >Cancel</v-btn
+                            >
+                            <v-btn color="primary" @click="createFolder"
+                                >Create</v-btn
+                            >
+                        </v-card-actions>
+                    </v-card>
+                </v-dialog>
+
+                <v-dialog v-model="showDeleteFolderDialog" width="500">
+                    <v-card>
+                        <v-card-title>Delete Folder</v-card-title>
+                        <v-card-text>
+                            Are you sure you want to delete this folder and all
+                            its contents (rm -rf)?
+                        </v-card-text>
+                        <v-card-actions>
+                            <v-spacer></v-spacer>
+                            <v-btn text @click="showDeleteFolderDialog = false"
+                                >Cancel</v-btn
+                            >
+                            <v-btn color="error" @click="deleteFolder"
+                                >Delete</v-btn
+                            >
+                        </v-card-actions>
+                    </v-card>
+                </v-dialog>
                 <template #append> </template>
                 <div class="list">
                     <v-list
@@ -475,7 +558,7 @@
                     >
                         <template
                             v-for="[id, v] of Object.entries(
-                                configurationCache
+                                configurationCacheFiltered
                             )"
                             :value="id"
                         >
@@ -661,13 +744,25 @@ const defaultForm = {
     enableMonitoring: true,
     interval: 5,
     configurationName: "new configuration",
-    sharedProjects: []
+    sharedProjects: [],
+    folderId: null
 };
 
 const configurationCache = ref({});
 const form = ref({});
 
 form.value = deepClone(defaultForm);
+
+const folderTree = ref([]);
+const activeFolderIds = ref([]);
+
+function onFolderSelected(ids) {
+    activeFolderIds.value = ids;
+}
+
+const folderIdSelected = computed(() => {
+    return activeFolderIds.value?.[0] ?? null;
+});
 
 const setConfigurationCache = () => {
     configurationCache.value = Object.fromEntries(
@@ -686,7 +781,26 @@ const { data: configurations, refresh } = await useAsyncData(
     async () => (await $api.configurations.get())?.data || []
 );
 
-setConfigurationCache();
+const { data: folders, refresh: refreshFolders } = await useAsyncData(
+    `configuration-folders-${$authStore.user.user_name}`,
+    async () => (await $api.configurationFolders.get())?.data || []
+);
+
+watch(
+    () => folders.value,
+    () => {
+        folderTree.value = folders.value || [];
+    },
+    { immediate: true }
+);
+
+watch(
+    () => configurations.value,
+    () => {
+        setConfigurationCache();
+    },
+    { immediate: true }
+);
 
 const partitionTree = computed(() => {
     let items = [];
@@ -708,9 +822,86 @@ const variableCount = computed(() => {
 });
 
 const fetchConfigurations = async () => {
-    await refresh();
-    // TODO known issue - this causes unsaved changes to be overwritten
+    const res = await $api.configurations.get();
+
+    configurations.value = res.data.filter((c) => {
+        if (!folderIdSelected.value) return true;
+
+        const folderId = c.configuration?.folderId;
+
+        if (!folderId) return false;
+
+        const folderIdStr =
+            typeof folderId === "string"
+                ? folderId
+                : folderId?.$oid || folderId?.toString?.() || null;
+
+        return folderIdStr === folderIdSelected.value;
+    });
+
     setConfigurationCache();
+};
+
+const configurationCacheFiltered = computed(() => {
+    const selectedFolderId = folderIdSelected.value;
+    if (!selectedFolderId) return configurationCache.value;
+
+    const filtered = {};
+    for (const [id, v] of Object.entries(configurationCache.value)) {
+        const folderId = v.configuration.folderId;
+
+        if (!folderId) continue;
+
+        const folderIdStr =
+            typeof folderId === "string"
+                ? folderId
+                : folderId?.$oid || folderId?.toString?.() || null;
+
+        if (folderIdStr === selectedFolderId) {
+            filtered[id] = v;
+        }
+    }
+
+    return filtered;
+});
+
+const showNewFolderDialog = ref(false);
+const showDeleteFolderDialog = ref(false);
+const newFolderName = ref("");
+
+const createFolder = async () => {
+    if (!newFolderName.value.trim()) return;
+
+    const parentId = folderIdSelected.value ?? null;
+
+    const payload = {
+        folder: {
+            folderName: newFolderName.value.trim(),
+            parentFolderId: parentId,
+            sharedProjects: []
+        }
+    };
+
+    const res = await $api.configurationFolders.post(payload);
+    if (res?._id) {
+        $snackbar.show("Folder created");
+        showNewFolderDialog.value = false;
+        newFolderName.value = "";
+
+        await refreshFolders();
+    }
+};
+
+const deleteFolder = async () => {
+    if (!folderIdSelected.value) return;
+
+    await $api.configurationFolders.delete(folderIdSelected.value);
+    $snackbar.show("Folder deleted");
+
+    showDeleteFolderDialog.value = false;
+    activeFolderIds.value = [];
+    await refreshFolders();
+    await fetchConfigurations();
 };
 
 const state = reactive({
@@ -773,7 +964,8 @@ const addConfig = (presetId = "") => {
             : defaultForm
     );
 
-    // TODO add "(copy)" n times when creating n copies
+    newConfig.folderId = folderIdSelected.value;
+
     configurationCache.value[_id] = {
         configuration: {
             ...newConfig,
@@ -827,9 +1019,11 @@ const save = async () => {
         let payload = configurationCache.value[state.currentEdit].configuration;
         // filter empty variables (only empty key)
         payload.variables = payload.variables.filter((x) => x.key.length);
+
+        if (!("folderId" in payload)) payload.folderId = folderIdSelected.value;
+
         response = await $api.configurations.post({
-            configuration:
-                configurationCache.value[state.currentEdit].configuration
+            configuration: payload
         });
         $snackbar.show("Created Configuration");
     }
@@ -843,6 +1037,10 @@ const save = async () => {
         // filter empty variables (only empty key)
         payload.configuration.variables =
             payload.configuration.variables.filter((x) => x.key.length);
+
+        if (!("folderId" in payload.configuration))
+            payload.configuration.folderId = folderIdSelected.value;
+
         response = await $api.configurations.put(state.currentEdit, payload);
         $snackbar.show("Configuration Saved");
     }
