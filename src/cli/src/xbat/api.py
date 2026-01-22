@@ -163,10 +163,9 @@ class Api(object):
             except NoKeyringError:
                 if fall_back_on_crypt_file:
                     keyring.set_keyring(CryptFileKeyring())
-                    return self.__load_access_token(False)
-                else:
-                    raise AccessTokenError("No access token found.")
-        assert access_token, "Access token was not loaded"
+                    access_token = self.__load_access_token(False)
+        if not access_token:
+            raise AccessTokenError("No access token found.")
         return access_token
 
     @property
