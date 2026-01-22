@@ -296,3 +296,41 @@ def delete(_id):
     db.deleteMany(COLLECTION_NAME, {"_id": {"$in": folder_ids}})
 
     return {}, 204
+
+
+def home_folder(user):
+    root = db.getOne(
+        COLLECTION_NAME,
+        {
+            "folder.folderName": user["user_name"],
+            "folder.parentFolderId": None,
+            "misc.owner": user["user_name"],
+        },
+    )
+
+    if root:
+        return root["_id"]
+
+    timestamp = get_current_datetime()
+
+    result = db.insertOne(
+        COLLECTION_NAME,
+        {
+            "folder": {
+                "folderName": user["user_name"],
+                "parentFolderId": None,
+                "sharedProjects": [],
+            },
+            "misc": {
+                "owner": user["user_name"],
+                "created": timestamp,
+                "edited": timestamp,
+            },
+        },
+    )
+
+    if not result.acknowledged:
+        raise httpErrors.InternalServerError(
+            "Failed to create user root folder")
+
+    return result.inserted_id

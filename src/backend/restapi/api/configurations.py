@@ -5,6 +5,7 @@ from shared.mongodb import MongoDB
 from shared.date import get_current_datetime
 from shared.helpers import sanitize_mongo, convert_jobscript_to_v0160
 from backend.restapi.user_helper import get_user_from_token, get_user_projects
+from backend.restapi.api.configuration_folders import home_folder
 
 db = MongoDB()
 
@@ -38,13 +39,29 @@ def get_user_configurations(_id=None):
     """
 
     # TODO remove when there a no configurations left with old format
-    def transform_configurations(configurations):
+    def transform_configurations(configurations, user):
+        home_folderId = home_folder(user)
+        folder_ids = []
+
         for configuration in configurations:
             cfg = configuration["configuration"]
             for jobscript in cfg["jobscript"]:
                 jobscript = convert_jobscript_to_v0160(jobscript)
+
             if "folderId" not in cfg:
-                cfg["folderId"] = None
+                cfg["folderId"] = home_folderId
+                folder_ids = []
+
+        if folder_ids:
+            db.updateMany(
+                COLLECTION_NAME,
+                {"_id": {
+                    "$in": folder_ids
+                }},
+                {"$set": {
+                    "configuration.folderId": folder_ids
+                }},
+            )
         return configurations
 
     filters = []
@@ -70,7 +87,7 @@ def get_user_configurations(_id=None):
 
     if _id is None:
         return transform_configurations(
-            sanitize_mongo(db.getMany(COLLECTION_NAME, filterQuery)))
+            sanitize_mongo(db.getMany(COLLECTION_NAME, filterQuery)), user)
 
     filterQuery["$and"] = [{"_id": _id}]
 
@@ -79,7 +96,7 @@ def get_user_configurations(_id=None):
     if configurations is None:
         return None
 
-    return transform_configurations([sanitize_mongo(configurations)])[0]
+    return transform_configurations([sanitize_mongo(configurations)], user)[0]
 
 
 def get_all():
@@ -125,7 +142,8 @@ def post():
         raise httpErrors.BadRequest("No configuration provided")
 
     if "folderId" not in config["configuration"]:
-        config["configuration"]["folderId"] = None
+        home_folderId = home_folder(user)
+        config["configuration"]["folderId"] = home_folderId
 
     timestamp = get_current_datetime()
     config["misc"] = {
@@ -152,13 +170,18 @@ def put(_id):
     :param _id: database id
     :return: updated configuration
     """
+    user = get_user_from_token()
+    if user is None:
+        raise httpErrors.Unauthorized()
+
     config = request.json
 
     if config is None:
         raise httpErrors.BadRequest("No configuration provided")
 
     if "folderId" not in config["configuration"]:
-        config["configuration"]["folderId"] = None
+        home_folderId = home_folder(user)
+        config["configuration"]["folderId"] = home_folderId
 
     config["misc"]["edited"] = get_current_datetime()
     config = transform_objectId(config)
