@@ -10,6 +10,8 @@ from typing import Any, Callable, Iterable, TypeVar, cast
 from urllib.parse import urlparse
 
 import keyring
+from keyring.errors import NoKeyringError
+from keyrings.cryptfile.cryptfile import CryptFileKeyring  # type: ignore[import-untyped]
 import requests
 import urllib3
 
@@ -118,12 +120,13 @@ class Api(object):
         self.__client_id = client_id
         self.__keyring_system = f"xbat-{self.__client_id}"
         self.__verify_ssl = self.__host != "localhost"
+        self.__access_token: str | None = None
 
     def __headers_accept(self, mime_type: str) -> dict[str, str]:
         return {"accept": mime_type}
 
     @_localhost_suppress_security_warning
-    def authorize(self, user: str, password: str) -> str:
+    def authorize(self, user: str, password: str, update_keystore: bool) -> str:
         headers = {
             "Content-Type": "application/x-www-form-urlencoded"
         } | self.__headers_accept("application/json")
@@ -143,22 +146,35 @@ class Api(object):
             raise AccessTokenError("Invalid credentials provided.", False)
         token_response.raise_for_status()
         access_token = token_response.json()["access_token"]
-        try:
-            keyring.set_password(self.__keyring_system, self.__host, access_token)
-        except keyring.errors.NoKeyringError:
-            pass
+        if update_keystore:
+            try:
+                keyring.set_password(self.__keyring_system, self.__host, access_token)
+            except NoKeyringError:
+                keyring.set_keyring(CryptFileKeyring())
+                keyring.set_password(self.__keyring_system, self.__host, access_token)
+        return access_token
+
+    def __load_access_token(self, fall_back_on_crypt_file: bool = True) -> str:
+        access_token = os.getenv("XBAT_ACCESS_TOKEN")
+        if not access_token:
+            # Fall back on keyring
+            try:
+                access_token = keyring.get_password(self.__keyring_system, self.__host)
+            except NoKeyringError:
+                if fall_back_on_crypt_file:
+                    keyring.set_keyring(CryptFileKeyring())
+                    return self.__load_access_token(False)
+                else:
+                    raise AccessTokenError("No access token found.")
+        assert access_token, "Access token was not loaded"
         return access_token
 
     @property
     def access_token(self) -> str:
-        try:
-            access_token = keyring.get_password(self.__keyring_system, self.__host)
-        except keyring.errors.NoKeyringError:
-            # Fall back on environment
-            access_token = os.getenv("XBAT_ACCESS_TOKEN")
-        if not access_token:
-            raise AccessTokenError("No access token found.")
-        return access_token
+        # Cache access token to avoid repeated password queries
+        if not self.__access_token:
+            self.__access_token = self.__load_access_token()
+        return self.__access_token
 
     @property
     def __headers_auth(self) -> dict[str, str]:

@@ -160,7 +160,9 @@ def handle_errors(func: Callable) -> Callable:
 def login(
     ci: Annotated[
         bool,
-        typer.Option("--ci", help="Use non-interactive mode (CI) and output token."),
+        typer.Option(
+            "--ci", help="Use non-interactive mode (CI) and output token only."
+        ),
     ] = False,
 ):
     access_token: str | None = None
@@ -181,7 +183,7 @@ def login(
     if not ci and user and password:
         print("[bold blue]Found credentials in environment![/bold blue]")
         try:
-            access_token = app.api.authorize(user, password)
+            access_token = app.api.authorize(user, password, not ci)
         except AccessTokenError:
             raise AccessTokenError("Implicit credentials were invalid")
     if not access_token:
@@ -189,7 +191,7 @@ def login(
         password = password if ci else typer.prompt("Password", hide_input=True)
         assert user, "User was None"
         assert password, "Password was None"
-        access_token = app.api.authorize(user, password)
+        access_token = app.api.authorize(user, password, not ci)
     if ci:
         builtins.print(access_token)
     else:
