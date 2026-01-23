@@ -119,7 +119,7 @@ class Api(object):
         self.__api_version = version
         self.__api_url = f"{self.__base_url}/api/{self.__api_version}"
         self.__client_id = client_id
-        self.__keyring_system = f"xbat-{self.__client_id}"
+        self.__keyring_system = f"xbat_{self.__client_id}"
         self.__verify_ssl = self.__host != "localhost"
         self.__access_token: str | None = None
         self.__init_noninteractive_keyring()
