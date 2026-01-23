@@ -125,6 +125,14 @@ class Api(object):
     def __headers_accept(self, mime_type: str) -> dict[str, str]:
         return {"accept": mime_type}
 
+    def __init_crypt_file_keyring(self):
+        kr = CryptFileKeyring()
+        # For non-interactive use
+        password = os.getenv("CRYPTFILE_KEYRING_PASS")
+        if password:
+            kr.keyring_key = password
+        keyring.set_keyring(kr)
+
     @_localhost_suppress_security_warning
     def authorize(self, user: str, password: str, update_keystore: bool) -> str:
         headers = {
@@ -150,7 +158,7 @@ class Api(object):
             try:
                 keyring.set_password(self.__keyring_system, self.__host, access_token)
             except NoKeyringError:
-                keyring.set_keyring(CryptFileKeyring())
+                self.__init_crypt_file_keyring()
                 keyring.set_password(self.__keyring_system, self.__host, access_token)
         return access_token
 
@@ -162,7 +170,7 @@ class Api(object):
                 access_token = keyring.get_password(self.__keyring_system, self.__host)
             except NoKeyringError:
                 if fall_back_on_crypt_file:
-                    keyring.set_keyring(CryptFileKeyring())
+                    self.__init_crypt_file_keyring()
                     access_token = self.__load_access_token(False)
         if not access_token:
             raise AccessTokenError("No access token found.")
