@@ -506,7 +506,7 @@ class Api(object):
                 c["configuration"]["configurationName"],
                 [
                     projects[project_id]
-                    for project_id in c["configuration"]["sharedProjects"]
+                    for project_id in c["configuration"].get("sharedProjects", [])
                 ],
             )
             for c in configurations
