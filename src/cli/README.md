@@ -53,6 +53,3 @@ export XBAT_ACCESS_TOKEN=$(
 )
 xbat pull --quiet 249755 measurements.csv
 ```
-
-On headless systems, the stored credentials may be unlocked non-interactively
-by setting the environment variable `CRYPTFILE_KEYRING_PASS` to the password used for creating the keyring with `xbat login`.

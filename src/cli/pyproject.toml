@@ -7,7 +7,7 @@ requires-python = ">=3.11"
 dependencies = [
     "fabric>=3.2.2",
     "keyring>=25.6.0",
-    "keyrings-cryptfile>=1.3.9",
+    "keyrings-alt>=5.0.2",
     "matplotlib>=3.10.8",
     "pandas>=2.3.3",
     "questionary>=2.1.1",
