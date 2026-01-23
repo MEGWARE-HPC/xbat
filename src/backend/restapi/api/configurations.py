@@ -48,9 +48,10 @@ def get_user_configurations(_id=None):
             for jobscript in cfg["jobscript"]:
                 jobscript = convert_jobscript_to_v0160(jobscript)
 
-            if "folderId" not in cfg:
+            if "folderId" not in cfg or not cfg["folderId"]:
                 cfg["folderId"] = home_folderId
-                folder_ids = []
+                configuration["_id"] = ensure_objectId(configuration["_id"])
+                folder_ids.append(configuration["_id"])
 
         if folder_ids:
             db.updateMany(
@@ -59,10 +60,20 @@ def get_user_configurations(_id=None):
                     "$in": folder_ids
                 }},
                 {"$set": {
-                    "configuration.folderId": folder_ids
+                    "configuration.folderId": home_folderId
                 }},
             )
         return configurations
+
+    def ensure_objectId(v):
+        if isinstance(v, ObjectId):
+            return v
+        if v is None:
+            return None
+        try:
+            return ObjectId(v)
+        except Exception:
+            raise ValueError(f"Invalid ObjectId format: {v}")
 
     filters = []
 
@@ -88,6 +99,8 @@ def get_user_configurations(_id=None):
     if _id is None:
         return transform_configurations(
             sanitize_mongo(db.getMany(COLLECTION_NAME, filterQuery)), user)
+
+    _id = ensure_objectId(_id)
 
     filterQuery["$and"] = [{"_id": _id}]
 
