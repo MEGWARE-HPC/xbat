@@ -230,7 +230,7 @@ def ls(
     list_jobs: Annotated[
         bool,
         typer.Option(
-            "--list-jobs", "-j", help="list individual jobs instead of benchmark runs."
+            "--jobs", "-j", help="list individual jobs instead of benchmark runs."
         ),
     ] = False,
     filter_variant: Annotated[

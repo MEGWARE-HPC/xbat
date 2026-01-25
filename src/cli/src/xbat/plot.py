@@ -152,17 +152,23 @@ def roofline_model(
         )
         markers = ["o", "s", "^", "D", "v", "*"]  # Cycle through
         job_handles = []
+        min_performance = np.inf
         for i, (job, v) in enumerate(jobs.items()):
+            performance = v["performance"]
+            min_performance = min(min_performance, performance)
             marker = markers[i % len(markers)]
             handle = ax.scatter(
                 v["operational_intensity"],
-                v["performance"],
+                performance,
                 s=80,
                 marker=marker,
-                zorder=5,
+                zorder=10,
                 label=job,
             )
             job_handles.append(handle)
+        for x in ridge_points:
+            ax.vlines(x, 0, peak_flops, "grey", linestyles=":", zorder=5)
+        ax.set_ylim(bottom=min_performance / 10)
         ax.set_xlabel("Operational Intensity [FLOPs / Byte]")
         ax.set_ylabel("Performance [FLOPs / s]")
         ax.set_title("Roofline Model")
