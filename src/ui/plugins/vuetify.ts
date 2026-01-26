@@ -95,7 +95,9 @@ import {
     mdiFormatListGroupPlus,
     mdiCheckboxMarked,
     mdiCheckboxBlankOutline,
-    mdiBackupRestore
+    mdiBackupRestore,
+    mdiFolderOutline,
+    mdiFolderPlusOutline
 } from "@mdi/js";
 
 /*
@@ -235,7 +237,9 @@ export default defineNuxtPlugin((app) => {
                 addArray: mdiFormatListGroupPlus,
                 checkboxMark: mdiCheckboxMarked,
                 checkboxBlank: mdiCheckboxBlankOutline,
-                backupRestore: mdiBackupRestore
+                backupRestore: mdiBackupRestore,
+                folder: mdiFolderOutline,
+                newFolder: mdiFolderPlusOutline
             },
             sets: {
                 mdi
