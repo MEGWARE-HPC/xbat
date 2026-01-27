@@ -457,129 +457,17 @@
                     </div>
                 </div>
             </v-main>
-            <v-navigation-drawer
-                permanent
-                location="right"
-                class="sidebar"
-                width="300"
-            >
-                <template #prepend
-                    ><div class="header">CONFIGURATIONS</div></template
-                >
-                <template #append> </template>
-                <div class="list">
-                    <v-list
-                        density="compact"
-                        v-model:selected="state.selectedEdit"
-                        mandatory
-                    >
-                        <template
-                            v-for="[id, v] of Object.entries(
-                                configurationCache
-                            )"
-                            :value="id"
-                        >
-                            <v-hover>
-                                <template
-                                    v-slot:default="{ isHovering, props }"
-                                >
-                                    <v-list-item
-                                        v-bind="props"
-                                        @click="state.selectedEdit = [id]"
-                                        :value="id"
-                                        style="line-height: 36px"
-                                    >
-                                        <template #prepend>
-                                            <div
-                                                class="mr-2"
-                                                v-if="
-                                                    v.configuration
-                                                        .sharedProjects?.length
-                                                "
-                                            >
-                                                <v-icon
-                                                    size="small"
-                                                    color="primary-light"
-                                                    title="This configuration is shared with other users"
-                                                    icon="$share"
-                                                ></v-icon>
-                                            </div>
-                                        </template>
-                                        <span class="configuration-name">
-                                            {{
-                                                "configurationName" in
-                                                v.configuration
-                                                    ? v.configuration
-                                                          .configurationName
-                                                    : id
-                                            }}
-                                        </span>
-                                        <template #append>
-                                            <v-btn-group
-                                                devided
-                                                variant="text"
-                                                density="compact"
-                                                v-if="
-                                                    isHovering &&
-                                                    $authStore.userLevel >=
-                                                        $authStore.UserLevelEnum
-                                                            .user
-                                                "
-                                            >
-                                                <v-btn
-                                                    title="Duplicate Configuration"
-                                                    size="small"
-                                                    @click.stop="addConfig(id)"
-                                                    icon="$duplicate"
-                                                >
-                                                </v-btn>
-                                                <v-btn
-                                                    title="Delete Configuration"
-                                                    size="small"
-                                                    @click.stop="
-                                                        setAction('delete', id)
-                                                    "
-                                                    v-if="
-                                                        (v?.misc?.owner &&
-                                                            $authStore.user
-                                                                .user_name ===
-                                                                v.misc.owner) ||
-                                                        $authStore.userLevel >
-                                                            $authStore
-                                                                .UserLevelEnum
-                                                                .user
-                                                    "
-                                                    icon="$trashCan"
-                                                >
-                                                </v-btn>
-                                            </v-btn-group>
-                                        </template>
-                                    </v-list-item>
-                                </template>
-                            </v-hover>
-                        </template>
-                    </v-list>
-                </div>
-                <v-list-item
-                    ><div
-                        v-if="
-                            $authStore.userLevel >
-                            $authStore.UserLevelEnum.guest
-                        "
-                        class="d-flex justify-center"
-                    >
-                        <v-btn
-                            @click="addConfig()"
-                            title="Add Configuration"
-                            elevation="0"
-                            variant="tonal"
-                            prepend-icon="$newFile"
-                        >
-                            New configuration
-                        </v-btn>
-                    </div></v-list-item
-                >
-            </v-navigation-drawer>
+            <ConfigurationSidebar
+                :configuration-cache="configurationCache"
+                :selected-id="state.currentEdit"
+                :user="$authStore.user"
+                :user-level="$authStore.userLevel"
+                :UserLevelEnum="$authStore.UserLevelEnum"
+                @select="(id) => (state.selectedEdit = [id])"
+                @create="addConfig"
+                @duplicate="addConfig"
+                @delete="(id) => setAction('delete', id)"
+            />
         </v-container>
         <v-dialog v-model="state.showActionDialog" max-width="600px">
             <v-card>
@@ -623,6 +511,7 @@
 </template>
 
 <script setup>
+import ConfigurationSidebar from "~/components/configuration/ConfigurationSidebar.vue";
 import { ref, computed, watch, reactive, nextTick } from "vue";
 import { deepClone } from "~/utils/misc";
 import { v4 as uuidv4 } from "uuid";
@@ -919,23 +808,6 @@ watch(
 .variant-tabs {
     margin-bottom: 10px;
     max-width: 100%;
-}
-
-.sidebar {
-    .header {
-        margin-top: 25px;
-        text-align: center;
-        color: $font-light;
-    }
-
-    .list {
-        overflow-y: auto;
-        max-height: 80vh;
-    }
-    .configuration-name {
-        white-space: normal;
-        word-break: break-all;
-    }
 }
 
 .expansion-title {
