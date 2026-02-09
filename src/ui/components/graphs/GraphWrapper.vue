@@ -163,4 +163,4 @@ onUnmounted(() => {
     $graphStore.unregisterGraph(graphId);
 });
 </script>
-<style scoped lang="scss"></style>
+<style lang="scss" scoped></style>

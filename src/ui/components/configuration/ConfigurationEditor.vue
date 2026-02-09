@@ -462,7 +462,7 @@ const variantTabModel = computed({
 });
 </script>
 
-<style scoped lang="scss">
+<style lang="scss" scoped>
 @use "~/assets/css/colors.scss" as *;
 
 .selection-info {
