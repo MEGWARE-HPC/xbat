@@ -145,10 +145,5 @@ const canDelete = (configWrapper) => {
         overflow-y: auto;
         max-height: 80vh;
     }
-
-    .configuration-name {
-        white-space: normal;
-        word-break: break-all;
-    }
 }
 </style>
