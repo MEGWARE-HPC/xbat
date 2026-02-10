@@ -9,17 +9,21 @@
                 style="line-height: 36px"
             >
                 <template #prepend>
-                    <div
+                    <v-icon
                         class="mr-2"
-                        v-if="doc?.configuration?.sharedProjects?.length"
-                    >
-                        <v-icon
-                            size="small"
-                            color="primary-light"
-                            title="This configuration is shared with other users"
-                            icon="$share"
-                        />
-                    </div>
+                        size="small"
+                        color="primary-light"
+                        :icon="
+                            doc.configuration?.sharedProjects?.length
+                                ? '$share'
+                                : '$textBox'
+                        "
+                        :title="
+                            doc.configuration?.sharedProjects?.length
+                                ? 'This configuration is shared with other users'
+                                : undefined
+                        "
+                    />
                 </template>
 
                 <span class="configuration-name">
