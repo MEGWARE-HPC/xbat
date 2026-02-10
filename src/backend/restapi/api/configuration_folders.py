@@ -72,7 +72,7 @@ def get_user_folders(_id=None):
     if user is None:
         return None
 
-    if user["user_type"] not in ["admin", "demo"]:
+    if user["user_type"] not in ["admin", "manager", "demo"]:
         filters.append({"misc.owner": user["user_name"]})
 
         project_ids = [p["_id"] for p in get_user_projects(user)]
