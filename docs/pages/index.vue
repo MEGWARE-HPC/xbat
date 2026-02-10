@@ -15,27 +15,31 @@
                         prepend-icon="$github"
                         href="https://github.com/MEGWARE-HPC/xbat"
                         target="_blank"
+                        rel="noopener noreferrer"
                         size="large"
                         elevation="0"
                         class="ma-2"
-                        >GitHub</v-btn
                     >
+                        GitHub
+                    </v-btn>
                     <v-btn
                         prepend-icon="$file"
                         to="/docs/user/introduction"
                         elevation="0"
                         size="large"
                         class="ma-2"
-                        >Documentation</v-btn
                     >
+                        Documentation
+                    </v-btn>
                     <v-btn
                         prepend-icon="$play"
                         to="/docs/demo"
                         elevation="0"
                         size="large"
                         class="ma-2"
-                        >Demo</v-btn
                     >
+                        Demo
+                    </v-btn>
                 </div>
             </div>
 
@@ -121,7 +125,9 @@ useSeoMeta({
 .layout {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    min-height: calc(
+        100dvh - var(--v-layout-top, 0px) - var(--v-layout-bottom, 0px)
+    );
 }
 
 .content {
@@ -130,9 +136,9 @@ useSeoMeta({
     flex-wrap: wrap;
     justify-content: space-between;
     align-items: stretch;
-    padding: 6rem 3rem 0 3rem;
-    min-height: 77.5vh;
-    margin-top: 64px;
+    padding: 3rem 3rem 0 3rem;
+    min-height: 74vh;
+    margin-top: 24px;
 
     .card {
         max-width: 40vw;

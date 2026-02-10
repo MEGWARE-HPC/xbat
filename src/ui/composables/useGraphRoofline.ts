@@ -221,14 +221,30 @@ export const useGraphRoofline = () => {
 
         const query = storeGraph.query.value;
 
-        const defaultLayout = createLayout({
+        let defaultLayout = createLayout({
             dataCount: 0,
-            yTitle: "FLOPS [GFLOPS/s]",
+            yTitle: "Performance [GFLOPS/s]",
             xTitle: "Operational Intensity [FLOPS/byte]",
             rangeslider: false,
             autorange: true,
             xAutotick: true
         });
+
+        defaultLayout = {
+            ...defaultLayout,
+            xaxis: {
+                ...(defaultLayout.xaxis || {}),
+                title: {
+                    text: "Operational Intensity [FLOPS/byte]"
+                }
+            },
+            yaxis: {
+                ...(defaultLayout.yaxis || {}),
+                title: {
+                    text: "Performance [GFLOPS/s]"
+                }
+            }
+        };
 
         if (
             !query.jobIds.length ||

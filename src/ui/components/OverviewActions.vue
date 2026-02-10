@@ -109,6 +109,23 @@
                                     $authStore.userLevel ==
                                     $authStore.UserLevelEnum.admin
                                 "
+                                value="backup"
+                                v-bind:title.attr="'Backup the entire mongodb database'"
+                                @click="setAction('backup')"
+                            >
+                                <template #prepend>
+                                    <div class="mr-2">
+                                        <v-icon
+                                            size="small"
+                                            icon="$backupRestore"
+                                        ></v-icon></div></template
+                                >Backup MongoDB</v-list-item
+                            >
+                            <v-list-item
+                                v-if="
+                                    $authStore.userLevel ==
+                                    $authStore.UserLevelEnum.admin
+                                "
                                 value="purge"
                                 v-bind:title.attr="'Purge deleted jobs from QuestDB'"
                                 @click="setAction('purge')"
@@ -174,6 +191,24 @@
                         <template v-else>
                             Selected benchmarks are not eligible for this
                             action!
+                        </template>
+                    </template>
+                    <template v-else-if="action.type == 'backup'">
+                        Do you want to backup the entire MongoDB database?
+                        <template>
+                            <v-overlay
+                                v-model="state.isExporting"
+                                contained
+                                class="align-center justify-center"
+                            >
+                                <!-- use v-show on progress as overlay does not correctly hide its slot under on rapid loading state changes -->
+                                <v-progress-circular
+                                    color="primary"
+                                    v-show="state.isExporting"
+                                    indeterminate
+                                    size="32"
+                                ></v-progress-circular>
+                            </v-overlay>
                         </template>
                     </template>
                     <template v-else-if="action.type == 'export'">
@@ -407,11 +442,16 @@
                     </v-btn>
                     <v-btn
                         v-if="
-                            action.type == 'purge' ||
-                            (action.eligible.length && action.type != 'import')
+                            action.type === 'purge' ||
+                            action.type === 'backup' ||
+                            (action.eligible.length && action.type !== 'import')
                         "
                         :color="
-                            action.type != 'share' ? 'danger' : 'primary-light'
+                            ['share', 'export', 'backup'].includes(
+                                action.type ?? ''
+                            )
+                                ? 'primary-light'
+                                : 'danger'
                         "
                         text
                         @click="executeAction"
@@ -497,14 +537,24 @@ const setAction = (type: string) => {
     action.ineligible = [];
     action.eligible = [];
 
-    if (!props.selected.length && type != "purge" && type != "import") return;
+    if (
+        !props.selected.length &&
+        type != "purge" &&
+        type != "import" &&
+        type != "backup"
+    )
+        return;
     if (type == "export") state.nonExportable = false;
 
     if (type == "cancel") {
         props.selected.forEach((x) => {
             action[x.state == "running" ? "eligible" : "ineligible"].push(x);
         });
-    } else action.eligible = props.selected;
+    } else {
+        if (type != "backup" && type != "purge") {
+            action.eligible = props.selected;
+        }
+    }
 
     action.type = type;
     dialog.value = true;
@@ -539,6 +589,7 @@ const executeAction = async () => {
     if (
         action.type != "purge" &&
         action.type != "import" &&
+        action.type != "backup" &&
         !props.selected.length
     )
         return;
@@ -606,6 +657,30 @@ const executeAction = async () => {
         state.isImporting = false;
         action.reassignRunNr = true;
         action.updateColl = true;
+    } else if (action.type == "backup") {
+        state.isExporting = true;
+        const responseBlob = await $api.benchmarks.backup();
+
+        if (!responseBlob || responseBlob.size === 0) {
+            $snackbar.show("No backup data available");
+            state.isExporting = false;
+            return;
+        }
+
+        const url = window.URL.createObjectURL(responseBlob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `MongoDB_backup_${new Date()
+            .toISOString()
+            .replace(/[:.]/g, "-")}.tgz`;
+        document.body.appendChild(link);
+        link.click();
+
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(link);
+
+        message = "Created backup from MongoDB";
+        state.isExporting = false;
     } else if (action.type == "purge") {
         await $api.benchmarks.purge();
         message = "Purged deleted jobs from QuestDB";

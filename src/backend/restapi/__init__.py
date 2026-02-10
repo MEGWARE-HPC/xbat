@@ -65,7 +65,7 @@ def configure():
         "BUILD":
         os.getenv('BUILD', "dev"),
         "DEMO_MODE":
-        service_configuration["demo"]["enabled"]
+        service_configuration["demo"]["enabled"] == "true"
         if "demo" in service_configuration
         and "enabled" in service_configuration["demo"] else False,
         "SECRET_KEY":

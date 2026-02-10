@@ -52,8 +52,8 @@ class QuestDB:
             # no result present, e.g. no returning statement
             pass
         except pg.DatabaseError as e:
-            # e.g. table not present
-            pass
+            logger.error("Database error: %s | SQL: %s", format_error(e),
+                         query[:512])
         except pg.Error as e:
             logger.error(format_error(e))
 
@@ -71,8 +71,12 @@ class QuestDB:
             async with semaphore:
                 return await self._execute(query)
 
-        tasks = [_execute_concurrent(q) for q in queries]
-        return await asyncio.gather(*tasks)
+        results = []
+        for i in range(0, len(queries), concurrency):
+            batch = queries[i:i + concurrency]
+            results.extend(
+                await asyncio.gather(*[_execute_concurrent(q) for q in batch]))
+        return results
 
     async def execute_query(self, query):
         """Execute a single query"""
@@ -81,7 +85,6 @@ class QuestDB:
 
 def questdb_maintenance():
     """
-
     Adds missing indexes to tables in QuestDB and checks for suspended Write Ahead Log (WAL).
 
     Tables are dynamically created with ILP without any indexes - scan all tables and add indexe if missing.
@@ -134,7 +137,6 @@ def questdb_maintenance():
 
 def questdb_purge():
     """
-
     Purges deleted jobs from QuestDB.
 
     QuestDB does not support DELETE queries, so we need to create a temporary table, copy the valid data and drop the original table.

@@ -274,6 +274,11 @@ const refreshPaused = computed(
 const route = useRoute();
 const { graphPreferences, displayColumns, infoCollapsed } = usePreferences();
 
+useSeoMeta({
+    title: `Benchmark - ${route.params.id}`,
+    description: "xbat benchmark results"
+});
+
 const metrics = ref({});
 const metricsCache = ref({}); // cache raw api responses for metrics call
 const runNr = computed(() => parseInt(route.params.id) || 0);
@@ -312,12 +317,23 @@ const { data, refresh: refreshData } = await useAsyncData(
         ]);
         return {
             benchmark: b.data,
-            jobs: j.data
+            jobs: j?.data ?? []
         };
     },
 
     { watch: [runNr] }
 );
+
+if (
+    !data.value?.benchmark ||
+    Object.keys(data.value?.benchmark || {}).length === 0
+) {
+    throw createError({
+        statusCode: 404,
+        statusMessage: `Benchmark #${runNr.value} Not Found`,
+        fatal: true
+    });
+}
 
 if (data.value.jobs.length && !state.refreshHandler)
     state.selectedJob = data.value.jobs[0].jobId;
@@ -479,7 +495,6 @@ watch(
             terminalStates.includes(newJobState) &&
             terminalStates.includes(newBenchmarkState)
         ) {
-            clearInterval(state.refreshHandler);
             clearInterval(state.refreshHandler);
             state.refreshHandler = null;
             if (newJobState == "done") refreshAll();

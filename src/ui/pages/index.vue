@@ -193,6 +193,11 @@ import { useRouter, onBeforeRouteLeave } from "vue-router";
 import { sanitizeDate } from "~/utils/date";
 import { encodeBraceNotation } from "~/utils/braceNotation";
 
+useSeoMeta({
+    title: "xbat",
+    description: "xbat benchmark overview"
+});
+
 const headers = [
     {
         title: "#",

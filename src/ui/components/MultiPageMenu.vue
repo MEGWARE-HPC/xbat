@@ -61,7 +61,7 @@
                     </v-list-item>
                     <v-list-item
                         v-bind:title.attr="'Visit web console of metric database'"
-                        :href="`${$authStore.backendUrl}/questdb/`"
+                        :href="`${$authStore.backendUrl}/questdb/index.html`"
                         target="_blank"
                     >
                         <template #prepend
@@ -95,13 +95,13 @@ const colorMode = useColorMode();
 watch(dark, async (v) => {
     const t = v ? "dark" : "light";
     themeCookie.value = t;
-    theme.global.name.value = t;
+    theme.change(t);
     emit("update:theme", themeCookie.value);
     // for shiki
     colorMode.preference = t;
 });
 
-theme.global.name.value = themeCookie.value;
+theme.change(themeCookie.value);
 dark.value = themeCookie.value == "dark";
 emit("update:theme", themeCookie.value);
 // for shiki

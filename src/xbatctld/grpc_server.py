@@ -10,7 +10,7 @@ from google.protobuf.json_format import MessageToJson
 from shared.questdb import questdb_purge
 from xbatctld.users import get_user_info
 from xbatctld.slurm import SlurmConnector
-from xbatctld.submission import start_benchmark
+from xbatctld.submission import create_benchmark_record, submit_benchmark_jobs
 
 slurm = SlurmConnector()
 
@@ -25,10 +25,34 @@ class XbatCtldServicer(xbat_pb2_grpc.xbatctldServicer):
         pass
 
     def SubmitBenchmark(self, request, context):
-        threading.Thread(target=start_benchmark,
-                         args=(json.loads(MessageToJson(request)), ),
-                         daemon=True).start()
-        return empty_pb2.Empty()
+        """
+        Submit a benchmark: create the record synchronously, submit jobs asynchronously.
+        Returns immediately with runNr while jobs are submitted in background.
+        """
+        try:
+            data = json.loads(MessageToJson(request))
+            
+            # Create benchmark and get runNr
+            benchmark_info = create_benchmark_record(data)
+            
+            # Submit jobs 
+            threading.Thread(
+                target=submit_benchmark_jobs,
+                args=(benchmark_info["benchmarkId"], benchmark_info["user"]),
+                daemon=True
+            ).start()
+            
+            # Return immediately with runNr
+            benchmark_created = xbat_pb2.BenchmarkCreated()
+            benchmark_created.runNr = benchmark_info["runNr"]
+            
+            return benchmark_created
+            
+        except Exception as e:
+            logger.error(f"Failed to create benchmark: {e}")
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            raise
 
     def GetNodes(self, request, context):
         node_data = xbat_pb2.NodeData()

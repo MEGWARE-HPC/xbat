@@ -118,6 +118,11 @@
 import { sanitizeDate } from "~/utils/date";
 const { $api, $snackbar, $store } = useNuxtApp();
 
+useSeoMeta({
+    title: "Projects",
+    description: "Projects management for xbat",
+});
+
 const headers = [
     { title: "Name", key: "name" },
     { title: "Created", key: "created" }

@@ -629,6 +629,11 @@ import { v4 as uuidv4 } from "uuid";
 const { vNotEmpty, vNumber, vInteger } = useFormValidation();
 const { $authStore, $api, $snackbar, $store } = useNuxtApp();
 
+useSeoMeta({
+    title: "Configurations",
+    description: "Configuration management for xbat"
+});
+
 const validity = reactive({ settings: true, jobscript: true });
 
 const settingsExpandedCookie = useCookie(
