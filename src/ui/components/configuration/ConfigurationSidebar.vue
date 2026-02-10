@@ -41,6 +41,8 @@
                         :user="user"
                         :user-level="userLevel"
                         :UserLevelEnum="UserLevelEnum"
+                        :depth="0"
+                        :max-depth="myMaxDepth"
                         @select="$emit('select', $event)"
                         @duplicate="$emit('duplicate', $event)"
                         @delete="$emit('delete', $event)"
@@ -136,6 +138,10 @@ const { $api } = useNuxtApp();
 const { data: folderTree } = await useAsyncData(
     `configuration-folders-tree-${props.user.user_name}`,
     async () => (await $api.configurationFolders.get())?.data || []
+);
+
+const myMaxDepth = computed(() =>
+    props.userLevel >= props.UserLevelEnum.manager ? 3 : 2
 );
 
 const allConfigs = computed(() =>

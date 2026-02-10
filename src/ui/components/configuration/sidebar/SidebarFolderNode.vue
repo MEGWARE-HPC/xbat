@@ -26,6 +26,7 @@
         <!-- subfolders -->
         <SidebarFolderNode
             v-for="child in node.children || []"
+            v-if="depth < maxDepth"
             :key="child.id"
             :node="child"
             :configs-by-folder="configsByFolder"
@@ -33,6 +34,8 @@
             :user="user"
             :user-level="userLevel"
             :UserLevelEnum="UserLevelEnum"
+            :depth="depth + 1"
+            :max-depth="maxDepth"
             @select="$emit('select', $event)"
             @duplicate="$emit('duplicate', $event)"
             @delete="$emit('delete', $event)"
@@ -50,7 +53,9 @@ const props = defineProps({
     selectedId: { type: String, default: null },
     user: { type: Object, required: true },
     userLevel: { type: Number, required: true },
-    UserLevelEnum: { type: Object, required: true }
+    UserLevelEnum: { type: Object, required: true },
+    depth: { type: Number, default: 0 },
+    maxDepth: { type: Number, default: 2 }
 });
 
 defineEmits(["select", "duplicate", "delete"]);
