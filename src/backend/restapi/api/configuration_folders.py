@@ -334,3 +334,41 @@ def home_folder(user):
             "Failed to create user root folder")
 
     return result.inserted_id
+
+
+def owner_folder(owner):
+    root = db.getOne(
+        COLLECTION_NAME,
+        {
+            "folder.folderName": owner,
+            "folder.parentFolderId": None,
+            "misc.owner": owner,
+        },
+    )
+
+    if root:
+        return root["_id"]
+
+    timestamp = get_current_datetime()
+
+    result = db.insertOne(
+        COLLECTION_NAME,
+        {
+            "folder": {
+                "folderName": owner,
+                "parentFolderId": None,
+                "sharedProjects": [],
+            },
+            "misc": {
+                "owner": owner,
+                "created": timestamp,
+                "edited": timestamp,
+            },
+        },
+    )
+
+    if not result.acknowledged:
+        raise httpErrors.InternalServerError(
+            "Failed to create owner home folder")
+
+    return result.inserted_id
