@@ -16,6 +16,22 @@
                         />
                     </template>
 
+                    <template v-if="showMyHomeInline">
+                        <SidebarConfigItem
+                            v-for="c in myHomeConfigs"
+                            :key="c.id"
+                            :id="c.id"
+                            :doc="c.doc"
+                            :selected-id="selectedId"
+                            :user="user"
+                            :user-level="userLevel"
+                            :UserLevelEnum="UserLevelEnum"
+                            @select="$emit('select', $event)"
+                            @duplicate="$emit('duplicate', $event)"
+                            @delete="$emit('delete', $event)"
+                        />
+                    </template>
+
                     <SidebarFolderNode
                         v-for="n in myFolderRoots"
                         :key="n.id"
@@ -117,13 +133,11 @@ defineEmits(["select", "create", "duplicate", "delete"]);
 
 const { $api } = useNuxtApp();
 
-/** folder tree: [{ id, name, type:"folder", children?: [...] }] */
 const { data: folderTree } = await useAsyncData(
     `configuration-folders-tree-${props.user.user_name}`,
     async () => (await $api.configurationFolders.get())?.data || []
 );
 
-/** normalize configs */
 const allConfigs = computed(() =>
     Object.entries(props.configurationCache || {}).map(([id, doc]) => ({
         id,
@@ -131,7 +145,23 @@ const allConfigs = computed(() =>
     }))
 );
 
-const myFolderRoots = computed(() => folderTree.value || []);
+const isManagerOrAdmin = computed(
+    () => props.userLevel >= props.UserLevelEnum.manager
+);
+
+const myHomeNode = computed(() => {
+    const roots = folderTree.value || [];
+    return roots.find((n) => n?.name === props.user.user_name) || null;
+});
+
+const myFolderRoots = computed(() => {
+    const roots = folderTree.value || [];
+    if (isManagerOrAdmin.value) return roots;
+
+    const home = myHomeNode.value;
+    if (!home) return roots; // fallback
+    return home.children || [];
+});
 
 const myConfigsByFolder = computed(() => {
     const m = new Map();
@@ -159,6 +189,16 @@ const myConfigsByFolder = computed(() => {
     return m;
 });
 
+const showMyHomeInline = computed(
+    () => !isManagerOrAdmin.value && !!myHomeNode.value
+);
+
+const myHomeConfigs = computed(() => {
+    if (!showMyHomeInline.value) return [];
+    const homeId = myHomeNode.value.id;
+    return myConfigsByFolder.value.get(homeId) || [];
+});
+
 const sharedConfigsFlat = computed(() =>
     allConfigs.value.filter(
         ({ doc }) => doc?.misc?.owner !== props.user.user_name
@@ -175,14 +215,12 @@ const projectNameById = computed(() => {
 
 const sharedBucket = (doc) => {
     const ids = doc?.configuration?.sharedProjects || [];
-    for (const pid of ids) {
-        if (projectNameById.value.has(pid)) return pid;
-    }
+    for (const pid of ids) if (projectNameById.value.has(pid)) return pid;
     return "unknown";
 };
 
 const sharedGroups = computed(() => {
-    const buckets = new Map(); // key -> {key,name,items}
+    const buckets = new Map();
 
     for (const { id, doc } of sharedConfigsFlat.value) {
         const pid = sharedBucket(doc);
