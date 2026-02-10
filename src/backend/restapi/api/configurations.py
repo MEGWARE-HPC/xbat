@@ -56,8 +56,9 @@ def get_user_configurations(_id=None):
 
         folder_ids = set()
         for c in configurations:
-            fid = c.get("configuration", {}).get("folderId")
-            oid = ensure_objectId(fid)
+            cfg = c.get("configuration", {}) or {}
+            raw_fid = cfg.get("folderId")
+            oid = ensure_objectId(raw_fid)
             if oid:
                 folder_ids.add(oid)
 
@@ -68,7 +69,7 @@ def get_user_configurations(_id=None):
                 {"_id": {
                     "$in": list(folder_ids)
                 }},
-                projection={"_id": 1},
+                {"_id": 1},
             )
             existing_folders = {f["_id"] for f in cursor}
 
@@ -79,33 +80,61 @@ def get_user_configurations(_id=None):
                 owner_home_cache[owner] = owner_folder(owner)
             return owner_home_cache[owner]
 
-        update_ids = []
-
         for c in configurations:
-            cfg = c["configuration"]
+            cfg = c.get("configuration", {}) or {}
             owner = c["misc"]["owner"]
 
             # jobscript compatibility
-            for jobscript in cfg.get("jobscript", []):
+            for jobscript in (cfg.get("jobscript") or []):
                 convert_jobscript_to_v0160(jobscript)
 
-            folder_id = ensure_objectId(cfg.get("folderId"))
-            valid = folder_id in existing_folders if folder_id else False
+            raw_fid = cfg.get("folderId", None)
 
-            if not valid:
-                cfg["folderId"] = get_owner_home(owner)
-                update_ids.append(ensure_objectId(c["_id"]))
+            if raw_fid is None or raw_fid == "":
+                new_folder = get_owner_home(owner)
+                cfg["folderId"] = new_folder
 
-        if update_ids:
-            db.updateMany(
-                COLLECTION_NAME,
-                {"_id": {
-                    "$in": update_ids
-                }},
-                {"$set": {
-                    "configuration.folderId": cfg["folderId"]
-                }},
-            )
+                cid = ensure_objectId(c.get("_id"))
+                if cid:
+                    db.updateOne(
+                        COLLECTION_NAME,
+                        {"_id": cid},
+                        {"$set": {
+                            "configuration.folderId": new_folder
+                        }},
+                    )
+                continue
+
+            folder_oid = ensure_objectId(raw_fid)
+            if folder_oid is None:
+                new_folder = get_owner_home(owner)
+                cfg["folderId"] = new_folder
+
+                cid = ensure_objectId(c.get("_id"))
+                if cid:
+                    db.updateOne(
+                        COLLECTION_NAME,
+                        {"_id": cid},
+                        {"$set": {
+                            "configuration.folderId": new_folder
+                        }},
+                    )
+                continue
+
+            if folder_oid not in existing_folders:
+                new_folder = get_owner_home(owner)
+                cfg["folderId"] = new_folder
+
+                cid = ensure_objectId(c.get("_id"))
+                if cid:
+                    db.updateOne(
+                        COLLECTION_NAME,
+                        {"_id": cid},
+                        {"$set": {
+                            "configuration.folderId": new_folder
+                        }},
+                    )
+                continue
 
         return configurations
 
@@ -189,15 +218,13 @@ def post():
     if not config:
         raise httpErrors.BadRequest("No configuration provided")
 
-    owner = user["user_name"]
-
     if not config["configuration"].get("folderId"):
-        config["configuration"]["folderId"] = owner_folder(owner)
+        config["configuration"]["folderId"] = owner_folder(user["user_name"])
 
     timestamp = get_current_datetime()
     config["misc"] = {
         "created": timestamp,
-        "owner": owner,
+        "owner": user["user_name"],
         "edited": timestamp,
     }
 
@@ -228,10 +255,9 @@ def put(_id):
     if not config:
         raise httpErrors.BadRequest("No configuration provided")
 
-    owner = config["misc"]["owner"]
-
     if not config["configuration"].get("folderId"):
-        config["configuration"]["folderId"] = owner_folder(owner)
+        config["configuration"]["folderId"] = owner_folder(
+            config["misc"]["owner"])
 
     config["misc"]["edited"] = get_current_datetime()
     config = transform_objectId(config)
