@@ -9,60 +9,29 @@ on:
       - ci-testing
 
 jobs:
-  build-el8:
+  build-el10:
     uses: ./.github/workflows/build.yml
     with:
-      distro: el8
       version: 1.0.0
       release: rc0
       executor: docker
 
-  build-el9:
-    uses: ./.github/workflows/build.yml
-    with:
-      distro: el9
-      version: 1.0.0
-      release: rc0
-      executor: docker
-
-  install-el8:
-    needs: build-el8
+  install-el10:
+    needs: build-el10
     uses: ./.github/workflows/install.yml
     with:
-      distro: el8
-      rpm_artifact: rpm-el8
+      rpm_artifact: rpm-el10
 
-  install-el9:
-    needs: build-el9
-    uses: ./.github/workflows/install.yml
-    with:
-      distro: el9
-      rpm_artifact: rpm-el9
-
-  install-service-el8:
-    needs: install-el8
-    runs-on: ubuntu-latest
+  install-service-el10:
+    needs: install-el10
+    runs-on: [self-hosted, xbat]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/cache-node-modules
       - uses: ./.github/actions/cache-nuxt-fonts
       - uses: ./.github/actions/docker-setup
-      - name: Run setup.sh install and uninstall on host (ubuntu-latest)
+      - name: Run setup.sh install and uninstall on host
         run: |
-          sudo chmod +x ./setup.sh
-          sudo env PATH=$PATH ./setup.sh install --home-mnt /home/ --executor docker --workers 4
-          sudo env PATH=$PATH ./setup.sh remove --yes
-
-  install-service-el9:
-    needs: install-el9
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/cache-node-modules
-      - uses: ./.github/actions/cache-nuxt-fonts
-      - uses: ./.github/actions/docker-setup
-      - name: Run setup.sh install and uninstall on host (ubuntu-latest)
-        run: |
-          sudo chmod +x ./setup.sh
-          sudo env PATH=$PATH ./setup.sh install --home-mnt /home/ --executor docker --workers 4
-          sudo env PATH=$PATH ./setup.sh remove --yes
+          chmod +x ./setup.sh
+          ./setup.sh install --home-mnt /home/ --executor docker --workers 4
+          ./setup.sh remove --yes
