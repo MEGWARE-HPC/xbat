@@ -5,73 +5,78 @@
         </template>
 
         <div class="list">
-            <v-list density="compact" :selected="[selectedId]" mandatory>
-                <template
-                    v-for="[id, v] of Object.entries(configurationCache)"
-                    :key="id"
-                >
-                    <v-hover>
-                        <template #default="{ isHovering, props }">
-                            <v-list-item
-                                v-bind="props"
-                                :value="id"
-                                @click="$emit('select', id)"
-                                style="line-height: 36px"
-                            >
-                                <template #prepend>
-                                    <div
-                                        class="mr-2"
-                                        v-if="
-                                            v.configuration?.sharedProjects
-                                                ?.length
-                                        "
-                                    >
-                                        <v-icon
-                                            size="small"
-                                            color="primary-light"
-                                            title="This configuration is shared with other users"
-                                            icon="$share"
-                                        />
-                                    </div>
-                                </template>
+            <v-list density="compact" :selected="[selectedId]">
+                <!-- My Configurations -->
+                <v-list-group value="my" :open="true">
+                    <template #activator="{ props: groupProps }">
+                        <v-list-item
+                            v-bind="groupProps"
+                            title="My Configurations"
+                            prepend-icon="$folder"
+                        />
+                    </template>
 
-                                <span class="configuration-name">
-                                    {{
-                                        v.configuration?.configurationName
-                                            ? v.configuration.configurationName
-                                            : id
-                                    }}
-                                </span>
+                    <SidebarFolderNode
+                        v-for="n in myFolderRoots"
+                        :key="n.id"
+                        :node="n"
+                        :configs-by-folder="myConfigsByFolder"
+                        :selected-id="selectedId"
+                        :user="user"
+                        :user-level="userLevel"
+                        :UserLevelEnum="UserLevelEnum"
+                        @select="$emit('select', $event)"
+                        @duplicate="$emit('duplicate', $event)"
+                        @delete="$emit('delete', $event)"
+                    />
+                </v-list-group>
 
-                                <template #append>
-                                    <v-btn-group
-                                        divided
-                                        variant="text"
-                                        density="compact"
-                                        v-if="
-                                            isHovering &&
-                                            userLevel >= UserLevelEnum.user
-                                        "
-                                    >
-                                        <v-btn
-                                            title="Duplicate Configuration"
-                                            size="small"
-                                            icon="$duplicate"
-                                            @click.stop="$emit('duplicate', id)"
-                                        />
-                                        <v-btn
-                                            v-if="canDelete(v)"
-                                            title="Delete Configuration"
-                                            size="small"
-                                            icon="$trashCan"
-                                            @click.stop="$emit('delete', id)"
-                                        />
-                                    </v-btn-group>
-                                </template>
-                            </v-list-item>
-                        </template>
-                    </v-hover>
-                </template>
+                <!-- Shared Configurations -->
+                <v-list-group value="shared" :open="true">
+                    <template #activator="{ props: groupProps }">
+                        <v-list-item
+                            v-bind="groupProps"
+                            title="Shared Configurations"
+                            prepend-icon="$share"
+                        />
+                    </template>
+
+                    <template v-if="sharedGroups.length">
+                        <v-list-group
+                            v-for="g in sharedGroups"
+                            :key="g.key"
+                            :value="g.key"
+                        >
+                            <template #activator="{ props: groupProps2 }">
+                                <v-list-item
+                                    v-bind="groupProps2"
+                                    :title="g.name"
+                                    prepend-icon="$group"
+                                />
+                            </template>
+
+                            <SidebarConfigItem
+                                v-for="c in g.items"
+                                :key="c.id"
+                                :id="c.id"
+                                :doc="c.doc"
+                                :selected-id="selectedId"
+                                :user="user"
+                                :user-level="userLevel"
+                                :UserLevelEnum="UserLevelEnum"
+                                @select="$emit('select', $event)"
+                                @duplicate="$emit('duplicate', $event)"
+                                @delete="$emit('delete', $event)"
+                            />
+                        </v-list-group>
+                    </template>
+
+                    <v-list-item
+                        v-else
+                        class="text-medium-emphasis"
+                        title="No shared configurations"
+                    />
+                </v-list-group>
             </v-list>
         </div>
 
@@ -97,38 +102,112 @@
 <script setup>
 import { computed } from "vue";
 
+import SidebarFolderNode from "./sidebar/SidebarFolderNode.vue";
+import SidebarConfigItem from "./sidebar/SidebarConfigItem.vue";
+
 const props = defineProps({
-    configurationCache: {
-        type: Object,
-        required: true
-    },
-    selectedId: {
-        type: String,
-        default: null
-    },
-    user: {
-        type: Object,
-        required: true
-    },
-    userLevel: {
-        type: Number,
-        required: true
-    },
-    UserLevelEnum: {
-        type: Object,
-        required: true
-    }
+    configurationCache: { type: Object, required: true },
+    selectedId: { type: String, default: null },
+    user: { type: Object, required: true },
+    userLevel: { type: Number, required: true },
+    UserLevelEnum: { type: Object, required: true }
 });
 
 defineEmits(["select", "create", "duplicate", "delete"]);
 
-const canDelete = (configWrapper) => {
-    const owner = configWrapper?.misc?.owner;
-    return (
-        (owner && owner === props.user.user_name) ||
-        props.userLevel > props.UserLevelEnum.user
-    );
+const { $api } = useNuxtApp();
+
+/** folder tree: [{ id, name, type:"folder", children?: [...] }] */
+const { data: folderTree } = await useAsyncData(
+    `configuration-folders-tree-${props.user.user_name}`,
+    async () => (await $api.configurationFolders.get())?.data || []
+);
+
+/** normalize configs */
+const allConfigs = computed(() =>
+    Object.entries(props.configurationCache || {}).map(([id, doc]) => ({
+        id,
+        doc
+    }))
+);
+
+const myFolderRoots = computed(() => folderTree.value || []);
+
+const myConfigsByFolder = computed(() => {
+    const m = new Map();
+
+    for (const { id, doc } of allConfigs.value) {
+        if (doc?.misc?.owner !== props.user.user_name) continue;
+
+        const folderId = doc?.configuration?.folderId
+            ? String(doc.configuration.folderId)
+            : "root";
+
+        if (!m.has(folderId)) m.set(folderId, []);
+        m.get(folderId).push({ id, doc });
+    }
+
+    for (const [k, arr] of m.entries()) {
+        arr.sort((a, b) =>
+            (a.doc?.configuration?.configurationName || a.id).localeCompare(
+                b.doc?.configuration?.configurationName || b.id
+            )
+        );
+        m.set(k, arr);
+    }
+
+    return m;
+});
+
+const sharedConfigsFlat = computed(() =>
+    allConfigs.value.filter(
+        ({ doc }) => doc?.misc?.owner !== props.user.user_name
+    )
+);
+
+const projectNameById = computed(() => {
+    const m = new Map();
+    for (const p of props.user?.projects || []) {
+        m.set(p._id, p.name);
+    }
+    return m;
+});
+
+const sharedBucket = (doc) => {
+    const ids = doc?.configuration?.sharedProjects || [];
+    for (const pid of ids) {
+        if (projectNameById.value.has(pid)) return pid;
+    }
+    return "unknown";
 };
+
+const sharedGroups = computed(() => {
+    const buckets = new Map(); // key -> {key,name,items}
+
+    for (const { id, doc } of sharedConfigsFlat.value) {
+        const pid = sharedBucket(doc);
+        const name =
+            pid === "unknown"
+                ? "Unknown / Other"
+                : projectNameById.value.get(pid);
+
+        const key = `shared-${pid}`;
+        if (!buckets.has(key)) buckets.set(key, { key, name, items: [] });
+        buckets.get(key).items.push({ id, doc });
+    }
+
+    for (const g of buckets.values()) {
+        g.items.sort((a, b) =>
+            (a.doc?.configuration?.configurationName || a.id).localeCompare(
+                b.doc?.configuration?.configurationName || b.id
+            )
+        );
+    }
+
+    return Array.from(buckets.values()).sort((a, b) =>
+        a.name.localeCompare(b.name)
+    );
+});
 </script>
 
 <style lang="scss" scoped>
