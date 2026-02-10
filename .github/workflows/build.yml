@@ -3,9 +3,6 @@ name: Build RPM
 on:
   workflow_call:
     inputs:
-      distro:
-        required: true
-        type: string
       version:
         required: true
         type: string
@@ -18,7 +15,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     outputs:
       rpm_name: ${{ steps.get_rpm.outputs.rpm_name }}
     steps:
@@ -26,17 +23,17 @@ jobs:
 
       - name: Build with build.sh
         working-directory: src/xbatd
-        run: ./build.sh ${{ inputs.version }} --release ${{ inputs.release }} --distro ${{ inputs.distro }} --executor ${{ inputs.executor }}
+        run: ./build.sh ${{ inputs.version }} --release ${{ inputs.release }} --distro el10 --executor ${{ inputs.executor }}
 
       - name: Find RPM
         id: get_rpm
         working-directory: src/xbatd
         run: |
-          RPM_NAME=$(ls xbatd-${{ inputs.version }}-${{ inputs.release }}.${{ inputs.distro }}*.rpm)
+          RPM_NAME=$(ls xbatd-${{ inputs.version }}-${{ inputs.release }}.el10*.rpm)
           echo "Found RPM: $RPM_NAME"
           echo "rpm_name=$RPM_NAME" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: rpm-${{ inputs.distro }}
-          path: src/xbatd/xbatd-${{ inputs.version }}-${{ inputs.release }}.${{ inputs.distro }}*.rpm
+          name: rpm-el10
+          path: src/xbatd/xbatd-${{ inputs.version }}-${{ inputs.release }}.el10*.rpm

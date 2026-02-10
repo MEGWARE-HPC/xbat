@@ -22,8 +22,8 @@ jobs:
           dnf install -y epel-release dnf-utils python3-pip
           dnf update -y
           pip3 install wheel
-          dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm
-          sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo || true
+          dnf install -y https://repo.radeon.com/amdgpu-install/7.2/rhel/10.1/amdgpu-install-7.2.70200-1.el10.noarch.rpm
+          amdgpu-install -y
 
       - name: Install RPM
         run: dnf install -y /rpm_dir/xbatd-1.0.0-rc0.el10*.rpm
