@@ -5,7 +5,7 @@ from shared.mongodb import MongoDB
 from shared.date import get_current_datetime
 from shared.helpers import sanitize_mongo, convert_jobscript_to_v0160
 from backend.restapi.user_helper import get_user_from_token, get_user_projects
-from backend.restapi.api.configuration_folders import home_folder
+from backend.restapi.api.configuration_folders import owner_folder
 
 db = MongoDB()
 
@@ -13,18 +13,29 @@ COLLECTION_NAME = "configurations"
 CONFIGURATION_FOLDERS_COLLECTION = "configuration_folders"
 
 
+def ensure_objectId(v):
+    if isinstance(v, ObjectId):
+        return v
+    if v is None:
+        return None
+    try:
+        return ObjectId(v)
+    except Exception:
+        return None
+
+
 def transform_objectId(c):
+    cfg = c.get("configuration", {})
     # transform folderId
-    if ("folderId" in c["configuration"]
-            and c["configuration"]["folderId"] is not None):
-        c["configuration"]["folderId"] = ObjectId(
-            c["configuration"]["folderId"])
+    if cfg.get("folderId"):
+        cfg["folderId"] = ensure_objectId(cfg["folderId"])
     # transform projectId(s)
-    if ("sharedProjects" in c["configuration"]):
-        c["configuration"]["sharedProjects"] = [
-            ObjectId(p) for p in c["configuration"]["sharedProjects"]
+    if "sharedProjects" in cfg:
+        cfg["sharedProjects"] = [
+            ensure_objectId(p) for p in cfg["sharedProjects"]
         ]
 
+    c["configuration"] = cfg
     return c
 
 
@@ -39,48 +50,71 @@ def get_user_configurations(_id=None):
     """
 
     # TODO remove when there a no configurations left with old format
-    def transform_configurations(configurations, user):
-        home_folderId = home_folder(user)
-        folder_ids = []
+    def transform_configurations(configurations):
+        if not configurations:
+            return configurations
 
-        for configuration in configurations:
-            cfg = configuration["configuration"]
-            for jobscript in cfg["jobscript"]:
-                jobscript = convert_jobscript_to_v0160(jobscript)
+        folder_ids = set()
+        for c in configurations:
+            fid = c.get("configuration", {}).get("folderId")
+            oid = ensure_objectId(fid)
+            if oid:
+                folder_ids.add(oid)
 
-            if "folderId" not in cfg or not cfg["folderId"]:
-                cfg["folderId"] = home_folderId
-                configuration["_id"] = ensure_objectId(configuration["_id"])
-                folder_ids.append(configuration["_id"])
-
+        existing_folders = set()
         if folder_ids:
+            cursor = db.getMany(
+                CONFIGURATION_FOLDERS_COLLECTION,
+                {"_id": {
+                    "$in": list(folder_ids)
+                }},
+                projection={"_id": 1},
+            )
+            existing_folders = {f["_id"] for f in cursor}
+
+        owner_home_cache = {}
+
+        def get_owner_home(owner):
+            if owner not in owner_home_cache:
+                owner_home_cache[owner] = owner_folder(owner)
+            return owner_home_cache[owner]
+
+        update_ids = []
+
+        for c in configurations:
+            cfg = c["configuration"]
+            owner = c["misc"]["owner"]
+
+            # jobscript compatibility
+            for jobscript in cfg.get("jobscript", []):
+                convert_jobscript_to_v0160(jobscript)
+
+            folder_id = ensure_objectId(cfg.get("folderId"))
+            valid = folder_id in existing_folders if folder_id else False
+
+            if not valid:
+                cfg["folderId"] = get_owner_home(owner)
+                update_ids.append(ensure_objectId(c["_id"]))
+
+        if update_ids:
             db.updateMany(
                 COLLECTION_NAME,
                 {"_id": {
-                    "$in": folder_ids
+                    "$in": update_ids
                 }},
                 {"$set": {
-                    "configuration.folderId": home_folderId
+                    "configuration.folderId": cfg["folderId"]
                 }},
             )
+
         return configurations
-
-    def ensure_objectId(v):
-        if isinstance(v, ObjectId):
-            return v
-        if v is None:
-            return None
-        try:
-            return ObjectId(v)
-        except Exception:
-            raise ValueError(f"Invalid ObjectId format: {v}")
-
-    filters = []
 
     user = get_user_from_token()
 
     if user is None:
         return None
+
+    filters = []
 
     if user["user_type"] not in ["admin", "manager", "demo"]:
         filters.append({"misc.owner": user["user_name"]})
@@ -93,23 +127,24 @@ def get_user_configurations(_id=None):
                     "$in": project_ids
                 }})
 
-    filterQuery = {}
-    if (len(filters)): filterQuery["$or"] = filters
+    query = {}
+    if (len(filters)):
+        query["$or"] = filters
 
     if _id is None:
         return transform_configurations(
-            sanitize_mongo(db.getMany(COLLECTION_NAME, filterQuery)), user)
+            sanitize_mongo(db.getMany(COLLECTION_NAME, query)))
 
     _id = ensure_objectId(_id)
 
-    filterQuery["$and"] = [{"_id": _id}]
+    query["$and"] = [{"_id": _id}]
 
-    configurations = db.getOne(COLLECTION_NAME, filterQuery)
+    configurations = db.getOne(COLLECTION_NAME, query)
 
     if configurations is None:
         return None
 
-    return transform_configurations([sanitize_mongo(configurations)], user)[0]
+    return transform_configurations([sanitize_mongo(configurations)])[0]
 
 
 def get_all():
@@ -151,17 +186,18 @@ def post():
         raise httpErrors.Unauthorized()
 
     config = request.json
-    if config is None:
+    if not config:
         raise httpErrors.BadRequest("No configuration provided")
 
-    if "folderId" not in config["configuration"]:
-        home_folderId = home_folder(user)
-        config["configuration"]["folderId"] = home_folderId
+    owner = user["user_name"]
+
+    if not config["configuration"].get("folderId"):
+        config["configuration"]["folderId"] = owner_folder(owner)
 
     timestamp = get_current_datetime()
     config["misc"] = {
         "created": timestamp,
-        "owner": user["user_name"],
+        "owner": owner,
         "edited": timestamp,
     }
 
@@ -189,19 +225,20 @@ def put(_id):
 
     config = request.json
 
-    if config is None:
+    if not config:
         raise httpErrors.BadRequest("No configuration provided")
 
-    if "folderId" not in config["configuration"]:
-        home_folderId = home_folder(user)
-        config["configuration"]["folderId"] = home_folderId
+    owner = config["misc"]["owner"]
+
+    if not config["configuration"].get("folderId"):
+        config["configuration"]["folderId"] = owner_folder(owner)
 
     config["misc"]["edited"] = get_current_datetime()
     config = transform_objectId(config)
 
     del config["_id"]
 
-    identifier = {"_id": ObjectId(_id)}
+    identifier = {"_id": ensure_objectId(_id)}
 
     result = db.replaceOne(COLLECTION_NAME, identifier, config)
 
@@ -226,15 +263,15 @@ def delete(_id):
     if user is None:
         raise httpErrors.Unauthorized()
 
-    configuration = db.getOne(COLLECTION_NAME, {"_id": ObjectId(_id)})
+    cfg = db.getOne(COLLECTION_NAME, {"_id": ensure_objectId(_id)})
 
-    if configuration is None:
+    if cfg is None:
         raise httpErrors.NotFound()
 
-    if user["user_name"] != configuration["misc"]["owner"] and not (
-            user["user_type"] == 'manager' or user["user_type"] == "admin"):
+    if (user["user_name"] != cfg["misc"]["owner"]
+            and user["user_type"] not in ("manager", "admin")):
         raise httpErrors.Forbidden()
 
-    result = db.deleteOne(COLLECTION_NAME, {"_id": ObjectId(_id)})
+    result = db.deleteOne(COLLECTION_NAME, {"_id": ensure_objectId(_id)})
 
     return {}, 204 if result.acknowledged else 400
