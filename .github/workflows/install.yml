@@ -3,36 +3,30 @@ name: Install and Remove RPM
 on:
   workflow_call:
     inputs:
-      distro:
-        required: true
-        type: string
       rpm_artifact:
         required: true
         type: string
 
 jobs:
   install:
-    runs-on: ubuntu-latest
-    container:
-      image: ${{ inputs.distro == 'el8' && 'almalinux:8' || 'almalinux:9' }}
+    runs-on: [self-hosted, xbat]
+
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.rpm_artifact }}
           path: /rpm_dir
 
-      - name: Prepare AlmaLinux 9 dependencies
-        if: ${{ inputs.distro == 'el9' }}
+      - name: Prepare AlmaLinux 10 dependencies
         run: |
           dnf install -y epel-release dnf-utils python3-pip
-          dnf config-manager --set-enabled crb
           dnf update -y
           pip3 install wheel
           dnf install -y https://repo.radeon.com/amdgpu-install/6.4.1/rhel/9.6/amdgpu-install-6.4.60401-1.el9.noarch.rpm
-          sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo
+          sed -i 's|/el/9.6/|/el/9.2/|g' /etc/yum.repos.d/amdgpu*.repo || true
 
       - name: Install RPM
-        run: dnf install -y /rpm_dir/xbatd-1.0.0-rc0.${{ inputs.distro }}*.rpm
+        run: dnf install -y /rpm_dir/xbatd-1.0.0-rc0.el10*.rpm
 
       - name: Remove RPM
         run: dnf remove -y xbatd || true
