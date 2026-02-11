@@ -30,7 +30,7 @@ RUN mkdir -p ~/rpmbuild/BUILD \
                ~/rpmbuild/SRPMS \
                /usr/local/share/xbatd
 
-# install nvml (EL10 repo!) - DEBUG HARD
+# install NVIDIA libs (EL10 repo!) - DEBUG HARD
 RUN set -ex; \
     echo "=== Downloading NVIDIA repo file ==="; \
     curl -v -o /etc/yum.repos.d/cuda-rhel10.repo \
@@ -41,10 +41,14 @@ RUN set -ex; \
     microdnf repolist || true; \
     echo "=== Available NVIDIA packages ==="; \
     microdnf search nvidia || true; \
-    echo "=== Trying install ==="; \
+    echo "=== Trying install NVIDIA libs ==="; \
     microdnf -y install \
-        nvidia-driver nvidia-driver-NVML nvidia-driver-devel cuda-nvml-devel || true; \
+        nvidia-driver-cuda-libs \
+        nvidia-driver-libs \
+        cuda-opencl \
+        cuda-opencl-devel || true; \
     echo "=== DONE DEBUG ==="
+
 
 
 
