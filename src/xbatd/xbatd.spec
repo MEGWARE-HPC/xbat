@@ -65,3 +65,7 @@ systemctl stop xbatd.service
 
 %postun
 systemctl daemon-reload
+
+%changelog
+* Wen Feb 11 2026 dtp tom.wahrenberg@megware.com - 1.0.0-rc0
+- Initial RPM build
