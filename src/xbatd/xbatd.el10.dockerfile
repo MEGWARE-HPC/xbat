@@ -60,7 +60,10 @@ RUN printf '%s\n' \
 > /etc/yum.repos.d/rocm.repo && \
     dnf makecache && \
     dnf -y install amd-smi-lib && \
+    mkdir -p /usr/local/share/xbatd/include/amd_smi && \
+    cp -r /opt/rocm/include/amd_smi/* /usr/local/share/xbatd/include/amd_smi/ && \
     dnf clean all
+
 ENV CQUESTDB_VERSION=4.0.5
 
 # install questdb client
