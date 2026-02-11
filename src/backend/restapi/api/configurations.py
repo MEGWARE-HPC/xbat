@@ -77,7 +77,11 @@ def get_user_configurations(_id=None):
 
         def get_owner_home(owner):
             if owner not in owner_home_cache:
-                owner_home_cache[owner] = owner_folder(owner)
+                home_id = owner_folder(owner)
+                owner_home_cache[owner] = home_id
+
+                if home_id:
+                    existing_folders.add(ensure_objectId(home_id) or home_id)
             return owner_home_cache[owner]
 
         for c in configurations:
@@ -88,21 +92,23 @@ def get_user_configurations(_id=None):
             for jobscript in (cfg.get("jobscript") or []):
                 convert_jobscript_to_v0160(jobscript)
 
+            cid = ensure_objectId(c.get("_id"))
+            if not cid:
+                continue
+
             raw_fid = cfg.get("folderId", None)
 
             if raw_fid is None or raw_fid == "":
                 new_folder = get_owner_home(owner)
                 cfg["folderId"] = new_folder
 
-                cid = ensure_objectId(c.get("_id"))
-                if cid:
-                    db.updateOne(
-                        COLLECTION_NAME,
-                        {"_id": cid},
-                        {"$set": {
-                            "configuration.folderId": new_folder
-                        }},
-                    )
+                db.updateOne(
+                    COLLECTION_NAME,
+                    {"_id": cid},
+                    {"$set": {
+                        "configuration.folderId": new_folder
+                    }},
+                )
                 continue
 
             folder_oid = ensure_objectId(raw_fid)
@@ -110,30 +116,27 @@ def get_user_configurations(_id=None):
                 new_folder = get_owner_home(owner)
                 cfg["folderId"] = new_folder
 
-                cid = ensure_objectId(c.get("_id"))
-                if cid:
-                    db.updateOne(
-                        COLLECTION_NAME,
-                        {"_id": cid},
-                        {"$set": {
-                            "configuration.folderId": new_folder
-                        }},
-                    )
+                db.updateOne(
+                    COLLECTION_NAME,
+                    {"_id": cid},
+                    {"$set": {
+                        "configuration.folderId": new_folder
+                    }},
+                )
                 continue
 
             if folder_oid not in existing_folders:
                 new_folder = get_owner_home(owner)
                 cfg["folderId"] = new_folder
 
-                cid = ensure_objectId(c.get("_id"))
-                if cid:
-                    db.updateOne(
-                        COLLECTION_NAME,
-                        {"_id": cid},
-                        {"$set": {
-                            "configuration.folderId": new_folder
-                        }},
-                    )
+                db.updateOne(
+                    COLLECTION_NAME,
+                    {"_id": cid},
+                    {"$set": {
+                        "configuration.folderId": new_folder
+                    }},
+                )
+                existing_folders.add(ensure_objectId(new_folder) or new_folder)
                 continue
 
         return configurations
