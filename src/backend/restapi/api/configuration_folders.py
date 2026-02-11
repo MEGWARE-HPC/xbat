@@ -15,15 +15,19 @@ def transform_objectId(v):
     """
     Convert sharedProjects strings to ObjectId if they exist
     """
-    # transform parentFolderId
-    if ("parentFolderId" in v and v["folder"]["parentFolderId"] is not None):
-        v["folder"]["parentFolderId"] = ObjectId(v["folder"]["parentFolderId"])
-    # transform projectId(s)
-    if "sharedProjects" in v:
-        v["folder"]["sharedProjects"] = [
-            ObjectId(p) for p in v["folder"]["sharedProjects"]
+    folder = v.get("folder", {})
+
+    parent = folder.get("parentFolderId")
+    if parent is not None and not isinstance(parent, ObjectId):
+        folder["parentFolderId"] = ObjectId(parent)
+
+    shared = folder.get("sharedProjects", [])
+    if shared:
+        folder["sharedProjects"] = [
+            ObjectId(p) if not isinstance(p, ObjectId) else p for p in shared
         ]
 
+    v["folder"] = folder
     return v
 
 
@@ -275,7 +279,8 @@ def delete(_id):
             current_id = queue.pop(0)
             children = db.getMany(COLLECTION_NAME,
                                   {"folder.parentFolderId": current_id},
-                                  projection={"_id": 1})
+                                  {"_id": 1})
+
             for child in children:
                 cid = child["_id"]
                 if cid not in visited:
@@ -337,23 +342,14 @@ def home_folder(user):
 
 
 def owner_folder(owner):
-    root = db.getOne(
-        COLLECTION_NAME,
-        {
-            "folder.folderName": owner,
-            "folder.parentFolderId": None,
-            "misc.owner": owner,
-        },
-    )
-
-    if root:
-        return root["_id"]
-
     timestamp = get_current_datetime()
 
-    result = db.insertOne(
-        COLLECTION_NAME,
-        {
+    doc = db.updateOne(COLLECTION_NAME, {
+        "folder.folderName": owner,
+        "folder.parentFolderId": None,
+        "misc.owner": owner,
+    }, {
+        "$setOnInsert": {
             "folder": {
                 "folderName": owner,
                 "parentFolderId": None,
@@ -363,12 +359,13 @@ def owner_folder(owner):
                 "owner": owner,
                 "created": timestamp,
                 "edited": timestamp,
-            },
-        },
-    )
+            }
+        }
+    },
+                       upsert=True)
 
-    if not result.acknowledged:
+    if not doc:
         raise httpErrors.InternalServerError(
-            "Failed to create owner home folder")
+            "Failed to get/create home folder")
 
-    return result.inserted_id
+    return doc["_id"]
