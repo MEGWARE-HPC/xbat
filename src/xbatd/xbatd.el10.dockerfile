@@ -30,12 +30,21 @@ RUN mkdir -p ~/rpmbuild/BUILD \
                ~/rpmbuild/SRPMS \
                /usr/local/share/xbatd
 
-# install nvml (EL10 repo!)
-RUN curl -fsSL -o /etc/yum.repos.d/cuda-rhel10.repo \
+# install nvml (EL10 repo!) - DEBUG
+RUN set -x && \
+    echo "=== Downloading NVIDIA repo file ===" && \
+    curl -v -o /etc/yum.repos.d/cuda-rhel10.repo \
         https://developer.download.nvidia.com/compute/cuda/repos/rhel10/x86_64/cuda-rhel10.repo && \
+    echo "=== Repo file content ===" && \
+    cat /etc/yum.repos.d/cuda-rhel10.repo && \
+    echo "=== microdnf repolist ===" && \
+    microdnf repolist && \
+    echo "=== Available NVIDIA packages ===" && \
+    microdnf search nvidia && \
+    echo "=== Trying install ===" && \
     microdnf -y install \
-        nvidia-driver nvidia-driver-NVML nvidia-driver-devel cuda-nvml-devel && \
-    microdnf clean all
+        nvidia-driver nvidia-driver-NVML nvidia-driver-devel cuda-nvml-devel
+
 
 # install rocm
 RUN printf '%s\n' \
