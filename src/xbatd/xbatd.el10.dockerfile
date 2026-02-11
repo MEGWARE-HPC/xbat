@@ -59,9 +59,10 @@ RUN printf '%s\n' \
 'gpgcheck=0' \
 > /etc/yum.repos.d/rocm.repo && \
     dnf makecache && \
-    dnf -y install amd-smi-lib amd-smi-lib-devel && \
+    dnf -y install amd-smi-lib && \
     dnf clean all
 ENV CQUESTDB_VERSION=4.0.5
+
 # install questdb client
 RUN mkdir -p /usr/local/share/xbatd/include /usr/local/share/xbatd/lib && \
     git clone --depth 1 --branch "${CQUESTDB_VERSION}" https://github.com/questdb/c-questdb-client.git && \
