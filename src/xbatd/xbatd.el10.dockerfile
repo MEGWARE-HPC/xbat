@@ -15,6 +15,7 @@ RUN microdnf -y update && \
         libatomic \
         rust-toolset \
         boost-devel \
+        chrpath \
         libcurl-devel \
         openssl-devel && \
     microdnf -y install --enablerepo=crb \

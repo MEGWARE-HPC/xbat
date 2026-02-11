@@ -15,6 +15,7 @@ AutoReqProv: no
 Requires: boost-log
 Requires: sysstat
 Requires: libcurl
+BuildRequires: chrpath
 %global debug_package %{nil}
 %description
 xbat daemon
@@ -96,6 +97,26 @@ mkdir -p %{BUILD_SHARE} %{BUILD_BIN} %{SYSTEMD} %{LOG}
 
 cp -a %{BASE}/* %{BUILD_SHARE}/
 
+# clean likely likwid binaries and libraries that come with RPATH
+for f in \
+  %{BUILD_SHARE}/bin/likwid-lua \
+  %{BUILD_SHARE}/bin/likwid-bench \
+  %{BUILD_SHARE}/lib/liblikwid.so.5.5 \
+  %{BUILD_SHARE}/lib/liblikwid-hwloc.so.5.5 \
+; do
+  if [ -f "$f" ]; then
+    chrpath -d "$f" || true
+  fi
+done
+
+find %{BUILD_SHARE} -type f -exec readelf -d {} \; 2>/dev/null | grep -E 'RPATH|RUNPATH' || true
+
+mkdir -p %{buildroot}/etc/ld.so.conf.d
+cat > %{buildroot}/etc/ld.so.conf.d/xbatd.conf <<'EOF'
+/usr/local/share/xbatd/lib
+/usr/local/share/xbatd/lib64
+EOF
+
 make -e \
   BIN_DESTINATION=%{BUILD_BIN} \
   SYS_DESTINATION=%{SYSTEMD} \
@@ -105,14 +126,17 @@ make -e \
 /usr/local/bin/xbatd
 /usr/local/share/xbatd
 /etc/systemd/system/xbatd.service
+/etc/ld.so.conf.d/xbatd.conf
 
 %post
+/sbin/ldconfig || /usr/sbin/ldconfig || true
 systemctl daemon-reload
 
 %preun
 systemctl stop xbatd.service
 
 %postun
+/sbin/ldconfig || /usr/sbin/ldconfig || true
 systemctl daemon-reload
 
 %changelog
