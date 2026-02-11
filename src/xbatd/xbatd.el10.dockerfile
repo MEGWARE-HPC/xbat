@@ -55,7 +55,11 @@ RUN printf '%s\n' \
 'baseurl=https://repo.radeon.com/rocm/rhel10/7.2/main/' \
 'enabled=1' \
 'gpgcheck=0' \
-> /etc/yum.repos.d/rocm.repo
+> /etc/yum.repos.d/rocm.repo && \
+    dnf makecache && \
+    dnf -y install amd-smi-lib amd-smi-lib-devel && \
+    microdnf clean all
+
 
 RUN microdnf -y install amd-smi-lib amd-smi-lib-devel || true && microdnf clean all
 
