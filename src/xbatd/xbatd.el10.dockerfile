@@ -48,6 +48,8 @@ RUN set -ex; \
         || true; \
     echo "=== DONE DEBUG ==="
 
+RUN microdnf -y install dnf && microdnf clean all
+
 # install rocm
 RUN printf '%s\n' \
 '[ROCm-7.2]' \
@@ -58,11 +60,7 @@ RUN printf '%s\n' \
 > /etc/yum.repos.d/rocm.repo && \
     dnf makecache && \
     dnf -y install amd-smi-lib amd-smi-lib-devel && \
-    microdnf clean all
-
-
-RUN microdnf -y install amd-smi-lib amd-smi-lib-devel || true && microdnf clean all
-
+    dnf clean all
 ENV CQUESTDB_VERSION=4.0.5
 # install questdb client
 RUN mkdir -p /usr/local/share/xbatd/include /usr/local/share/xbatd/lib && \
