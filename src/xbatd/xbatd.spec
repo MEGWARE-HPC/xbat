@@ -32,6 +32,7 @@ xbat daemon
 %define BUILD_SHARE %{buildroot}/usr/local/share/xbatd
 %define SYSTEMD %{buildroot}/etc/systemd/system
 %define LOG %{buildroot}/var/log/xbatd
+%define LDSOCONF %{buildroot}/etc/ld.so.conf.d
 
 %build
 make clean
@@ -111,8 +112,8 @@ done
 
 find %{BUILD_SHARE} -type f -exec readelf -d {} \; 2>/dev/null | grep -E 'RPATH|RUNPATH' || true
 
-mkdir -p %{buildroot}/etc/ld.so.conf.d
-cat > %{buildroot}/etc/ld.so.conf.d/xbatd.conf <<'EOF'
+mkdir -p %{LDSOCONF}
+cat > %{LDSOCONF}/xbatd.conf <<'EOF'
 /usr/local/share/xbatd/lib
 /usr/local/share/xbatd/lib64
 EOF
