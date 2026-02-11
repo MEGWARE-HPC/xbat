@@ -48,6 +48,10 @@ RUN set -ex; \
         || true; \
     echo "=== DONE DEBUG ==="
 
+# copy NVML headers to build path
+RUN mkdir -p /usr/local/share/xbatd/include/nvml && \
+    cp -r /usr/include/nvidia/* /usr/local/share/xbatd/include/nvml/ || true
+
 RUN microdnf -y install dnf && microdnf clean all
 
 # install rocm
