@@ -61,7 +61,8 @@ RUN microdnf -y install amd-smi-lib amd-smi-lib-devel || true && microdnf clean 
 
 ENV CQUESTDB_VERSION=4.0.5
 # install questdb client
-RUN git clone --depth 1 --branch "${CQUESTDB_VERSION}" https://github.com/questdb/c-questdb-client.git && \
+RUN mkdir -p /usr/local/share/xbatd/include /usr/local/share/xbatd/lib && \
+    git clone --depth 1 --branch "${CQUESTDB_VERSION}" https://github.com/questdb/c-questdb-client.git && \
     cd c-questdb-client && \
     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
     cmake --build build && \
