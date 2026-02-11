@@ -30,7 +30,6 @@ RUN mkdir -p ~/rpmbuild/BUILD \
                ~/rpmbuild/SRPMS \
                /usr/local/share/xbatd
 
-# install NVIDIA libs (EL10 repo!) - DEBUG HARD
 RUN set -ex; \
     echo "=== Downloading NVIDIA repo file ==="; \
     curl -v -o /etc/yum.repos.d/cuda-rhel10.repo \
@@ -39,17 +38,14 @@ RUN set -ex; \
     cat /etc/yum.repos.d/cuda-rhel10.repo; \
     echo "=== microdnf repolist ==="; \
     microdnf repolist; \
-    echo "=== Available NVIDIA packages ==="; \
+    echo "=== NVIDIA packages in repo ==="; \
     dnf list --repo=cuda-rhel10-x86_64 | grep nvidia || true; \
-    echo "=== Trying install NVIDIA libs ==="; \
+    echo "=== Installing runtime NVIDIA libs only ==="; \
     microdnf -y install \
-        nvidia-driver \
         nvidia-driver-cuda-libs \
         nvidia-driver-libs \
-        cuda-opencl \
-        cuda-opencl-devel; \
+        || true; \
     echo "=== DONE DEBUG ==="
-
 
 # install rocm
 RUN printf '%s\n' \
