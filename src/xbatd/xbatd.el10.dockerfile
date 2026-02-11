@@ -34,22 +34,21 @@ RUN mkdir -p ~/rpmbuild/BUILD \
 RUN set -ex; \
     echo "=== Downloading NVIDIA repo file ==="; \
     curl -v -o /etc/yum.repos.d/cuda-rhel10.repo \
-        https://developer.download.nvidia.com/compute/cuda/repos/rhel10/x86_64/cuda-rhel10.repo || true; \
+        https://developer.download.nvidia.com/compute/cuda/repos/rhel10/x86_64/cuda-rhel10.repo; \
     echo "=== Repo file content ==="; \
-    cat /etc/yum.repos.d/cuda-rhel10.repo || true; \
+    cat /etc/yum.repos.d/cuda-rhel10.repo; \
     echo "=== microdnf repolist ==="; \
-    microdnf repolist || true; \
+    microdnf repolist; \
     echo "=== Available NVIDIA packages ==="; \
-    microdnf search nvidia || true; \
+    dnf list --repo=cuda-rhel10-x86_64 | grep nvidia || true; \
     echo "=== Trying install NVIDIA libs ==="; \
     microdnf -y install \
+        nvidia-driver \
         nvidia-driver-cuda-libs \
         nvidia-driver-libs \
         cuda-opencl \
-        cuda-opencl-devel || true; \
+        cuda-opencl-devel; \
     echo "=== DONE DEBUG ==="
-
-
 
 
 # install rocm
