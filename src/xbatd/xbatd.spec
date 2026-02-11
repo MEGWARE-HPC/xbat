@@ -141,5 +141,5 @@ systemctl stop xbatd.service
 systemctl daemon-reload
 
 %changelog
-* Wed Feb 11 2026 Ziwen xbat@megware.com - %{VERSION}-%{RELEASE}
+* Wed Feb 11 2026 xbatd xbat@megware.com - %{VERSION}-%{RELEASE}
 - Build xbatd
