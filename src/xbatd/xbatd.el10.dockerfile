@@ -40,8 +40,9 @@ RUN set -ex; \
     microdnf repolist; \
     echo "=== NVIDIA packages in repo ==="; \
     dnf list --repo=cuda-rhel10-x86_64 | grep nvidia || true; \
-    echo "=== Installing runtime NVIDIA libs only ==="; \
+    echo "=== Installing runtime NVIDIA libs and dev headers ==="; \
     microdnf -y install \
+        nvidia-driver-devel \
         nvidia-driver-cuda-libs \
         nvidia-driver-libs \
         || true; \
@@ -56,14 +57,16 @@ RUN printf '%s\n' \
 'gpgcheck=0' \
 > /etc/yum.repos.d/rocm.repo
 
-RUN microdnf -y install amd-smi-lib || true && microdnf clean all
+RUN microdnf -y install amd-smi-lib amd-smi-lib-devel || true && microdnf clean all
 
 ENV CQUESTDB_VERSION=4.0.5
 # install questdb client
 RUN git clone --depth 1 --branch "${CQUESTDB_VERSION}" https://github.com/questdb/c-questdb-client.git && \
     cd c-questdb-client && \
     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
-    cmake --build build
+    cmake --build build && \
+    cp -r include/questdb /usr/local/share/xbatd/include/ && \
+    cp -r build/libquestdb_client.a build/libquestdb_client.so /usr/local/share/xbatd/lib/
 
 # install LIKWID
 ENV LIKWID_VERSION="v5.5.1"
@@ -87,6 +90,9 @@ RUN mkdir -p /root/rpmbuild/SOURCES/${APP_NAME}
 COPY . /root/rpmbuild/SOURCES/${APP_NAME}
 RUN cd /root/rpmbuild/SOURCES/ && tar -czvf ${APP_NAME}.tar.gz ${APP_NAME}
 RUN cp /root/rpmbuild/SOURCES/${APP_NAME}/xbatd.spec /root/rpmbuild/SPECS
+
+ENV CXXFLAGS="-I/usr/local/share/xbatd/include"
+ENV LDFLAGS="-L/usr/local/share/xbatd/lib -L/usr/local/share/xbatd/lib64"
 
 RUN /bin/bash -c "rpmbuild --verbose --target x86_64 \
     --define 'VERSION $XBAT_VERSION' \
