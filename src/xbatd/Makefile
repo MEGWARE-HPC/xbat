@@ -1,4 +1,4 @@
-CXX = g++
+CXX ?= g++
 
 SRC = $(wildcard ./src/*.cpp) $(wildcard ../shared/*.cpp)
 OBJ = $(SRC:.cpp=.o)
@@ -15,17 +15,22 @@ LIB_PATH?=/usr/local/share/xbatd/lib
 LIB64_PATH?=/usr/local/share/xbatd/lib64
 INCLUDE_PATH?=/usr/local/share/xbatd/include
 
-LDFLAGS = -pthread -I$(INCLUDE_PATH) -L$(LIB_PATH) -L$(LIB64_PATH) -llikwid -lcurl -lquestdb_client -lstdc++fs -I /usr/local/cuda-*/targets/x86_64-linux/include/ -lnvidia-ml -lcrypto -I /opt/rocm-*/include -L /opt/rocm-*/lib -lamd_smi
-BOOST = -lboost_log -lboost_log_setup -lboost_system -lboost_thread -DBOOST_LOG_DYN_LINK
-CXXFLAGS = -std=c++17 -O2 -Wall -Wextra -Wpedantic $(LDFLAGS) $(BOOST)
+CPPFLAGS += -I$(INCLUDE_PATH) -I/usr/local/cuda/include -I/opt/rocm/include
+CXXFLAGS += -std=c++17 -Wall -Wextra -Wpedantic -DBOOST_LOG_DYN_LINK
+LIBDIRS := -L$(LIB_PATH) -L$(LIB64_PATH)
+LDLIBS += -lboost_log -lboost_log_setup -lboost_system -lboost_thread \
+            -llikwid -lcurl -lquestdb_client -lnvidia-ml -lamd_smi -lcrypto -lstdc++fs -pthread
 
 $(BINARY): $(OBJ)
-	$(CXX) -o $@ $^ $(CXXFLAGS)
+	$(CXX) -o $@ $^ $(LIBDIRS) $(LDFLAGS) $(LDLIBS)
 
 -include $(DEP)
 
+%.o: %.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+
 %.d: %.cpp 
-	@$(CXX) $(CXXFLAGS) $< -MM -MT $(@:.d=.o) >$@
+	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) $< -MM -MT $(@:.d=.o) >$@
 
 .PHONY: install
 install:
