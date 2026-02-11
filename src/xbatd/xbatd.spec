@@ -85,11 +85,10 @@ elif ls /usr/local/share/xbatd/lib/liblikwid.* >/dev/null 2>&1; then
   cp -a /usr/local/share/xbatd/lib/liblikwid.* %{LIB}/
 fi
 
-make -e \
+make %{?_smp_mflags} \
   INCLUDE_PATH=%{INCLUDE} \
   LIB_PATH=%{LIB} \
-  LIB64_PATH=%{LIB64} \
-  %{?_smp_mflags}
+  LIB64_PATH=%{LIB64}
 
 %install
 rm -rf %{buildroot}
