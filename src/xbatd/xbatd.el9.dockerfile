@@ -15,6 +15,7 @@ RUN microdnf -y update && \
         libatomic \
         rust-toolset \
         boost-devel \
+        chrpath \
         libcurl-devel \
         openssl-devel && \
     microdnf -y install --enablerepo=crb \
@@ -28,14 +29,14 @@ RUN mkdir -p ~/rpmbuild/BUILD ~/rpmbuild/BUILDROOT ~/rpmbuild/RPMS ~/rpmbuild/SO
 RUN curl -fsSL -o /etc/yum.repos.d/cuda-rhel9.repo \
         https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo && \
     microdnf -y install \
-        nvidia-driver nvidia-driver-NVML nvidia-driver-devel cuda-nvml-devel-12-2 && \
+        nvidia-driver nvidia-driver-NVML nvidia-driver-devel cuda-nvml-devel-13-1 && \
     microdnf clean all
 
 # install rocm
 RUN printf '%s\n' \
-'[ROCm-6.4.4]' \
-'name=ROCm 6.4.4' \
-'baseurl=https://repo.radeon.com/rocm/rhel9/6.4.4/main/' \
+'[ROCm-7.2]' \
+'name=ROCm 7.2' \
+'baseurl=https://repo.radeon.com/rocm/rhel9/7.2/main/' \
 'enabled=1' \
 'gpgcheck=0' \
 > /etc/yum.repos.d/rocm.repo
@@ -53,7 +54,7 @@ RUN git clone --depth 1 --branch "${CQUESTDB_VERSION}" https://github.com/questd
 ENV LIKWID_VERSION="v5.5.1"
 RUN git clone --depth 1 --branch "${LIKWID_VERSION}" https://github.com/RRZE-HPC/likwid.git && \
     cd likwid && \
-    sed -i -e 's!PREFIX ?= /usr/local#NO SPACE!PREFIX ?= /usr/local/share/xbatd/#NO SPACE!g' config.mk && \
+    sed -i -e 's!PREFIX ?= /usr/local#NO SPACE!PREFIX ?= /usr/local/share/xbatd#NO SPACE!g' config.mk && \
     sed -i -e 's!MAX_NUM_THREADS = 512!MAX_NUM_THREADS = 1024!g' config.mk && \
     make -j "$(nproc)" && \
     make install
