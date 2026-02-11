@@ -30,20 +30,22 @@ RUN mkdir -p ~/rpmbuild/BUILD \
                ~/rpmbuild/SRPMS \
                /usr/local/share/xbatd
 
-# install nvml (EL10 repo!) - DEBUG
-RUN set -x && \
-    echo "=== Downloading NVIDIA repo file ===" && \
+# install nvml (EL10 repo!) - DEBUG HARD
+RUN set -ex; \
+    echo "=== Downloading NVIDIA repo file ==="; \
     curl -v -o /etc/yum.repos.d/cuda-rhel10.repo \
-        https://developer.download.nvidia.com/compute/cuda/repos/rhel10/x86_64/cuda-rhel10.repo && \
-    echo "=== Repo file content ===" && \
-    cat /etc/yum.repos.d/cuda-rhel10.repo && \
-    echo "=== microdnf repolist ===" && \
-    microdnf repolist && \
-    echo "=== Available NVIDIA packages ===" && \
-    microdnf search nvidia && \
-    echo "=== Trying install ===" && \
+        https://developer.download.nvidia.com/compute/cuda/repos/rhel10/x86_64/cuda-rhel10.repo || true; \
+    echo "=== Repo file content ==="; \
+    cat /etc/yum.repos.d/cuda-rhel10.repo || true; \
+    echo "=== microdnf repolist ==="; \
+    microdnf repolist || true; \
+    echo "=== Available NVIDIA packages ==="; \
+    microdnf search nvidia || true; \
+    echo "=== Trying install ==="; \
     microdnf -y install \
-        nvidia-driver nvidia-driver-NVML nvidia-driver-devel cuda-nvml-devel
+        nvidia-driver nvidia-driver-NVML nvidia-driver-devel cuda-nvml-devel || true; \
+    echo "=== DONE DEBUG ==="
+
 
 
 # install rocm
