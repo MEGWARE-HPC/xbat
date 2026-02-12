@@ -15,7 +15,11 @@ LIB_PATH?=/usr/local/share/xbatd/lib
 LIB64_PATH?=/usr/local/share/xbatd/lib64
 INCLUDE_PATH?=/usr/local/share/xbatd/include
 
-CPPFLAGS += -I$(INCLUDE_PATH) -I/usr/local/cuda/include -I/opt/rocm/include
+CUDA_INC := $(firstword $(wildcard /usr/local/cuda*/targets/x86_64-linux/include) \
+                     $(wildcard /usr/local/cuda*/include) \
+                     $(wildcard /usr/include))
+ROCM_INC := $(firstword $(wildcard /opt/rocm*/include))
+CPPFLAGS += -I$(INCLUDE_PATH) -I$(CUDA_INC) -I$(ROCM_INC)
 CXXFLAGS += -std=c++17 -Wall -Wextra -Wpedantic -DBOOST_LOG_DYN_LINK
 LIBDIRS := -L$(LIB_PATH) -L$(LIB64_PATH)
 LDLIBS += -lboost_log -lboost_log_setup -lboost_system -lboost_thread \

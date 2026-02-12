@@ -22,7 +22,7 @@ xbat daemon
 
 %prep
 %setup
-
+# directories already created during likwid installation
 %define BASE /usr/local/share/xbatd
 %define LIB %{BASE}/lib
 %define LIB64 %{BASE}/lib64
@@ -48,44 +48,9 @@ cp -a /c-questdb-client/build/libquestdb_client.* %{LIB}/
 cp -a /usr/lib64/libnvidia-ml.* %{LIB64}/ || true
 ln -sf %{LIB64}/libnvidia-ml.so.1 %{LIB64}/libnvidia-ml.so || true
 
-if [ -f /usr/include/nvml.h ]; then
-  cp -a /usr/include/nvml.h %{INCLUDE}/
-elif ls /usr/local/cuda*/targets/*/include/nvml.h >/dev/null 2>&1; then
-  cp -a /usr/local/cuda*/targets/*/include/nvml.h %{INCLUDE}/
-elif ls /usr/local/cuda*/include/nvml.h >/dev/null 2>&1; then
-  cp -a /usr/local/cuda*/include/nvml.h %{INCLUDE}/
-else
-  echo "WARNING: nvml.h not found. Ensure cuda-nvml-devel is installed." >&2
-fi
-
 for f in $(ls -1 /opt/rocm*/lib*/libamd_smi.so* 2>/dev/null | sort -u); do
   cp -a "$f" %{LIB}/
 done
-
-for d in $(ls -d /opt/rocm*/include/amd_smi 2>/dev/null | sort -u); do
-  cp -a "$d" %{INCLUDE}/
-done
-
-if [ -f /usr/local/include/likwid.h ]; then
-  cp -a /usr/local/include/likwid.h %{INCLUDE}/
-elif [ -f /usr/include/likwid.h ]; then
-  cp -a /usr/include/likwid.h %{INCLUDE}/
-elif [ -f %{INCLUDE}/likwid.h ]; then
-  :
-else
-  echo "WARNING: likwid.h not found. Ensure LIKWID is installed and its headers are available." >&2
-fi
-
-if ls /usr/local/lib*/liblikwid.* >/dev/null 2>&1; then
-  cp -a /usr/local/lib*/liblikwid.* %{LIB}/
-elif ls /usr/lib64/liblikwid.* >/dev/null 2>&1; then
-  cp -a /usr/lib64/liblikwid.* %{LIB64}/
-elif [ -d /usr/local/share/xbatd/lib ] && [ "%{LIB}" = "/usr/local/share/xbatd/lib" ]; then
-  # already in target dir, no-op
-  :
-elif ls /usr/local/share/xbatd/lib/liblikwid.* >/dev/null 2>&1; then
-  cp -a /usr/local/share/xbatd/lib/liblikwid.* %{LIB}/
-fi
 
 make %{?_smp_mflags} \
   INCLUDE_PATH=%{INCLUDE} \
@@ -98,7 +63,9 @@ mkdir -p %{BUILD_SHARE} %{BUILD_BIN} %{SYSTEMD} %{LOG}
 
 cp -a %{BASE}/* %{BUILD_SHARE}/
 
-# clean likely likwid binaries and libraries that come with RPATH
+# clean likely likwid binaries and libraries that come with RPATH (check-rpaths from el10)
+find %{BUILD_SHARE} -type f -exec readelf -d {} \; 2>/dev/null | grep -E 'RPATH|RUNPATH' || true
+
 for f in \
   %{BUILD_SHARE}/bin/likwid-lua \
   %{BUILD_SHARE}/bin/likwid-bench \
@@ -142,4 +109,4 @@ systemctl daemon-reload
 
 %changelog
 * Wed Feb 11 2026 xbatd xbat@megware.com - %{VERSION}-%{RELEASE}
-- Build xbatd
+- Build xbatd v2
