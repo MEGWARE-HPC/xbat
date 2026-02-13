@@ -41,5 +41,5 @@ jobs:
       - name: Run setup.sh install and uninstall on host
         run: |
           chmod +x ./setup.sh
-          ./setup.sh install --home-mnt /home/ --executor docker --workers 4
-          ./setup.sh remove --yes
+          sudo ./setup.sh install --home-mnt /home/ --executor docker --workers 4
+          sudo ./setup.sh remove --yes
