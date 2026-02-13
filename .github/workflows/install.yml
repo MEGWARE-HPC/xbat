@@ -1,5 +1,5 @@
 name: Install and Remove RPM
-#added pw ignore on runner (user)
+# added pw ignore on runner (user)
 
 on:
   workflow_call:
@@ -27,7 +27,7 @@ jobs:
           sudo amdgpu-install -y
 
       - name: Install RPM
-        run: dnf install -y /data/github-runner/xbat/_work/rpm_dir/xbatd-1.0.0-rc0.el10*.rpm
+        run: sudo dnf install -y /data/github-runner/xbat/_work/rpm_dir/xbatd-1.0.0-rc0.el10*.rpm
 
       - name: Remove RPM
-        run: dnf remove -y xbatd || true
+        run: sudo dnf remove -y xbatd || true
