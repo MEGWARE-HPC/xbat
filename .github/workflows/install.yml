@@ -15,7 +15,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.rpm_artifact }}
-          path: /rpm_dir
+          path: /data/github-runner/xbat/_work/rpm_dir
 
       - name: Prepare AlmaLinux 10 dependencies
         run: |
@@ -26,7 +26,7 @@ jobs:
           amdgpu-install -y
 
       - name: Install RPM
-        run: dnf install -y /rpm_dir/xbatd-1.0.0-rc0.el10*.rpm
+        run: dnf install -y /data/github-runner/xbat/_work/rpm_dir/xbatd-1.0.0-rc0.el10*.rpm
 
       - name: Remove RPM
         run: dnf remove -y xbatd || true
