@@ -1,5 +1,4 @@
 name: Install and Remove RPM
-# added pw ignore on runner (user)
 
 on:
   workflow_call:
