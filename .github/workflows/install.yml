@@ -19,11 +19,11 @@ jobs:
 
       - name: Prepare AlmaLinux 10 dependencies
         run: |
-          dnf install -y epel-release dnf-utils python3-pip
-          dnf update -y
-          pip3 install wheel
-          dnf install -y https://repo.radeon.com/amdgpu-install/7.2/rhel/10.1/amdgpu-install-7.2.70200-1.el10.noarch.rpm
-          amdgpu-install -y
+          sudo dnf install -y epel-release dnf-utils python3-pip
+          sudo dnf update -y
+          sudo pip3 install wheel
+          sudo dnf install -y https://repo.radeon.com/amdgpu-install/7.2/rhel/10.1/amdgpu-install-7.2.70200-1.el10.noarch.rpm
+          sudo amdgpu-install -y
 
       - name: Install RPM
         run: dnf install -y /data/github-runner/xbat/_work/rpm_dir/xbatd-1.0.0-rc0.el10*.rpm
