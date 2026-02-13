@@ -1,4 +1,4 @@
-FROM almalinux:10-minimal
+FROM almalinux:10.1-minimal
 
 # require crb for ninja-build
 RUN microdnf -y update && \
@@ -15,6 +15,7 @@ RUN microdnf -y update && \
         libatomic \
         rust-toolset \
         boost-devel \
+        chrpath \
         libcurl-devel \
         openssl-devel && \
     microdnf -y install --enablerepo=crb \
@@ -22,37 +23,14 @@ RUN microdnf -y update && \
         python3-wheel && \
     microdnf clean all
 
-RUN mkdir -p ~/rpmbuild/BUILD \
-               ~/rpmbuild/BUILDROOT \
-               ~/rpmbuild/RPMS \
-               ~/rpmbuild/SOURCES \
-               ~/rpmbuild/SPECS \
-               ~/rpmbuild/SRPMS \
-               /usr/local/share/xbatd
+RUN mkdir -p ~/rpmbuild/BUILD ~/rpmbuild/BUILDROOT ~/rpmbuild/RPMS ~/rpmbuild/SOURCES ~/rpmbuild/SPECS ~/rpmbuild/SRPMS /usr/local/share/xbatd
 
-RUN set -ex; \
-    echo "=== Downloading NVIDIA repo file ==="; \
-    curl -v -o /etc/yum.repos.d/cuda-rhel10.repo \
-        https://developer.download.nvidia.com/compute/cuda/repos/rhel10/x86_64/cuda-rhel10.repo; \
-    echo "=== Repo file content ==="; \
-    cat /etc/yum.repos.d/cuda-rhel10.repo; \
-    echo "=== microdnf repolist ==="; \
-    microdnf repolist; \
-    echo "=== NVIDIA packages in repo ==="; \
-    dnf list --repo=cuda-rhel10-x86_64 | grep nvidia || true; \
-    echo "=== Installing runtime NVIDIA libs and dev headers ==="; \
+# install nvml
+RUN curl -fsSL -o /etc/yum.repos.d/cuda-rhel10.repo \
+    https://developer.download.nvidia.com/compute/cuda/repos/rhel10/x86_64/cuda-rhel10.repo && \
     microdnf -y install \
-        nvidia-driver-devel \
-        nvidia-driver-cuda-libs \
-        nvidia-driver-libs \
-        || true; \
-    echo "=== DONE DEBUG ==="
-
-# copy NVML headers to build path
-RUN mkdir -p /usr/local/share/xbatd/include/nvml && \
-    cp -r /usr/include/nvidia/* /usr/local/share/xbatd/include/nvml/ || true
-
-RUN microdnf -y install dnf && microdnf clean all
+    nvidia-driver nvidia-driver-NVML nvidia-driver-devel cuda-nvml-devel-13-1 && \
+    microdnf clean all
 
 # install rocm
 RUN printf '%s\n' \
@@ -61,29 +39,22 @@ RUN printf '%s\n' \
 'baseurl=https://repo.radeon.com/rocm/rhel10/7.2/main/' \
 'enabled=1' \
 'gpgcheck=0' \
-> /etc/yum.repos.d/rocm.repo && \
-    dnf makecache && \
-    dnf -y install amd-smi-lib && \
-    mkdir -p /usr/local/share/xbatd/include/amd_smi && \
-    cp -r /opt/rocm/include/amd_smi/* /usr/local/share/xbatd/include/amd_smi/ && \
-    dnf clean all
+> /etc/yum.repos.d/rocm.repo
+
+RUN microdnf -y install amd-smi-lib && microdnf clean all
 
 ENV CQUESTDB_VERSION=4.0.5
-
 # install questdb client
-RUN mkdir -p /usr/local/share/xbatd/include /usr/local/share/xbatd/lib && \
-    git clone --depth 1 --branch "${CQUESTDB_VERSION}" https://github.com/questdb/c-questdb-client.git && \
+RUN git clone --depth 1 --branch "${CQUESTDB_VERSION}" https://github.com/questdb/c-questdb-client.git && \
     cd c-questdb-client && \
     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
-    cmake --build build && \
-    cp -r include/questdb /usr/local/share/xbatd/include/ && \
-    cp -r build/libquestdb_client.a build/libquestdb_client.so /usr/local/share/xbatd/lib/
+    cmake --build build
 
 # install LIKWID
 ENV LIKWID_VERSION="v5.5.1"
 RUN git clone --depth 1 --branch "${LIKWID_VERSION}" https://github.com/RRZE-HPC/likwid.git && \
     cd likwid && \
-    sed -i -e 's!PREFIX ?= /usr/local#NO SPACE!PREFIX ?= /usr/local/share/xbatd/#NO SPACE!g' config.mk && \
+    sed -i -e 's!PREFIX ?= /usr/local#NO SPACE!PREFIX ?= /usr/local/share/xbatd#NO SPACE!g' config.mk && \
     sed -i -e 's!MAX_NUM_THREADS = 512!MAX_NUM_THREADS = 1024!g' config.mk && \
     make -j "$(nproc)" && \
     make install
@@ -96,18 +67,10 @@ ENV XBAT_RELEASE=$RELEASE
 ENV APP_NAME=xbatd-${XBAT_VERSION}
 
 RUN echo -e "%_unpackaged_files_terminate_build      0 \n%_binaries_in_noarch_packages_terminate_build   0" > /etc/rpm/macros
-
 RUN mkdir -p /root/rpmbuild/SOURCES/${APP_NAME}
 COPY . /root/rpmbuild/SOURCES/${APP_NAME}
 RUN cd /root/rpmbuild/SOURCES/ && tar -czvf ${APP_NAME}.tar.gz ${APP_NAME}
 RUN cp /root/rpmbuild/SOURCES/${APP_NAME}/xbatd.spec /root/rpmbuild/SPECS
 
-ENV CXXFLAGS="-I/usr/local/share/xbatd/include"
-ENV LDFLAGS="-L/usr/local/share/xbatd/lib -L/usr/local/share/xbatd/lib64"
-
-RUN /bin/bash -c "rpmbuild --verbose --target x86_64 \
-    --define 'VERSION $XBAT_VERSION' \
-    --define 'RELEASE $XBAT_RELEASE' \
-    -bb /root/rpmbuild/SPECS/xbatd.spec"
-
+RUN /bin/bash -c "rpmbuild --verbose --target x86_64 --define 'VERSION $XBAT_VERSION' --define 'RELEASE $XBAT_RELEASE' -bb /root/rpmbuild/SPECS/xbatd.spec"
 RUN cp /root/rpmbuild/RPMS/x86_64/xbatd* /
