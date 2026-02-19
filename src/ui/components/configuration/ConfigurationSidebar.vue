@@ -6,17 +6,17 @@
 
         <div class="list">
             <v-list density="compact" :selected="[selectedId]">
-                <!-- My Configurations -->
+                <!-- My / All Configurations -->
                 <v-list-group value="my" :open="true">
                     <template #activator="{ props: groupProps }">
                         <v-list-item
                             v-bind="groupProps"
-                            title="My Configurations"
+                            :title="myConfigTitle"
                             prepend-icon="$folder"
                         />
                     </template>
 
-                    <template v-if="showMyHomeInline">
+                    <template v-if="showMyHome">
                         <SidebarConfigItem
                             v-for="c in myHomeConfigs"
                             :key="c.id"
@@ -49,8 +49,7 @@
                     />
                 </v-list-group>
 
-                <!-- Shared Configurations -->
-                <v-list-group value="shared" :open="true">
+                <v-list-group v-if="showShared" value="shared" :open="true">
                     <template #activator="{ props: groupProps }">
                         <v-list-item
                             v-bind="groupProps"
@@ -140,9 +139,7 @@ const { data: folderTree } = await useAsyncData(
     async () => (await $api.configurationFolders.get())?.data || []
 );
 
-const myMaxDepth = computed(() =>
-    props.userLevel >= props.UserLevelEnum.manager ? 3 : 2
-);
+const myMaxDepth = computed(() => (isManager.value ? 3 : 2));
 
 const allConfigs = computed(() =>
     Object.entries(props.configurationCache || {}).map(([id, doc]) => ({
@@ -151,8 +148,14 @@ const allConfigs = computed(() =>
     }))
 );
 
-const isManagerOrAdmin = computed(
+const isManager = computed(
     () => props.userLevel >= props.UserLevelEnum.manager
+);
+
+const showShared = computed(() => !isManager.value);
+
+const myConfigTitle = computed(() =>
+    isManager.value ? "All Folders" : "My Configurations"
 );
 
 const myHomeNode = computed(() => {
@@ -162,7 +165,7 @@ const myHomeNode = computed(() => {
 
 const myFolderRoots = computed(() => {
     const roots = folderTree.value || [];
-    if (isManagerOrAdmin.value) return roots;
+    if (isManager.value) return roots;
 
     const home = myHomeNode.value;
     if (!home) return roots; // fallback
@@ -173,7 +176,9 @@ const myConfigsByFolder = computed(() => {
     const m = new Map();
 
     for (const { id, doc } of allConfigs.value) {
-        if (doc?.misc?.owner !== props.user.user_name) continue;
+        if (!isManager.value && doc?.misc?.owner !== props.user.user_name) {
+            continue;
+        }
 
         const folderId = doc?.configuration?.folderId
             ? String(doc.configuration.folderId)
@@ -195,12 +200,10 @@ const myConfigsByFolder = computed(() => {
     return m;
 });
 
-const showMyHomeInline = computed(
-    () => !isManagerOrAdmin.value && !!myHomeNode.value
-);
+const showMyHome = computed(() => !isManager.value && !!myHomeNode.value);
 
 const myHomeConfigs = computed(() => {
-    if (!showMyHomeInline.value) return [];
+    if (!showMyHome.value) return [];
     const homeId = myHomeNode.value.id;
     return myConfigsByFolder.value.get(homeId) || [];
 });
@@ -226,6 +229,8 @@ const sharedBucket = (doc) => {
 };
 
 const sharedGroups = computed(() => {
+    if (isManager.value) return [];
+
     const buckets = new Map();
 
     for (const { id, doc } of sharedConfigsFlat.value) {
