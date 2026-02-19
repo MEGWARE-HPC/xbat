@@ -310,9 +310,11 @@ async def import_benchmark():
         )
     if 'file' not in request.files:
         raise httpErrors.BadRequest("No file provided")
+
     file = request.files["file"]
     if file.filename == '' or not file.filename:
         raise httpErrors.BadRequest("No file selected")
+
     if not check_extension(file.filename, 'tgz') and not check_extension(
             file.filename, 'tar.gz') and not check_extension(
                 file.filename, 'gz'):
@@ -322,10 +324,11 @@ async def import_benchmark():
     IMPORT_PATH.mkdir(parents=True, exist_ok=True)
     tar_path = IMPORT_PATH / file_name
     manager_uuid = str(uuid.uuid1())
-    reassignRunNr = request.form.get("reassignRunNr")
-    updateColl = request.form.get("updateColl")
-    if isinstance(updateColl, str):
-        updateColl = str_to_bool(updateColl)
+    reassign_run_nr = request.form.get("reassignRunNr") == "true"
+    update_collections = request.form.get("updateColl")
+
+    if isinstance(update_collections, str):
+        update_collections = str_to_bool(update_collections)
 
     try:
         file.save(tar_path)
@@ -335,47 +338,62 @@ async def import_benchmark():
     except Exception as e:
         app.logger.error("Error occurred while extracting: %s" % e)
         raise httpErrors.InternalServerError("Error extracting files")
-    runNr_cache = {}
-    for jsonfile_path in Path(extract_folder).rglob("*.json"):
-        folder = jsonfile_path.relative_to(extract_folder).parent
-        if folder not in runNr_cache:
-            benchmarks_path = extract_folder / folder / "benchmarks.json"
-            if benchmarks_path.exists():
-                with open(benchmarks_path, 'r') as benchmark_json:
-                    benchmark_data = json.load(benchmark_json)
-                    if not benchmark_data:
-                        raise httpErrors.InternalServerError(
-                            f"Failed to load {benchmarks_path}")
-                    else:
-                        temp_runNr, maxJobId = await get_import_runNr(
-                            benchmark_data, db, reassignRunNr)
-                        runNr_cache[folder] = temp_runNr
-                        jobId_map = {}
-                        if maxJobId:
-                            jobId_map = get_new_jobIds(benchmark_data, db,
-                                                       maxJobId)
-        new_runNr = runNr_cache[folder]
-        with open(jsonfile_path, "r") as file:
-            try:
-                data = json.load(file)
-                if not data:
-                    continue
-                collection = jsonfile_path.stem
-                data = desanitize_mongo(data)
-                if reassignRunNr == "true":
-                    replace_runNr(data, new_runNr)
-                if maxJobId:
-                    if collection in ["benchmarks", "jobs", "outputs"]:
-                        replace_jobId_json(data, collection, jobId_map)
-                process_collection(collection, data, db, updateColl)
-                if collection == "benchmarks":
-                    await process_table(jsonfile_path.parent, jobId_map)
-            except json.JSONDecodeError as e:
-                raise httpErrors.BadRequest(
-                    "Invalid JSON file causing errors: %s" % e)
-            except Exception as e:
+
+    # Process each runNr directory
+    for runNr_folder in extract_folder.iterdir():
+
+        if not runNr_folder.is_dir():
+            continue
+
+        benchmarks_path = runNr_folder / "benchmarks.json"
+        if not benchmarks_path.exists():
+            continue
+
+        # Load benchmarks.json to determine new runNr and jobId mapping
+        with open(benchmarks_path, 'r') as benchmark_json:
+            benchmark_data = json.load(benchmark_json)
+            if not benchmark_data:
                 raise httpErrors.InternalServerError(
-                    "An unexpected error occurred while processing: %s" % e)
+                    f"Failed to load {benchmarks_path}")
+
+            new_runNr, maxJobId = await get_import_runNr(
+                benchmark_data, db, reassign_run_nr)
+
+            jobId_map = {}
+            if maxJobId:
+                jobId_map = get_new_jobIds(benchmark_data, db, maxJobId)
+
+        # Process all JSON files in this runNr folder
+        for jsonfile_path in runNr_folder.glob("*.json"):
+            with open(jsonfile_path, "r") as file:
+                try:
+                    data = json.load(file)
+                    if not data:
+                        continue
+                    collection = jsonfile_path.stem
+                    data = desanitize_mongo(data)
+                    if reassign_run_nr:
+                        print("Replacing runNr in collection:", collection)
+                        replace_runNr(data, new_runNr)
+                        if collection == "benchmarks":
+                            print(data)
+                    if maxJobId:
+                        if collection in ["benchmarks", "jobs", "outputs"]:
+                            replace_jobId_json(data, collection, jobId_map)
+                    process_collection(collection,
+                                       data,
+                                       db,
+                                       update_collections=update_collections,
+                                       is_reassigned_run_nr=reassign_run_nr)
+                    # if collection == "benchmarks":
+                    #     await process_table(runNr_folder / "jobs", jobId_map)
+                except json.JSONDecodeError as e:
+                    raise httpErrors.BadRequest(
+                        "Invalid JSON file causing errors: %s" % e)
+                except Exception as e:
+                    raise httpErrors.InternalServerError(
+                        "An unexpected error occurred while processing: %s" %
+                        e)
     try:
         shutil.rmtree(extract_folder)
     except Exception as e:

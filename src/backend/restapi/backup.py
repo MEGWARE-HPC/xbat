@@ -671,36 +671,31 @@ async def save_benchmarks(runNr, anonymise, folder_path, db):
                 "Error saving %s for runNr %s to file." % (collection, runNr))
 
 
-async def get_import_runNr(data, db, reassignRunNr):
+async def get_import_runNr(data, db, reassign_run_nr):
     """
     Get the runNr and maxJobId for importing data.
 
     :return: new_runNr and maxJobId
     """
     # The type of the parameter (reassignRunNr) from the FormData is String
-    if reassignRunNr == "true":
-        if db.getOne("benchmarks", {"_id": ObjectId(data["_id"])}):
-            new_runNr = db.getOne("benchmarks",
-                                  {"_id": ObjectId(data["_id"])})["runNr"]
-            maxJobId = 0
-        else:
-            new_runNr = db.getNextRunNr()
-            jobID_questdb = await questdb.execute_query(
-                "SELECT MAX(jobId) AS maxJobId FROM cpu_usage;")
-            jobID_mongodb = list(
-                db.aggregate("jobs", [{
-                    "$group": {
-                        "_id": "null",
-                        "maxJobId": {
-                            "$max": "$jobId"
-                        }
+    if reassign_run_nr:
+        new_runNr = db.getNextRunNr()
+        jobID_questdb = await clickhouse.execute_query(
+            "SELECT MAX(job_id) AS maxJobId FROM cpu_usage;")
+        jobID_mongodb = list(
+            db.aggregate("jobs", [{
+                "$group": {
+                    "_id": "null",
+                    "maxJobId": {
+                        "$max": "$jobId"
                     }
-                }]))
-            if jobID_mongodb or jobID_questdb:
-                maxJobId = max(int(jobID_questdb[0]['maxJobId']),
-                               int(jobID_mongodb[0]['maxJobId']))
-            else:
-                maxJobId = 30000
+                }
+            }]))
+        if jobID_mongodb or jobID_questdb:
+            maxJobId = max(int(jobID_questdb[0]['maxJobId']),
+                            int(jobID_mongodb[0]['maxJobId']))
+        else:
+            maxJobId = 30000
 
         if db.getOne("benchmarks", {"runNr": data["runNr"]}):
             return (new_runNr, maxJobId)
@@ -735,13 +730,13 @@ def count_csv_files(path: Path) -> int:
     return sum(1 for _ in path.rglob("*.csv"))
 
 
-def process_collection(collection, data, db, updateColl):
+def process_collection(collection, data, db, update_collections, is_reassigned_run_nr):
     if collection == "configurations":
         for item in data if isinstance(data, list) else [data]:
             if not db.getOne(collection, {"_id": ObjectId(item["_id"])}):
                 db.insertOne(collection, item)
             else:
-                if updateColl:
+                if update_collections:
                     db.replaceOne(collection, {"_id": ObjectId(item["_id"])},
                                   item)
     elif collection == "projects":
@@ -750,21 +745,21 @@ def process_collection(collection, data, db, updateColl):
                 if not db.getOne(collection, {"_id": ObjectId(item["_id"])}):
                     db.insertOne(collection, item)
                 else:
-                    if updateColl:
+                    if update_collections:
                         db.replaceOne(collection,
                                       {"_id": ObjectId(item["_id"])}, item)
         else:
             if not db.getOne(collection, {"_id": ObjectId(data["_id"])}):
                 db.insertOne(collection, data)
             else:
-                if updateColl:
+                if update_collections:
                     db.replaceOne(collection, {"_id": ObjectId(data["_id"])},
                                   data)
     elif collection == "users":
         if not db.getOne(collection, {"user_name": data["user_name"]}):
             db.insertOne(collection, data)
         else:
-            if updateColl:
+            if update_collections:
                 db.replaceOne(collection, {"user_name": data["user_name"]},
                               data)
     elif collection == "nodes":
@@ -773,28 +768,30 @@ def process_collection(collection, data, db, updateColl):
                 if not db.getOne(collection, {"hash": item["hash"]}):
                     db.insertOne(collection, item)
                 else:
-                    if updateColl:
+                    if update_collections:
                         db.replaceOne(collection, {"hash": item["hash"]}, item)
         else:
             if not db.getOne(collection, {"hash": data["hash"]}):
                 db.insertOne(collection, data)
             else:
-                if updateColl:
+                if update_collections:
                     db.replaceOne(collection, {"hash": data["hash"]}, data)
     elif collection in ["benchmarks", "jobs", "outputs"]:
         if isinstance(data, list):
             for item in data:
-                if not db.getOne(collection, {"_id": ObjectId(item["_id"])}):
+                if is_reassigned_run_nr or not db.getOne(collection, {"_id": ObjectId(item["_id"])}):
+                    item.pop("_id", None)  # Remove _id to avoid duplication when inserting as new document
                     db.insertOne(collection, item)
                 else:
-                    if updateColl:
+                    if update_collections:
                         db.replaceOne(collection,
                                       {"_id": ObjectId(item["_id"])}, item)
         else:
-            if not db.getOne(collection, {"_id": ObjectId(data["_id"])}):
+            if is_reassigned_run_nr or not db.getOne(collection, {"_id": ObjectId(data["_id"])}):
+                data.pop("_id", None)  # Remove _id to avoid duplication when inserting as new document
                 db.insertOne(collection, data)
             else:
-                if updateColl:
+                if update_collections:
                     db.replaceOne(collection, {"_id": ObjectId(data["_id"])},
                                   data)
 
@@ -857,8 +854,8 @@ def pigz_compress(input_path, uuid):
         # Weighing compression efficiency and compressed file size, the current compression rate rating is chosen to be '3'
         command = [
             'tar', '--use-compress-program=pigz -3', '-cpf',
-            output_path.as_posix(),
-            source_folder.as_posix()
+            output_path.as_posix(), '-C',
+            source_folder.as_posix(), '.'
         ]
         try:
             subprocess.run(command, stderr=subprocess.PIPE, check=True)
@@ -892,7 +889,7 @@ def pigz_decompress(input_path, extract_folder):
     command = [
         'tar', '--use-compress-program=pigz', '-xpf',
         input_path.as_posix(), '-C',
-        extract_folder.as_posix(), '--strip-components=4'
+        extract_folder.as_posix()
     ]
     try:
         subprocess.run(command, stderr=subprocess.PIPE, check=True)

@@ -33,6 +33,9 @@ class MongoConnector(object):
             self.user = settings["user"]
             self.password = settings["password"]
 
+        print("CREATING MONGO WITH", self.address, self.database, self.user,
+              self.password)
+
         logger.info("Creating connection to %s with database '%s'",
                     self.address, self.database)
         if not len(self.address) or not len(self.database):
