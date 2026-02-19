@@ -6,7 +6,7 @@
 --  Device is string as it can be either numerical values or identifiers like "nvme0n1".
 --  LowCardinality(String) is used for node, level, and device to optimize storage (only viable when the number of distinct values is smaller than 10.000).
 --  Level uses LowCardinality(String) instead of Enum to allow for more flexibility in the future.
---  ZSTD(3) compression is used for better storage efficiency (20-40% better than default LZ4).
+--  ZSTD(3) compression is used for better storage efficiency.
 
 CREATE TABLE IF NOT EXISTS template_float (
     job_id UInt32 CODEC(ZSTD(3)),

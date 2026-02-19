@@ -105,7 +105,7 @@ services:
             - "#FRONTEND_NETWORK#:9001:9000" # temporary mapping to 9001 during migration to clickhouse
             - "#FRONTEND_NETWORK#:9003:9003"
     xbat-clickhouse:
-        image: docker.io/clickhouse/clickhouse-server:25.6.2
+        image: docker.io/clickhouse/clickhouse-server:25.11.9
         restart: unless-stopped
         container_name: xbat-clickhouse
         user: "#XBAT_UID#:#XBAT_GID#"
@@ -126,6 +126,7 @@ services:
             - 8123 # TODO remove once passed through nginx
             - 9000
         ports:
+            - "#FRONTEND_NETWORK#:8443:8443" # HTTP SSL/TLS default port
             - "#FRONTEND_NETWORK#:8123:8123" # web UI and HTTP API
             - "#FRONTEND_NETWORK#:9000:9000" # native protocol
             - "#FRONTEND_NETWORK#:9005:9005" # postgreSQL-compatible protocol
