@@ -235,9 +235,6 @@ def post():
     if not config:
         raise httpErrors.BadRequest("No configuration provided")
 
-    if not config["configuration"].get("folderId"):
-        config["configuration"]["folderId"] = owner_folder(user["user_name"])
-
     timestamp = get_current_datetime()
     config["misc"] = {
         "created": timestamp,
@@ -246,6 +243,19 @@ def post():
     }
 
     config = transform_objectId(config)
+
+    owner = user["user_name"]
+    fid = ensure_objectId((config.get("configuration") or {}).get("folderId"))
+
+    if fid:
+        folder = db.getOne(CONFIGURATION_FOLDERS_COLLECTION, {"_id": fid},
+                           {"misc.owner": 1})
+        folder_owner = (folder.get("misc")
+                        or {}).get("owner") if folder else None
+        if folder_owner != owner:
+            (config["configuration"] or {})["folderId"] = owner_folder(owner)
+    else:
+        (config["configuration"] or {})["folderId"] = owner_folder(owner)
 
     result = db.insertOne(COLLECTION_NAME, config)
 
@@ -272,24 +282,48 @@ def put(_id):
     if not config:
         raise httpErrors.BadRequest("No configuration provided")
 
-    if not config["configuration"].get("folderId"):
-        config["configuration"]["folderId"] = owner_folder(
-            config["misc"]["owner"])
+    cid = ensure_objectId(_id)
+    if not cid:
+        raise httpErrors.BadRequest("Invalid configuration id")
+
+    existing = db.getOne(COLLECTION_NAME, {"_id": cid})
+    if existing is None:
+        raise httpErrors.NotFound()
+
+    existing_owner = (existing.get("misc") or {}).get("owner")
+
+    if user["user_name"] != existing_owner and user["user_type"] not in (
+            "manager", "admin"):
+        raise httpErrors.Forbidden()
+
+    config["misc"]["owner"] = existing_owner
 
     config["misc"]["edited"] = get_current_datetime()
     config = transform_objectId(config)
 
-    del config["_id"]
+    fid = ensure_objectId((config.get("configuration") or {}).get("folderId"))
+    if fid:
+        folder = db.getOne(CONFIGURATION_FOLDERS_COLLECTION, {"_id": fid},
+                           {"misc.owner": 1})
+        folder_owner = (folder.get("misc")
+                        or {}).get("owner") if folder else None
+        if folder_owner != existing_owner:
+            (config["configuration"]
+             or {})["folderId"] = owner_folder(existing_owner)
+    else:
+        (config["configuration"]
+         or {})["folderId"] = owner_folder(existing_owner)
 
-    identifier = {"_id": ensure_objectId(_id)}
+    if "_id" in config:
+        del config["_id"]
 
-    result = db.replaceOne(COLLECTION_NAME, identifier, config)
+    result = db.replaceOne(COLLECTION_NAME, {"_id": cid}, config)
 
     if not result.acknowledged:
         raise httpErrors.InternalServerError("Update of configuration failed")
 
     # return replaced document for consistent API similar to patch
-    return sanitize_mongo(db.getOne(COLLECTION_NAME, identifier)), 200
+    return sanitize_mongo(db.getOne(COLLECTION_NAME, {"_id": cid})), 200
 
 
 def delete(_id):
