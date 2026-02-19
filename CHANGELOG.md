@@ -9,11 +9,12 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 -   migrated MongoDB from v5 to v8 (to retain data from the previous database, please follow the migration guide.) (#90)
-
+-   unified font usage across browsers in the documentation (#184) and switched to Source Sans 3
+-   upgraded xbat font from Source Sans Pro to Source Sans 3
 
 ### Fixed
 
-- jobs not being processed
+-   jobs not being processed
 
 ## v1.2.0 - 2026-01-05
 
