@@ -265,7 +265,7 @@ async def save_as_csv(job_id, runNr_path):
 
 async def clickhouse_save_as_csv(job_id, runNr_path):
     path = runNr_path / Path(str(job_id))
-    recreate_folder(path)
+    recreate_folder(path, parents=True)
 
     tables = await clickhouse.get_table_names()
     export_start_time = time.time()
@@ -601,7 +601,6 @@ async def save_benchmarks(runNr, anonymise, folder_path, db):
                 if node_hash not in node_hashes:
                     node_hashes.append(node_hash)
 
-        job_id = '(' + ', '.join(f"'{str(item)}'" for item in job_list) + ')'
         nodes_list = extract_hash(list(node_hashes))
 
         collections = {
@@ -665,7 +664,7 @@ async def save_benchmarks(runNr, anonymise, folder_path, db):
                                  collections[collection]['value'], anonymise,
                                  orig_username, db)
             for job_id in job_list:
-                await clickhouse_save_as_csv(job_id, runNr_path)
+                await clickhouse_save_as_csv(job_id, runNr_path / "jobs")
         except Exception as e:
             app.logger.error("Error occurred while saving: %s" % e)
             raise httpErrors.InternalServerError(
