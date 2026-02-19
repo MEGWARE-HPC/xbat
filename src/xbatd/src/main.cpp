@@ -10,6 +10,7 @@
 #include <signal.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -19,16 +20,15 @@
 #include <map>
 #include <thread>
 #include <variant>
-#include <algorithm>
 
 #include "CLikwidPerfctr.hpp"
-#include "ClickHouseWriter.hpp"
 #include "CLogging.hpp"
 #include "CQueue.hpp"
+#include "ClickHouseWriter.hpp"
 #include "CurlClient.hpp"
 #include "external/clipp/include/clipp.h"
-#include "helper.hpp"
 #include "external/nlohmann-json/include/nlohmann/json.hpp"
+#include "helper.hpp"
 #include "threadhelper.hpp"
 
 #define WATCHDOGSLEEP 3
@@ -71,10 +71,10 @@ statusInfo::~statusInfo() {
  *
  * @param statusList List of statusInfo
  */
-void watchdog(std::unique_ptr<statusInfo> &statusList) {
+void watchdog(std::unique_ptr<statusInfo>& statusList) {
     do {
         time_t currentTime = Helper::getSecondsSinceEpoch();
-        for (const auto &entry : statusList->classList) {
+        for (const auto& entry : statusList->classList) {
             /* Check whether thread is hung and forcefully terminate it if this is the case.
              * Restart thread on next watchdog execution.
              */
@@ -96,7 +96,7 @@ void watchdog(std::unique_ptr<statusInfo> &statusList) {
     } while (!canceled);
 }
 
-int measure(config_map &config, Topology::cpuTopology &topology) {
+int measure(config_map& config, Topology::cpuTopology& topology) {
     std::unique_ptr<statusInfo> statusList(new statusInfo);
 
     CQueue dataQueue = CQueue();
@@ -118,7 +118,7 @@ int measure(config_map &config, Topology::cpuTopology &topology) {
     return 0;
 }
 
-std::map<std::string, double> benchmarkSystem(Topology::cpuTopology &topology) {
+std::map<std::string, double> benchmarkSystem(Topology::cpuTopology& topology) {
     std::map<std::string, double> values;
     if (Helper::writeToFile(BENCHMARK_STATUS_FILE_PATH, "") != 0)
         return values;
@@ -129,7 +129,7 @@ std::map<std::string, double> benchmarkSystem(Topology::cpuTopology &topology) {
         return path + " -t " + benchmark + " " + workgroup;
     };
 
-    auto benchmarkAvailable = [](std::string &available, std::string benchmark) {
+    auto benchmarkAvailable = [](std::string& available, std::string benchmark) {
         // available benchmarks are suffixed with " -"
         return available.find(benchmark + " -") != std::string::npos;
     };
@@ -150,7 +150,7 @@ std::map<std::string, double> benchmarkSystem(Topology::cpuTopology &topology) {
     int threads = topology.coresPerSocket * topology.threadsPerCore * topology.sockets;
 
     std::string output;
-    for (auto &benchmark : flopBenchmarks) {
+    for (auto& benchmark : flopBenchmarks) {
         if (!benchmarkAvailable(available, benchmark)) continue;
         if (Helper::getCommandOutput(generateBenchmarkCommand(benchmark, threads, topology.l1CacheTotal), output) != 0)
             continue;
@@ -160,7 +160,7 @@ std::map<std::string, double> benchmarkSystem(Topology::cpuTopology &topology) {
 
     std::vector<std::string> stream = {"l1", "l2", "l3", "mem"};
 
-    for (auto &variant : stream) {
+    for (auto& variant : stream) {
         std::string benchmark = "load";
         if (!benchmarkAvailable(available, benchmark)) continue;
         int cacheSize = 0;
@@ -197,7 +197,7 @@ std::map<std::string, double> benchmarkSystem(Topology::cpuTopology &topology) {
  * @param argv arguments
  * @return int Exit status
  */
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     bool help = false;
     std::string confPath = "/etc/xbatd/xbatd.conf";
     uint jobId = 0;
@@ -229,8 +229,6 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    std::cout << "Using configuration file: " << configString << std::endl;
-
     config_map config;
     try {
         std::istringstream isConfig(configString);
@@ -249,7 +247,7 @@ int main(int argc, char *argv[]) {
             {"clickhouse_user", pt.get<std::string>("clickhouse.user")},
             {"clickhouse_password", pt.get<std::string>("clickhouse.password")}};
 
-    } catch (boost::property_tree::ptree_bad_path const &) {
+    } catch (boost::property_tree::ptree_bad_path const&) {
         std::cerr << "Invalid configuration at " << confPath << "\n"
                   << boost::current_exception_diagnostic_information();
         return EXIT_FAILURE;
@@ -325,7 +323,7 @@ int main(int argc, char *argv[]) {
         if (benchmarkValues.empty())
             logger.log(CLogging::error, "Failed to benchmark system");
 
-        for (auto &v : benchmarkValues) {
+        for (auto& v : benchmarkValues) {
             systemInfo["benchmarks"][v.first] = v.second;
         }
         curlClient.registerNode(systeminfoHash, systemInfo);

@@ -138,6 +138,7 @@ CREATE TABLE IF NOT EXISTS likwid_l2d_l_bw AS template_topology_float;
 CREATE TABLE IF NOT EXISTS likwid_l2d_e_bw AS template_topology_float;
 CREATE TABLE IF NOT EXISTS likwid_l3_l_bw AS template_topology_float;
 CREATE TABLE IF NOT EXISTS likwid_l3_e_bw AS template_topology_float;
+CREATE TABLE IF NOT EXISTS likwid_l3d_e_bw AS template_topology_float;
 
 CREATE TABLE IF NOT EXISTS likwid_l2_vol AS template_topology_float;
 CREATE TABLE IF NOT EXISTS likwid_l3_vol AS template_topology_float;
@@ -145,6 +146,7 @@ CREATE TABLE IF NOT EXISTS likwid_l2d_l_vol AS template_topology_float;
 CREATE TABLE IF NOT EXISTS likwid_l3_l_vol AS template_topology_float;
 CREATE TABLE IF NOT EXISTS likwid_l2d_e_vol AS template_topology_float;
 CREATE TABLE IF NOT EXISTS likwid_l3_e_vol AS template_topology_float;
+CREATE TABLE IF NOT EXISTS likwid_l3d_e_vol AS template_topology_float;
 
 CREATE TABLE IF NOT EXISTS likwid_l2_mis_rate AS template_topology_float;
 CREATE TABLE IF NOT EXISTS likwid_l3_mis_rate AS template_topology_float;
@@ -395,6 +397,8 @@ DROP TABLE IF EXISTS xbat.likwid_l2d_l_vol;
 DROP TABLE IF EXISTS xbat.likwid_l3_bw;
 DROP TABLE IF EXISTS xbat.likwid_l3_e_bw;
 DROP TABLE IF EXISTS xbat.likwid_l3_e_vol;
+DROP TABLE IF EXISTS xbat.likwid_l3d_e_bw;
+DROP TABLE IF EXISTS xbat.likwid_l3d_e_vol;
 DROP TABLE IF EXISTS xbat.likwid_l3_l_bw;
 DROP TABLE IF EXISTS xbat.likwid_l3_l_vol;
 DROP TABLE IF EXISTS xbat.likwid_l3_mis_rate;

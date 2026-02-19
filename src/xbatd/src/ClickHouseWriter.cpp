@@ -23,14 +23,14 @@
 // External variable from main.cpp
 extern std::atomic<bool> canceled;
 
-void ClickHouseWriter::executeQuery(clickhouse::Client &client,
-                                    const std::string &query) {
+void ClickHouseWriter::executeQuery(clickhouse::Client& client,
+                                    const std::string& query) {
     try {
         CLogging::log("DbWriter", CLogging::debug,
                       "Executing query: " + query);
         clickhouse::Query q(query);
         client.Execute(q);
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
         std::string error_msg = e.what();
 
         // Check if this is a "table does not exist" error
@@ -57,10 +57,10 @@ void ClickHouseWriter::executeQuery(clickhouse::Client &client,
     }
 }
 
-void ClickHouseWriter::sendData(clickhouse::Client &client,
-                                const CQueue::SchemaEntries &data,
+void ClickHouseWriter::sendData(clickhouse::Client& client,
+                                const CQueue::SchemaEntries& data,
                                 uint32_t jobId,
-                                const std::string &hostname) {
+                                const std::string& hostname) {
     try {
         // Send each measurement type using the templated function
         insertMeasurements(client, data.basic_int, jobId, hostname);
@@ -69,14 +69,25 @@ void ClickHouseWriter::sendData(clickhouse::Client &client,
         insertMeasurements(client, data.device_double, jobId, hostname);
         insertMeasurements(client, data.topology_int, jobId, hostname);
         insertMeasurements(client, data.topology_double, jobId, hostname);
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
+        std::string error_msg = e.what();
+
+        // Check if this is a "table does not exist" error - these are recoverable
+        if (error_msg.find("Table") != std::string::npos &&
+            error_msg.find("does not exist") != std::string::npos) {
+            CLogging::log("DbWriter", CLogging::warning,
+                          "Skipping measurements for non-existent table: " + error_msg);
+            return;  // Continue running despite missing table
+        }
+
+        // For other errors (connection issues, authentication, etc.), log and re-throw
         CLogging::log("DbWriter", CLogging::error,
-                      "Error sending data: " + std::string(e.what()));
+                      "Error sending data: " + error_msg);
         throw;
     }
 }
 
-void ClickHouseWriter::writeToDb(CQueue &dataQueue, config_map &config) {
+void ClickHouseWriter::writeToDb(CQueue& dataQueue, config_map& config) {
     try {
         // Configure ClickHouse client options
         clickhouse::ClientOptions clientOptions;
@@ -114,12 +125,21 @@ void ClickHouseWriter::writeToDb(CQueue &dataQueue, config_map &config) {
             if (totalMeasurements > 0) {
                 CLogging::log("DbWriter", CLogging::debug,
                               "Sending " + std::to_string(totalMeasurements) + " measurements to ClickHouse");
-                sendData(client, data, jobId, hostname);
+                try {
+                    sendData(client, data, jobId, hostname);
+                } catch (const std::exception& e) {
+                    // Critical error (connection, authentication, etc.) - stop the daemon
+                    CLogging::log("DbWriter", CLogging::error,
+                                  "Critical database error - stopping daemon: " + std::string(e.what()));
+                    canceled = true;
+                    break;
+                }
             }
         }
 
-    } catch (const std::exception &e) {
-        CLogging::log("DbWriter", CLogging::error, "Database Error - " + std::string(e.what()));
+    } catch (const std::exception& e) {
+        CLogging::log("DbWriter", CLogging::error,
+                      "Failed to initialize ClickHouse client: " + std::string(e.what()));
         canceled = true;
     }
 }
