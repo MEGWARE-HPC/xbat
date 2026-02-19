@@ -315,7 +315,7 @@ show_help() {
     echo -e "\tgenerate-xbatd-conf  Generate xbatd configuration file"
     echo
     echo "Install configuration options:"
-    echo -e "\t[--help] Print this message"
+    echo -e "\t[--help|-h] Print this message"
     echo -e "\t[--executor (docker|podman)] Container executor (default: podman)"
     echo -e "\t[--home-mnt <path>] Mount home directory path"
     echo -e "\t[--port <port>] Frontend port (default: 7000)"
@@ -379,7 +379,7 @@ while [[ $# -gt 0 ]]; do
     --workers) WORKERS="$2"; shift; shift;;
     --certificate-dir) CERT_DIR="$2"; shift; shift;;
     --user) XBAT_USER="$2"; shift; shift;;
-    --help) HELP=true; shift;;
+    --help|-h) HELP=true; shift;;
     -*|--*) log_error "Unknown option $1"; exit 1;;
     *) POSITIONAL_ARGS+=("$1"); shift;;
   esac
