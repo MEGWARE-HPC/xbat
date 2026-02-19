@@ -25,9 +25,9 @@ class ClickHouse:
             logger.error("Invalid configuration: missing 'pgbouncer' config.")
             return
 
-        config = config["pgbouncer"]
+        pgbouncer_config = config["pgbouncer"]
         self.conninfo = (
-            f"dbname=clickhouse host={config['host']} port={config['port']} user={config['user']} password={config['password']}"
+            f"dbname=clickhouse host={pgbouncer_config['host']} port={pgbouncer_config['port']} user={pgbouncer_config['user']} password={pgbouncer_config['password']}"
         )
 
     async def _execute(self, query):
@@ -114,3 +114,17 @@ class ClickHouse:
         ]
 
         await self.execute_queries(queries)
+
+    async def get_table_names(self, exclude_templates=True):
+        """Get list of table names in ClickHouse"""
+        self.setup()
+        tables = await self._execute("SHOW TABLES")
+        tables = [table['name'] for table in tables if "name" in table]
+
+        if exclude_templates:
+            tables = [
+                table for table in tables if not (
+                    table.startswith('template') or table.startswith('goose'))
+            ]
+
+        return tables

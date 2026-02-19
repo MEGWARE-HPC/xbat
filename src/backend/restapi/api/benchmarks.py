@@ -12,7 +12,7 @@ from shared.helpers import sanitize_mongo, replace_runNr, desanitize_mongo, str_
 from backend.restapi.grpc_client import XbatCtldRpcClient
 from backend.restapi.access_control import check_user_permissions
 from backend.restapi.user_helper import get_user_from_token, create_user_benchmark_filter
-from backend.restapi.backup import save_benchmarks, get_import_runNr, get_new_jobIds, process_collection, replace_jobId_json, process_table, pigz_compress, pigz_decompress
+from backend.restapi.backup import save_benchmarks, get_import_runNr, get_new_jobIds, process_collection, replace_jobId_json, process_table, pigz_compress, pigz_decompress, count_csv_files
 from shared.clickhouse import ClickHouse
 import asyncio
 
@@ -269,17 +269,15 @@ async def export_benchmark():
     manager_uuid = str(uuid.uuid1())
     folder_path = EXPORT_PATH / manager_uuid
     folder_path.mkdir(parents=True, exist_ok=True)
-    csv_counts = 0
 
     for runNr in runNrs:
         try:
-            csv_count = await save_benchmarks(runNr, anonymise, folder_path,
-                                              db)
-            csv_counts += csv_count
+            await save_benchmarks(runNr, anonymise, folder_path, db)
         except Exception as e:
             app.logger.error("Benchmark export failed: %s" % e)
             raise httpErrors.InternalServerError("Benchmark runNr %s failed." %
                                                  runNr)
+    csv_counts = count_csv_files(folder_path)
     try:
         compress_status = pigz_compress(EXPORT_PATH, manager_uuid)
     except Exception as e:

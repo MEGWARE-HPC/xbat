@@ -15,8 +15,10 @@ from shared import httpErrors
 from shared.files import recreate_folder, contains_files
 from shared.helpers import sanitize_mongo
 from shared.configuration import get_logger, get_config
+from shared import clickhouse as cdb
 
 logger = logging.getLogger(get_logger())
+clickhouse = cdb.ClickHouse()
 
 questdb = qdb.QuestDB()
 
@@ -261,6 +263,80 @@ async def save_as_csv(job_id, runNr_path):
     return csv_count
 
 
+async def clickhouse_save_as_csv(job_id, runNr_path):
+    path = runNr_path / Path(str(job_id))
+    recreate_folder(path)
+
+    tables = await clickhouse.get_table_names()
+    export_start_time = time.time()
+    # Use a semaphore to limit the number of concurrent exports
+    semaphore = asyncio.Semaphore(8)
+
+    config = get_config()
+    if "clickhouse" not in config:
+        logger.error("Invalid configuration: missing 'clickhouse' config.")
+        return
+
+    ch_config = config["clickhouse"]
+    host = ch_config.get("host", "localhost")
+    port = ch_config.get("daemon_port", 9000)
+    user = ch_config.get("user")
+    password = ch_config.get("password")
+    database = ch_config.get("database")
+
+    base_cmd = ["clickhouse-client", "--host", host, "--port", str(port)]
+    if database:
+        base_cmd.extend(["--database", database])
+    if user:
+        base_cmd.extend(["--user", user])
+    if password:
+        base_cmd.extend(["--password", password])
+
+    async def _export_table(table_name, output_path):
+        async with semaphore:
+            return await _export_table_inner(table_name, output_path)
+
+    async def _export_table_inner(table_name, output_path):
+        query = f"SELECT * FROM {table_name} WHERE job_id = '{job_id}'"
+        cmd = base_cmd + ["--format", "CSV", "--query", query]
+
+        def _run():
+            start_time = time.time()
+            with open(output_path, "wb") as csvfile:
+                result = subprocess.run(cmd,
+                                        stdout=csvfile,
+                                        stderr=subprocess.PIPE,
+                                        check=False)
+            duration = time.time() - start_time
+            logger.debug(
+                "ClickHouse export duration for table '%s': %.2f seconds",
+                table_name, duration)
+            return result
+
+        result = await asyncio.to_thread(_run)
+        if result.returncode != 0:
+            logger.error("ClickHouse export failed for table '%s': %s",
+                         table_name,
+                         result.stderr.decode("utf-8", errors="ignore")[:512])
+            if output_path.exists():
+                output_path.unlink()
+            return False
+
+        if output_path.exists() and output_path.stat().st_size == 0:
+            output_path.unlink()
+            return False
+        return True
+
+    tasks = []
+    for table in tables:
+        csv_file_path = path / Path(f"{table}.csv")
+        tasks.append(_export_table(table, csv_file_path))
+    await asyncio.gather(*tasks)
+    total_duration = time.time() - export_start_time
+    logger.debug("ClickHouse export total duration: %.2f seconds",
+                 total_duration)
+
+
 def replace_key_fields(data, target_keys, target_value, replaced_value='demo'):
     """
     Replace target_value with replaced_value('demo') in the value of the specified key in the Dict.
@@ -472,6 +548,7 @@ async def save_benchmarks(runNr, anonymise, folder_path, db):
             )
             return
         node_hashes = []
+        job_list = []
         if 'jobIds' in benchmark_db and benchmark_db['jobIds']:
             if len(benchmark_db['jobIds']) > 1:
                 job_db = list(db.getMany("jobs", {"runNr": runNr}))
@@ -508,7 +585,6 @@ async def save_benchmarks(runNr, anonymise, folder_path, db):
         else:
             # for compatibility with old benchmarks that did not save jobIds in the benchmark.
             job_db = list(db.getMany("jobs", {"runNr": runNr}))
-            job_list = []
             if job_db is None:
                 raise httpErrors.NotFound(
                     "Job with runNr %s not found in jobs collection" % runNr)
@@ -569,9 +645,9 @@ async def save_benchmarks(runNr, anonymise, folder_path, db):
         orig_username = benchmark_db['issuer']
         recreate_folder(runNr_path)
 
-        for collection in collections:
-            file_path = runNr_path / Path(collection + '.json')
-            try:
+        try:
+            for collection in collections:
+                file_path = runNr_path / Path(collection + '.json')
                 if collection == 'benchmarks':
                     if anonymise:
                         benchmark_db = data_anonymise(benchmark_db,
@@ -583,18 +659,17 @@ async def save_benchmarks(runNr, anonymise, folder_path, db):
                         job_db = data_anonymise(job_db, orig_username)
                     with open(file_path, "w") as file:
                         json.dump(sanitize_mongo(job_db), file)
-                    csv_count = await save_as_csv(job_id, runNr_path)
                 else:
                     save_as_json(file_path, collection,
                                  collections[collection]['filter'],
                                  collections[collection]['value'], anonymise,
                                  orig_username, db)
-            except Exception as e:
-                app.logger.error("Error occurred while saving: %s" % e)
-                raise httpErrors.InternalServerError(
-                    "Error saving %s for runNr %s to file." %
-                    (collection, runNr))
-        return csv_count
+            for job_id in job_list:
+                await clickhouse_save_as_csv(job_id, runNr_path)
+        except Exception as e:
+            app.logger.error("Error occurred while saving: %s" % e)
+            raise httpErrors.InternalServerError(
+                "Error saving %s for runNr %s to file." % (collection, runNr))
 
 
 async def get_import_runNr(data, db, reassignRunNr):
@@ -650,6 +725,15 @@ def get_tablepath_dict(path):
         table_name = csv_file.stem
         table_dict[table_name] = csv_file
     return table_dict
+
+
+def count_csv_files(path: Path) -> int:
+    """Count all CSV files under path recursively."""
+    if not isinstance(path, Path):
+        path = Path(path)
+    if not path.exists():
+        return 0
+    return sum(1 for _ in path.rglob("*.csv"))
 
 
 def process_collection(collection, data, db, updateColl):
