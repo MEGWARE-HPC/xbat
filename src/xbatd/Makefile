@@ -22,11 +22,12 @@ ROCM_INC := $(firstword $(wildcard /opt/rocm*/include))
 CPPFLAGS += -I$(INCLUDE_PATH) -I$(CUDA_INC) -I$(ROCM_INC)
 CXXFLAGS += -std=c++17 -Wall -Wextra -Wpedantic -DBOOST_LOG_DYN_LINK
 LIBDIRS := -L$(LIB_PATH) -L$(LIB64_PATH)
+LINK_AUX := -Wl,-rpath-link,$(LIB_PATH) -Wl,-rpath-link,$(LIB64_PATH)
 LDLIBS += -lboost_log -lboost_log_setup -lboost_system -lboost_thread \
             -llikwid -lcurl -lquestdb_client -lnvidia-ml -lamd_smi -lcrypto -lstdc++fs -pthread
 
 $(BINARY): $(OBJ)
-	$(CXX) -o $@ $^ $(LIBDIRS) $(LDFLAGS) $(LDLIBS)
+	$(CXX) -o $@ $^ $(LIBDIRS) $(LINK_AUX) $(LDFLAGS) $(LDLIBS)
 
 -include $(DEP)
 

@@ -15,7 +15,6 @@ AutoReqProv: no
 Requires: boost-log
 Requires: sysstat
 Requires: libcurl
-BuildRequires: chrpath
 %global debug_package %{nil}
 %description
 xbat daemon
@@ -64,19 +63,6 @@ mkdir -p %{BUILD_SHARE} %{BUILD_BIN} %{SYSTEMD} %{LOG}
 cp -a %{BASE}/* %{BUILD_SHARE}/
 
 # clean likely likwid binaries and libraries that come with RPATH (check-rpaths from el10)
-find %{BUILD_SHARE} -type f -exec readelf -d {} \; 2>/dev/null | grep -E 'RPATH|RUNPATH' || true
-
-for f in \
-  %{BUILD_SHARE}/bin/likwid-lua \
-  %{BUILD_SHARE}/bin/likwid-bench \
-  %{BUILD_SHARE}/lib/liblikwid.so.5.5 \
-  %{BUILD_SHARE}/lib/liblikwid-hwloc.so.5.5 \
-; do
-  if [ -f "$f" ]; then
-    chrpath -d "$f" || true
-  fi
-done
-
 find %{BUILD_SHARE} -type f -exec readelf -d {} \; 2>/dev/null | grep -E 'RPATH|RUNPATH' || true
 
 mkdir -p %{LDSOCONF}

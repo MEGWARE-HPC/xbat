@@ -15,7 +15,6 @@ RUN microdnf -y update && \
         libatomic \
         rust-toolset \
         boost-devel \
-        chrpath \
         libcurl-devel \
         openssl-devel && \
     microdnf -y install --enablerepo=crb \
@@ -56,7 +55,7 @@ RUN git clone --depth 1 --branch "${LIKWID_VERSION}" https://github.com/RRZE-HPC
     cd likwid && \
     sed -i -e 's!PREFIX ?= /usr/local#NO SPACE!PREFIX ?= /usr/local/share/xbatd#NO SPACE!g' config.mk && \
     sed -i -e 's!MAX_NUM_THREADS = 512!MAX_NUM_THREADS = 1024!g' config.mk && \
-    make -j "$(nproc)" && \
+    make -j "$(nproc)" RPATHS= && \
     make install
 
 ARG VERSION
