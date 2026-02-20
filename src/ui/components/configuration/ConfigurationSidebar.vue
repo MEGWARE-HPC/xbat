@@ -5,79 +5,45 @@
         </template>
 
         <div class="list">
-            <v-list density="compact" :selected="[selectedId]">
+            <v-list
+                density="comfortable"
+                :selected="[selectedId]"
+                v-model:opened="opened"
+            >
                 <!-- My / All Configurations -->
-                <v-list-group value="my" :open="true">
+                <v-list-group value="my" :open="true" class="sb-section">
                     <template #activator="{ props: groupProps }">
                         <v-list-item
                             v-bind="groupProps"
-                            :title="myConfigTitle"
-                            prepend-icon="$folder"
-                        />
-                    </template>
-
-                    <template v-if="showMyHome">
-                        <SidebarConfigItem
-                            v-for="c in myHomeConfigs"
-                            :key="c.id"
-                            :id="c.id"
-                            :doc="c.doc"
-                            :depth="1"
-                            :selected-id="selectedId"
-                            :user="user"
-                            :user-level="userLevel"
-                            :UserLevelEnum="UserLevelEnum"
-                            @select="$emit('select', $event)"
-                            @duplicate="$emit('duplicate', $event)"
-                            @delete="$emit('delete', $event)"
-                        />
-                    </template>
-
-                    <SidebarFolderNode
-                        v-for="n in myFolderRoots"
-                        :key="n.id"
-                        :node="n"
-                        :configs-by-folder="myConfigsByFolder"
-                        :selected-id="selectedId"
-                        :user="user"
-                        :user-level="userLevel"
-                        :UserLevelEnum="UserLevelEnum"
-                        :depth="0"
-                        :max-depth="myMaxDepth"
-                        @select="$emit('select', $event)"
-                        @duplicate="$emit('duplicate', $event)"
-                        @delete="$emit('delete', $event)"
-                    />
-                </v-list-group>
-
-                <v-list-group v-if="showShared" value="shared" :open="true">
-                    <template #activator="{ props: groupProps }">
-                        <v-list-item
-                            v-bind="groupProps"
-                            title="Shared Configurations"
-                            prepend-icon="$share"
-                        />
-                    </template>
-
-                    <template v-if="sharedGroups.length">
-                        <v-list-group
-                            v-for="g in sharedGroups"
-                            :key="g.key"
-                            :value="g.key"
+                            class="sb-row sb-section-row"
+                            density="comfortable"
+                            :style="sectionRowStyle(0)"
                         >
-                            <template #activator="{ props: groupProps2 }">
-                                <v-list-item
-                                    v-bind="groupProps2"
-                                    :title="g.name"
-                                    prepend-icon="$group"
+                            <template #prepend>
+                                <span class="sb-chevron-spacer" />
+                                <v-icon
+                                    class="sb-folder-icon"
+                                    icon="$folder"
                                 />
                             </template>
 
+                            <v-list-item-title class="sb-title">
+                                {{ myConfigTitle }}
+                            </v-list-item-title>
+                        </v-list-item>
+                    </template>
+
+                    <div
+                        class="sb-children sb-section-children"
+                        :style="sectionChildrenStyle(0)"
+                    >
+                        <template v-if="showMyHome">
                             <SidebarConfigItem
-                                v-for="c in g.items"
+                                v-for="c in myHomeConfigs"
                                 :key="c.id"
                                 :id="c.id"
                                 :doc="c.doc"
+                                :depth="1"
                                 :selected-id="selectedId"
                                 :user="user"
                                 :user-level="userLevel"
@@ -86,14 +52,120 @@
                                 @duplicate="$emit('duplicate', $event)"
                                 @delete="$emit('delete', $event)"
                             />
-                        </v-list-group>
+                        </template>
+
+                        <SidebarFolderNode
+                            v-for="n in myFolderRoots"
+                            :key="n.id"
+                            :node="n"
+                            :configs-by-folder="myConfigsByFolder"
+                            :selected-id="selectedId"
+                            :user="user"
+                            :user-level="userLevel"
+                            :UserLevelEnum="UserLevelEnum"
+                            :depth="0"
+                            :max-depth="myMaxDepth"
+                            @select="$emit('select', $event)"
+                            @duplicate="$emit('duplicate', $event)"
+                            @delete="$emit('delete', $event)"
+                        />
+                    </div>
+                </v-list-group>
+
+                <v-list-group
+                    v-if="showShared"
+                    value="shared"
+                    :open="true"
+                    class="sb-section"
+                >
+                    <template #activator="{ props: groupProps }">
+                        <v-list-item
+                            v-bind="groupProps"
+                            class="sb-row sb-section-row"
+                            density="comfortable"
+                            :style="sectionRowStyle(0)"
+                        >
+                            <template #prepend>
+                                <span class="sb-chevron-spacer" />
+                                <v-icon class="sb-folder-icon" icon="$share" />
+                            </template>
+
+                            <v-list-item-title class="sb-title">
+                                Shared Configurations
+                            </v-list-item-title>
+                        </v-list-item>
                     </template>
 
-                    <v-list-item
-                        v-else
-                        class="text-medium-emphasis"
-                        title="No shared configurations"
-                    />
+                    <div
+                        class="sb-children sb-section-children"
+                        :style="sectionChildrenStyle(0)"
+                    >
+                        <template v-if="sharedGroups.length">
+                            <v-list-group
+                                v-for="g in sharedGroups"
+                                :key="g.key"
+                                :value="g.key"
+                                class="sb-project"
+                            >
+                                <template
+                                    #activator="{ props: groupProps2, isOpen }"
+                                >
+                                    <v-list-item
+                                        v-bind="groupProps2"
+                                        class="sb-row"
+                                        density="comfortable"
+                                        :style="sectionRowStyle(1)"
+                                    >
+                                        <template #prepend>
+                                            <v-icon
+                                                class="sb-chevron"
+                                                size="small"
+                                                :icon="
+                                                    isOpen
+                                                        ? '$chevronDown'
+                                                        : '$chevronRight'
+                                                "
+                                            />
+                                            <v-icon
+                                                class="sb-folder-icon"
+                                                icon="$group"
+                                            />
+                                        </template>
+
+                                        <v-list-item-title class="sb-title">
+                                            {{ g.name }}
+                                        </v-list-item-title>
+                                    </v-list-item>
+                                </template>
+
+                                <div
+                                    class="sb-children"
+                                    :style="sectionChildrenStyle(1)"
+                                >
+                                    <SidebarConfigItem
+                                        v-for="c in g.items"
+                                        :key="c.id"
+                                        :id="c.id"
+                                        :doc="c.doc"
+                                        :depth="2"
+                                        :selected-id="selectedId"
+                                        :user="user"
+                                        :user-level="userLevel"
+                                        :UserLevelEnum="UserLevelEnum"
+                                        @select="$emit('select', $event)"
+                                        @duplicate="$emit('duplicate', $event)"
+                                        @delete="$emit('delete', $event)"
+                                    />
+                                </div>
+                            </v-list-group>
+                        </template>
+
+                        <v-list-item
+                            v-else
+                            class="text-medium-emphasis"
+                            title="No shared configurations"
+                        />
+                    </div>
                 </v-list-group>
             </v-list>
         </div>
@@ -258,6 +330,31 @@ const sharedGroups = computed(() => {
         a.name.localeCompare(b.name)
     );
 });
+
+const opened = ref(["my", "shared"]);
+
+watchEffect(() => {
+    const base = ["my"];
+    if (showShared.value) base.push("shared");
+
+    if (isManager.value && myHomeNode.value?.id) {
+        base.push(`folder-${myHomeNode.value.id}`);
+    }
+
+    opened.value = Array.from(new Set([...base, ...opened.value]));
+});
+
+const INDENT = 12;
+const GUIDE_GAP = 6;
+
+const sectionRowStyle = (depth) => ({
+    "--sb-indent": `${depth * INDENT}px`
+});
+
+const sectionChildrenStyle = (depth) => ({
+    "--sb-indent": `${(depth + 1) * INDENT}px`,
+    "--sb-guide-gap": `${GUIDE_GAP}px`
+});
 </script>
 
 <style lang="scss" scoped>
@@ -276,7 +373,61 @@ const sharedGroups = computed(() => {
     }
 }
 
+:deep(.v-list-group__items) {
+    padding-inline-start: 0 !important;
+}
+
 :deep(.v-list-group__header .v-list-item__append) {
     display: none !important;
+}
+
+:deep(.sb-row) {
+    padding-inline-start: var(--sb-indent) !important;
+    min-height: 30px;
+}
+
+:deep(.sb-title) {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+:deep(.sb-chevron-spacer) {
+    display: inline-block;
+    width: 18px;
+    margin-inline-end: 2px;
+}
+
+:deep(.sb-folder-icon) {
+    margin-inline-end: 6px;
+    color: rgb(var(--v-theme-on-surface)) !important;
+    opacity: var(--v-medium-emphasis-opacity) !important;
+}
+
+:deep(.sb-chevron) {
+    margin-inline-end: 2px;
+    color: rgb(var(--v-theme-on-surface)) !important;
+    opacity: var(--v-medium-emphasis-opacity) !important;
+}
+
+:deep(.sb-children) {
+    position: relative;
+    margin-inline-start: var(--sb-indent);
+    padding-inline-start: calc(var(--sb-guide-gap) + 6px);
+}
+
+:deep(.sb-children::before) {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--sb-guide-gap) / 2);
+    width: 1px;
+    opacity: 0.35;
+    background: currentColor;
+}
+
+:deep(.sb-section-children) {
+    padding-inline-start: calc(var(--sb-guide-gap) + 4px);
 }
 </style>

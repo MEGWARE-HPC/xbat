@@ -12,12 +12,10 @@
                         class="sb-chevron"
                         size="small"
                         :icon="isOpen ? '$chevronDown' : '$chevronRight'"
-                        color="currentColor"
                     />
                     <v-icon
                         class="sb-folder-icon"
                         icon="$folder"
-                        color="currentColor"
                     />
                 </template>
 
@@ -140,6 +138,5 @@ const childrenStyle = computed(() => ({
     left: calc(var(--sb-guide-gap) / 2);
     width: 1px;
     opacity: 0.35;
-    background: currentColor;
 }
 </style>
