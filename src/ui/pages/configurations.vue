@@ -1,6 +1,17 @@
 <template>
     <div>
         <v-container fluid>
+            <ConfigurationSidebar
+                :configuration-cache="configurationCache"
+                :selected-id="state.currentEdit"
+                :user="$authStore.user"
+                :user-level="$authStore.userLevel"
+                :UserLevelEnum="$authStore.UserLevelEnum"
+                @select="(id) => (state.selectedEdit = [id])"
+                @create="addConfig"
+                @duplicate="addConfig"
+                @delete="(id) => setAction('delete', id)"
+            />
             <ConfigurationEditor
                 ref="editorRef"
                 :form="form"
@@ -24,17 +35,6 @@
                 @remove-variant="removeVariant"
                 @save="save"
                 @cancel="cancelEdit"
-            />
-            <ConfigurationSidebar
-                :configuration-cache="configurationCache"
-                :selected-id="state.currentEdit"
-                :user="$authStore.user"
-                :user-level="$authStore.userLevel"
-                :UserLevelEnum="$authStore.UserLevelEnum"
-                @select="(id) => (state.selectedEdit = [id])"
-                @create="addConfig"
-                @duplicate="addConfig"
-                @delete="(id) => setAction('delete', id)"
             />
         </v-container>
         <v-dialog v-model="state.showActionDialog" max-width="600px">

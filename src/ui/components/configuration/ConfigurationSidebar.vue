@@ -1,5 +1,5 @@
 <template>
-    <v-navigation-drawer permanent location="right" class="sidebar" width="300">
+    <v-navigation-drawer permanent class="sidebar" width="300">
         <template #prepend>
             <div class="header">CONFIGURATIONS</div>
         </template>
