@@ -22,6 +22,7 @@
                             :key="c.id"
                             :id="c.id"
                             :doc="c.doc"
+                            :depth="1"
                             :selected-id="selectedId"
                             :user="user"
                             :user-level="userLevel"
@@ -273,5 +274,9 @@ const sharedGroups = computed(() => {
         overflow-y: auto;
         max-height: 80vh;
     }
+}
+
+:deep(.v-list-group__header .v-list-item__append) {
+    display: none !important;
 }
 </style>

@@ -3,14 +3,16 @@
         <template #default="{ isHovering, props: hoverProps }">
             <v-list-item
                 v-bind="hoverProps"
+                class="sb-row"
+                density="comfortable"
+                :style="rowStyle"
                 :value="id"
                 :active="selectedId === id"
                 @click="$emit('select', id)"
-                style="line-height: 36px"
             >
                 <template #prepend>
                     <v-icon
-                        class="mr-2"
+                        class="sb-icon"
                         size="small"
                         color="primary-light"
                         :icon="
@@ -26,9 +28,9 @@
                     />
                 </template>
 
-                <span class="configuration-name">
+                <v-list-item-title class="sb-title">
                     {{ doc?.configuration?.configurationName || id }}
-                </span>
+                </v-list-item-title>
 
                 <template #append>
                     <v-btn-group
@@ -66,10 +68,17 @@ const props = defineProps({
     selectedId: { type: String, default: null },
     user: { type: Object, required: true },
     userLevel: { type: Number, required: true },
-    UserLevelEnum: { type: Object, required: true }
+    UserLevelEnum: { type: Object, required: true },
+    depth: { type: Number, default: 0 }
 });
 
 defineEmits(["select", "duplicate", "delete"]);
+
+const INDENT = 12;
+
+const rowStyle = computed(() => ({
+    "--sb-indent": `${props.depth * INDENT}px`
+}));
 
 const canDelete = computed(() => {
     const owner = props.doc?.misc?.owner;
@@ -84,5 +93,20 @@ const canDelete = computed(() => {
 .configuration-name {
     white-space: normal;
     word-break: break-all;
+}
+
+.sb-row {
+    padding-inline-start: var(--sb-indent) !important;
+    min-height: 30px;
+}
+
+.sb-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sb-icon {
+    margin-inline-end: 6px;
 }
 </style>
