@@ -3,7 +3,7 @@
         <template #default="{ isHovering, props: hoverProps }">
             <v-list-item
                 v-bind="hoverProps"
-                class="sb-row"
+                class="sb-row sb-tight"
                 density="comfortable"
                 :style="rowStyle"
                 :value="id"

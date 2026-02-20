@@ -128,7 +128,7 @@
                                 >
                                     <v-list-item
                                         v-bind="groupProps2"
-                                        class="sb-row"
+                                        class="sb-row sb-tight"
                                         density="comfortable"
                                         :style="sectionRowStyle(1)"
                                     >
@@ -155,7 +155,7 @@
                                 </template>
 
                                 <div
-                                    class="sb-children"
+                                    class="sb-children sb-tight"
                                     :style="sectionChildrenStyle(1)"
                                 >
                                     <SidebarConfigItem
@@ -178,7 +178,7 @@
 
                         <v-list-item
                             v-else
-                            class="text-medium-emphasis"
+                            class="text-medium-emphasis sb-row sb-tight"
                             title="No shared configurations"
                         />
                     </div>
@@ -442,6 +442,24 @@ const sectionChildrenStyle = (depth) => ({
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+:deep(.sb-tight .v-list-item__spacer) {
+    width: 4px !important;
+    flex: 0 0 4px !important;
+}
+
+:deep(.sb-tight .v-list-item__prepend) {
+    margin-inline-end: 0 !important;
+}
+
+:deep(.sb-tight .sb-folder-icon),
+:deep(.sb-tight .sb-icon) {
+    margin-inline-end: 8px !important;
+}
+
+:deep(.sb-section-row .sb-folder-icon) {
+    margin-inline-end: 12px !important;
 }
 
 :deep(.sb-chevron) {

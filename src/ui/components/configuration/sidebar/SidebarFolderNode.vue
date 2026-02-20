@@ -3,7 +3,7 @@
         <template #activator="{ props: groupProps, isOpen }">
             <v-list-item
                 v-bind="groupProps"
-                class="sb-row"
+                class="sb-row sb-tight"
                 density="comfortable"
                 :style="rowStyle"
             >
