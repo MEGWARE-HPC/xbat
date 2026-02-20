@@ -29,7 +29,10 @@
                                             : '$chevronRight'
                                     "
                                 />
-                                <v-icon class="sb-folder-icon" icon="$folder" />
+                                <v-icon
+                                    class="sb-folder-icon"
+                                    :icon="isOpen ? '$folderOpen' : '$folder'"
+                                />
                             </template>
 
                             <v-list-item-title class="sb-title">

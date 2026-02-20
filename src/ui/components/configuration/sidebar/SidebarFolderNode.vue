@@ -15,7 +15,7 @@
                     />
                     <v-icon
                         class="sb-folder-icon"
-                        icon="$folder"
+                        :icon="isOpen ? '$folderOpen' : '$folder'"
                     />
                 </template>
 
