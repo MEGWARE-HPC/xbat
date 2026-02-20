@@ -13,7 +13,6 @@
                 <template #prepend>
                     <v-icon
                         class="sb-icon"
-                        size="small"
                         color="primary-light"
                         :icon="
                             doc.configuration?.sharedProjects?.length

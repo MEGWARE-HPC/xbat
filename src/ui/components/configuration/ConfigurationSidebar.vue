@@ -11,8 +11,8 @@
                 v-model:opened="opened"
             >
                 <!-- My / All Configurations -->
-                <v-list-group value="my" :open="true" class="sb-section">
-                    <template #activator="{ props: groupProps }">
+                <v-list-group value="my" class="sb-section">
+                    <template #activator="{ props: groupProps, isOpen }">
                         <v-list-item
                             v-bind="groupProps"
                             class="sb-row sb-section-row"
@@ -20,11 +20,16 @@
                             :style="sectionRowStyle(0)"
                         >
                             <template #prepend>
-                                <span class="sb-chevron-spacer" />
                                 <v-icon
-                                    class="sb-folder-icon"
-                                    icon="$folder"
+                                    class="sb-chevron"
+                                    size="small"
+                                    :icon="
+                                        isOpen
+                                            ? '$chevronDown'
+                                            : '$chevronRight'
+                                    "
                                 />
+                                <v-icon class="sb-folder-icon" icon="$folder" />
                             </template>
 
                             <v-list-item-title class="sb-title">
@@ -72,13 +77,13 @@
                     </div>
                 </v-list-group>
 
+                <!-- Shared -->
                 <v-list-group
                     v-if="showShared"
                     value="shared"
-                    :open="true"
                     class="sb-section"
                 >
-                    <template #activator="{ props: groupProps }">
+                    <template #activator="{ props: groupProps, isOpen }">
                         <v-list-item
                             v-bind="groupProps"
                             class="sb-row sb-section-row"
@@ -86,7 +91,15 @@
                             :style="sectionRowStyle(0)"
                         >
                             <template #prepend>
-                                <span class="sb-chevron-spacer" />
+                                <v-icon
+                                    class="sb-chevron"
+                                    size="small"
+                                    :icon="
+                                        isOpen
+                                            ? '$chevronDown'
+                                            : '$chevronRight'
+                                    "
+                                />
                                 <v-icon class="sb-folder-icon" icon="$share" />
                             </template>
 
@@ -190,7 +203,7 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, ref, watch, onMounted } from "vue";
 
 import SidebarFolderNode from "./sidebar/SidebarFolderNode.vue";
 import SidebarConfigItem from "./sidebar/SidebarConfigItem.vue";
@@ -331,18 +344,54 @@ const sharedGroups = computed(() => {
     );
 });
 
-const opened = ref(["my", "shared"]);
+const opened = ref([]);
 
-watchEffect(() => {
+const isInit = ref(false);
+
+const openHome = ref(false);
+
+const ensureOpened = (keys) => {
+    const set = new Set(opened.value);
+    for (const k of keys) set.add(k);
+    opened.value = Array.from(set);
+};
+
+const initOpened = () => {
     const base = ["my"];
     if (showShared.value) base.push("shared");
+    ensureOpened(base);
+    isInit.value = true;
+};
 
-    if (isManager.value && myHomeNode.value?.id) {
-        base.push(`folder-${myHomeNode.value.id}`);
+onMounted(() => {
+    initOpened();
+});
+
+watch(showShared, (v) => {
+    if (!isInit.value) return;
+
+    if (!v) {
+        opened.value = opened.value.filter((x) => x !== "shared");
+        return;
     }
 
-    opened.value = Array.from(new Set([...base, ...opened.value]));
+    // if shared reopened：
+    // ensureOpened(["shared"]);
 });
+
+watch(
+    () => [isManager.value, myHomeNode.value?.id],
+    ([mgr, homeId]) => {
+        if (!mgr || !homeId) return;
+        if (openHome.value) return;
+
+        const key = `folder-${homeId}`;
+        ensureOpened([key]);
+
+        openHome.value = true;
+    },
+    { immediate: true }
+);
 
 const INDENT = 12;
 const GUIDE_GAP = 6;
@@ -392,20 +441,14 @@ const sectionChildrenStyle = (depth) => ({
     text-overflow: ellipsis;
 }
 
-:deep(.sb-chevron-spacer) {
-    display: inline-block;
-    width: 18px;
+:deep(.sb-chevron) {
     margin-inline-end: 2px;
-}
-
-:deep(.sb-folder-icon) {
-    margin-inline-end: 6px;
     color: rgb(var(--v-theme-on-surface)) !important;
     opacity: var(--v-medium-emphasis-opacity) !important;
 }
 
-:deep(.sb-chevron) {
-    margin-inline-end: 2px;
+:deep(.sb-folder-icon) {
+    margin-inline-end: 6px;
     color: rgb(var(--v-theme-on-surface)) !important;
     opacity: var(--v-medium-emphasis-opacity) !important;
 }
