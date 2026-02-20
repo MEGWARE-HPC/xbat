@@ -446,14 +446,20 @@ const sectionChildrenStyle = (depth) => ({
 
 :deep(.sb-chevron) {
     margin-inline-end: 2px;
-    color: rgb(var(--v-theme-on-surface)) !important;
-    opacity: var(--v-medium-emphasis-opacity) !important;
+    color: $font-disabled !important;
+    opacity: 1 !important;
 }
 
 :deep(.sb-folder-icon) {
     margin-inline-end: 6px;
-    color: rgb(var(--v-theme-on-surface)) !important;
-    opacity: var(--v-medium-emphasis-opacity) !important;
+    color: $primary-light !important;
+    opacity: 0.8 !important;
+    filter: brightness(1.1);
+}
+
+:deep(.sb-folder-icon.is-open) {
+    color: $primary !important;
+    opacity: 0.8 !important;
 }
 
 :deep(.sb-children) {
@@ -469,8 +475,8 @@ const sectionChildrenStyle = (depth) => ({
     bottom: 0;
     left: calc(var(--sb-guide-gap) / 2);
     width: 1px;
-    opacity: 0.35;
-    background: currentColor;
+    background: $font-disabled;
+    opacity: 0.45;
 }
 
 :deep(.sb-section-children) {

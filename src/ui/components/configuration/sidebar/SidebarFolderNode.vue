@@ -15,6 +15,7 @@
                     />
                     <v-icon
                         class="sb-folder-icon"
+                        :class="{ 'is-open': isOpen }"
                         :icon="isOpen ? '$folderOpen' : '$folder'"
                     />
                 </template>
@@ -100,43 +101,5 @@ const childrenStyle = computed(() => ({
 <style scoped lang="scss">
 :deep(.v-list-group__items) {
     padding-inline-start: 0 !important;
-}
-
-.sb-row {
-    padding-inline-start: var(--sb-indent) !important;
-    min-height: 30px;
-}
-
-.sb-title {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.sb-chevron {
-    margin-inline-end: 2px;
-    color: rgb(var(--v-theme-on-surface)) !important;
-    opacity: var(--v-medium-emphasis-opacity) !important;
-}
-.sb-folder-icon {
-    margin-inline-end: 6px;
-    color: rgb(var(--v-theme-on-surface)) !important;
-    opacity: var(--v-medium-emphasis-opacity) !important;
-}
-
-.sb-children {
-    position: relative;
-    margin-inline-start: var(--sb-indent);
-    padding-inline-start: calc(var(--sb-guide-gap) + 6px);
-}
-
-.sb-children::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: calc(var(--sb-guide-gap) / 2);
-    width: 1px;
-    opacity: 0.35;
 }
 </style>
