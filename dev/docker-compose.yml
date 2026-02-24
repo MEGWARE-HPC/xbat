@@ -20,11 +20,11 @@ services:
             - /etc/xbat/valkey.conf:/usr/local/etc/valkey/valkey.conf:ro
         ports:
             - 6379:6379
-    # xbat-pgbouncer:
-    #     image: edoburu/pgbouncer:latest
-    #     container_name: xbat-pgbouncer
-    #     network_mode: "host"
-    #     user: "${XBAT_UID}:${XBAT_GID}"
-    #     volumes:
-    #         - /etc/xbat/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
-    #         - /etc/xbat/userlists.txt:/etc/pgbouncer/userlists.txt:ro
+    xbat-pgbouncer:
+        image: edoburu/pgbouncer:latest
+        container_name: xbat-pgbouncer
+        network_mode: "host"
+        user: "${XBAT_UID}:${XBAT_GID}"
+        volumes:
+            - /etc/xbat/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+            - /etc/xbat/userlists.txt:/etc/pgbouncer/userlists.txt:ro
