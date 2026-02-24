@@ -187,12 +187,6 @@ Copyright (c) 2022-2023, Redis, inc
 
 License: [MIT](#mit) <!--https://github.com/redis/redis-py/blob/master/LICENSE-->
 
-### [aiohttp](https://github.com/aio-libs/aiohttp)
-
-Copyright (c) aio-libs collaboration
-
-License: [Apache-2.0](#apache20) <!--https://github.com/aio-libs/aiohttp/blob/master/LICENSE.txt-->
-
 ### [grpcio](https://github.com/grpc/grpc)
 
 Copyright (c) gRPC authors

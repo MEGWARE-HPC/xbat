@@ -404,7 +404,7 @@ def get_new_jobIds(benchmark_db, db):
                 if 'jobId' in job_data:
                     if job_data['jobId'] not in jobIds:
                         jobIds.append(job_data['jobId'])
-    
+
     jobId_map = {}
     for jobId in jobIds:
         new_jobId = db.getNextAvailableJobId()

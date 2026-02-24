@@ -14,6 +14,9 @@ logger = logging.getLogger(get_logger())
 run_lock = FileLock("/tmp/mongodb.lock" if os.getenv('BUILD', "dev") ==
                     "dev" else "/run/xbat/mongodb.lock")
 
+job_id_lock = FileLock("/tmp/mongodb_jobid.lock" if os.getenv('BUILD', "dev") ==
+                       "dev" else "/run/xbat/mongodb_jobid.lock")
+
 
 # singleton pattern based upon https://stackoverflow.com/a/40542664/8212473
 class MongoConnector(object):
@@ -32,9 +35,6 @@ class MongoConnector(object):
             self.database = settings["database"]
             self.user = settings["user"]
             self.password = settings["password"]
-
-        print("CREATING MONGO WITH", self.address, self.database, self.user,
-              self.password)
 
         logger.info("Creating connection to %s with database '%s'",
                     self.address, self.database)
@@ -136,6 +136,62 @@ class MongoDB(object):
                     "last_run": 1
                 }})
             return run
+
+    @classmethod
+    def getNextAvailableJobId(cls):
+        """
+        Get the next available jobId by finding gaps in existing jobIds.
+        Thread-safe across multiple API instances using MongoDB for reservation tracking.
+        
+        :return: Next available jobId
+        """
+        with job_id_lock:
+            from datetime import datetime, timedelta
+            
+            # Clean up old reservations (older than 1 hour, in case of crashes)
+            one_hour_ago = datetime.utcnow() - timedelta(hours=1)
+            cls.deleteMany("reserved_jobIds", {"reservedAt": {"$lt": one_hour_ago}})
+            
+            # Get all existing jobIds from MongoDB
+            all_jobs = list(cls.getMany("jobs", {}, {"jobId": True, "_id": False}))
+            existing_jobIds = set([job["jobId"] for job in all_jobs]) if all_jobs else set()
+            
+            # Get all reserved jobIds
+            reserved_jobs = list(cls.getMany("reserved_jobIds", {}, {"jobId": True, "_id": False}))
+            reserved_jobIds = set([job["jobId"] for job in reserved_jobs]) if reserved_jobs else set()
+            
+            # Combine existing and reserved
+            all_used_jobIds = existing_jobIds.union(reserved_jobIds)
+            
+            if all_used_jobIds:
+                sorted_jobIds = sorted(all_used_jobIds)
+                
+                # Find first gap in the sequence starting from 1
+                for i in range(1, sorted_jobIds[-1] + 2):
+                    if i not in all_used_jobIds:
+                        # Reserve this jobId in MongoDB
+                        cls.insertOne("reserved_jobIds", {
+                            "jobId": i,
+                            "reservedAt": datetime.utcnow()
+                        })
+                        return i
+            else:
+                # No jobs exist, start from 1
+                cls.insertOne("reserved_jobIds", {
+                    "jobId": 1,
+                    "reservedAt": datetime.utcnow()
+                })
+                return 1
+
+    @classmethod
+    def releaseReservedJobIds(cls, jobIds):
+        """
+        Release jobIds from the reserved collection after they've been persisted.
+        
+        :param jobIds: List or set of jobIds to release
+        """
+        if jobIds:
+            cls.deleteMany("reserved_jobIds", {"jobId": {"$in": list(jobIds)}})
 
     @classmethod
     def getOne(cls, collection, identifierObj, excludeObj={}):

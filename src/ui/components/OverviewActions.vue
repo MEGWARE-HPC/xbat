@@ -311,7 +311,7 @@
                                     <v-checkbox
                                         color="primary-light"
                                         v-model="action.reassignRunNr"
-                                        label="Reassign Run Number"
+                                        label="Reassign"
                                     >
                                         <template #append>
                                             <v-tooltip location="bottom">
@@ -327,12 +327,11 @@
                                                     </v-icon>
                                                 </template>
                                                 <span>
-                                                    This option will reassign
-                                                    the run number in case of
-                                                    conflict, otherwise it will
-                                                    skip the import of the
-                                                    benchmark when the run
-                                                    number already exists
+                                                    This option will assign new
+                                                    run numbers and job IDs to
+                                                    the imported benchmark(s) to
+                                                    avoid conflicts with
+                                                    existing data.
                                                 </span>
                                             </v-tooltip>
                                         </template>
@@ -497,12 +496,7 @@ const setAction = (type: string) => {
     action.ineligible = [];
     action.eligible = [];
 
-    if (
-        !props.selected.length &&
-        type != "import" &&
-        type != "backup"
-    )
-        return;
+    if (!props.selected.length && type != "import" && type != "backup") return;
     if (type == "export") state.nonExportable = false;
 
     if (type == "cancel") {
@@ -590,7 +584,7 @@ const executeAction = async () => {
         const url = window.URL.createObjectURL(responseBlob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = `exported_${action.eligible
+        link.download = `xbat_export_${action.eligible
             .map((x) => x.runNr)
             .join("_")}.tgz`;
         document.body.appendChild(link);
