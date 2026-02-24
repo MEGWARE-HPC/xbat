@@ -2,6 +2,8 @@ import json
 import uuid
 import shutil
 import time
+import threading
+import logging
 from pathlib import Path
 from bson.objectid import ObjectId
 from werkzeug.utils import secure_filename
@@ -146,6 +148,20 @@ def patch(runNr):
     return sanitize_mongo(result), 200
 
 
+def _delete_clickhouse_jobs_background(jobIds):
+    """
+    Background task to delete jobs from ClickHouse.
+    
+    :param jobIds: list of job IDs to delete
+    """
+    logger = logging.getLogger(__name__)
+    try:
+        asyncio.run(clickhouse.delete_jobs(jobIds))
+        logger.info(f"Successfully deleted {len(jobIds)} jobs from ClickHouse")
+    except Exception as e:
+        logger.error(f"Failed to delete jobs from ClickHouse: {e}")
+
+
 @check_user_permissions
 def delete(runNr):
     """
@@ -170,7 +186,11 @@ def delete(runNr):
     db.deleteMany("outputs", {"jobId": {"$in": jobIds}})
 
     if len(jobIds):
-        asyncio.run(clickhouse.delete_jobs(jobIds))
+        # Run ClickHouse deletion in background thread
+        thread = threading.Thread(target=_delete_clickhouse_jobs_background,
+                                  args=(jobIds, ),
+                                  daemon=True)
+        thread.start()
 
     return {}, 204
 
@@ -336,11 +356,11 @@ async def import_benchmark():
         extract_folder = IMPORT_PATH / manager_uuid
         recreate_folder(extract_folder)
         pigz_decompress(tar_path, extract_folder)
-        
+
         # Detect and convert QuestDB format to ClickHouse format if needed
         format_type = detect_format(extract_folder)
         app.logger.info(f"Detected import format: {format_type}")
-        
+
         if format_type == "questdb":
             app.logger.info("Converting from QuestDB to ClickHouse format...")
             conversion_start = time.time()
@@ -348,7 +368,9 @@ async def import_benchmark():
             conversion_duration = time.time() - conversion_start
             if new_folder:
                 extract_folder = new_folder
-                app.logger.info(f"Conversion completed successfully in {conversion_duration:.2f} seconds. New folder: {extract_folder}")
+                app.logger.info(
+                    f"Conversion completed successfully in {conversion_duration:.2f} seconds. New folder: {extract_folder}"
+                )
 
     except Exception as e:
         app.logger.error("Error occurred while extracting: %s" % e)
@@ -369,7 +391,6 @@ async def import_benchmark():
                 f"The following runNr(s) already exist: {', '.join(map(str, existing_run_nrs))}. Use 'Reassign RunNr' to assign new runNr(s) on import."
             )
 
-    
     # Start timing the import process
     import_start_time = time.time()
     # Track all reserved jobIds for cleanup
@@ -459,10 +480,10 @@ async def import_benchmark():
                             "An unexpected error occurred while processing CSV files: %s"
                             % e)
 
-        
         # Log total import duration
         import_duration = time.time() - import_start_time
-        app.logger.info(f"Total import duration: {import_duration:.2f} seconds")
+        app.logger.info(
+            f"Total import duration: {import_duration:.2f} seconds")
         # After successful import, release the reserved jobIds
         if all_reserved_jobIds:
             db.releaseReservedJobIds(all_reserved_jobIds)
@@ -475,7 +496,7 @@ async def import_benchmark():
     finally:
         try:
             print("Cleaning up extracted files...")
-            # shutil.rmtree(extract_folder)
+            shutil.rmtree(extract_folder)
         except Exception as e:
             app.logger.error("Error during deletion of extracted folder: %s",
                              e)
