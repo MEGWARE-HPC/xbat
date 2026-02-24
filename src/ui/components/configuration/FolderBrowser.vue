@@ -9,7 +9,10 @@
                 <!-- Header -->
                 <div class="fb-header">
                     <div class="fb-title">
-                        <v-icon class="mr-2" icon="$folderOpen" />
+                        <v-icon
+                            class="mr-2 fb-ico--folder"
+                            icon="$folderOpen"
+                        />
                         <span class="fb-title-text">{{ folder.name }}</span>
                     </div>
                 </div>
@@ -29,7 +32,10 @@
                         @click="$emit('open-folder', parentId)"
                     >
                         <template #prepend>
-                            <v-icon icon="$arrowLeftTop" class="fb-ico" />
+                            <v-icon
+                                icon="$arrowLeftTop"
+                                class="fb-ico fb-ico--nav"
+                            />
                         </template>
 
                         <v-list-item-title>
@@ -161,6 +167,8 @@ const formatDate = (v) => {
 </script>
 
 <style scoped lang="scss">
+@use "~/assets/css/colors.scss" as *;
+
 .fb {
     padding: 16px;
 }
@@ -242,10 +250,16 @@ const formatDate = (v) => {
 
 .fb-ico {
     margin-inline-end: 8px;
-    opacity: 0.9;
 }
 
 .fb-ico--folder {
-    opacity: 0.9;
+    color: $primary-light;
+    opacity: 0.8;
+    filter: brightness(1.1);
+}
+
+.fb-ico--nav {
+    color: $primary-light;
+    opacity: 0.7;
 }
 </style>
