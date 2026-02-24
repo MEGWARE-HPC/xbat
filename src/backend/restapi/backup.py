@@ -703,7 +703,7 @@ def pigz_decompress(input_path, extract_folder):
         extract_folder.as_posix()
     ]
     try:
-        subprocess.run(command, stderr=subprocess.PIPE, check=True)
+        subprocess.run(command, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, check=True)
         end_time = time.time()
         logger.debug(f"File {input_path} decompressed to {extract_folder}")
         logger.debug(

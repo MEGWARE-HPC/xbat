@@ -355,11 +355,11 @@ async def import_benchmark():
 
     # Track all reserved jobIds for cleanup
     all_reserved_jobIds = []
-    print("EXTRACTED")
+
     try:
         # Process each runNr directory
         for runNr_folder in extract_folder.iterdir():
-            print("RUNNR FOLDER", runNr_folder)
+
             if not runNr_folder.is_dir():
                 continue
 
@@ -392,8 +392,6 @@ async def import_benchmark():
                         new_jobId = db.getNextAvailableJobId()
                         jobId_map[old_jobId] = new_jobId
                         all_reserved_jobIds.append(new_jobId)
-
-            print("HERE", new_runNr, jobId_map)
 
             # Process all JSON files in this runNr folder
             for jsonfile_path in runNr_folder.glob("*.json"):
