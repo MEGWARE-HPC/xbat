@@ -150,17 +150,12 @@ async def clickhouse_import_csvs(csv_paths, old_jobId, new_jobId):
         cmd = base_cmd + ["--query", query]
 
         def _run():
-            file_start = time.time()
             try:
                 with open(csv_file, "rb") as csvfile:
                     result = subprocess.run(cmd,
                                             stdin=csvfile,
                                             stderr=subprocess.PIPE,
                                             check=False)
-                duration = time.time() - file_start
-                logger.debug(
-                    "ClickHouse import duration for table '%s': %.2f seconds",
-                    table_name, duration)
                 return result
             except Exception as e:
                 logger.error(f"Error importing {csv_file}: {e}")
@@ -580,7 +575,12 @@ def _remove_id(item):
     return item
 
 
-def _process_item(collection, item, db, update_collections, is_reassigned_run_nr, lookup_key="_id"):
+def _process_item(collection,
+                  item,
+                  db,
+                  update_collections,
+                  is_reassigned_run_nr,
+                  lookup_key="_id"):
     """
     Process a single item for insert or update.
     
@@ -596,12 +596,14 @@ def _process_item(collection, item, db, update_collections, is_reassigned_run_nr
         lookup_filter = {lookup_key: ObjectId(item["_id"])}
     else:
         lookup_filter = {lookup_key: item[lookup_key]}
-    
+
     # Check if item exists
     existing_item = db.getOne(collection, lookup_filter)
-    
+
     # For reassigned runNr or benchmarks/jobs/outputs, always insert as new
-    if is_reassigned_run_nr and collection in ["benchmarks", "jobs", "outputs"]:
+    if is_reassigned_run_nr and collection in [
+            "benchmarks", "jobs", "outputs"
+    ]:
         _remove_id(item)
         db.insertOne(collection, item)
     elif not existing_item:
@@ -625,7 +627,7 @@ def process_collection(collection, data, db, update_collections,
     """
     # Normalize data to list
     items = data if isinstance(data, list) else [data]
-    
+
     # Determine lookup key based on collection
     lookup_keys = {
         "users": "user_name",
@@ -636,13 +638,13 @@ def process_collection(collection, data, db, update_collections,
         "jobs": "_id",
         "outputs": "_id"
     }
-    
+
     lookup_key = lookup_keys.get(collection, "_id")
-    
+
     # Process each item
     for item in items:
-        _process_item(collection, item, db, update_collections, 
-                     is_reassigned_run_nr, lookup_key)
+        _process_item(collection, item, db, update_collections,
+                      is_reassigned_run_nr, lookup_key)
 
 
 def pigz_compress(input_path, uuid):
