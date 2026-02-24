@@ -574,77 +574,75 @@ def count_csv_files(path: Path) -> int:
     return sum(1 for _ in path.rglob("*.csv"))
 
 
+def _remove_id(item):
+    """Remove _id field from item to avoid duplication during inserts."""
+    item.pop("_id", None)
+    return item
+
+
+def _process_item(collection, item, db, update_collections, is_reassigned_run_nr, lookup_key="_id"):
+    """
+    Process a single item for insert or update.
+    
+    :param collection: Collection name
+    :param item: Item to process
+    :param db: Database instance
+    :param update_collections: Whether to update existing items
+    :param is_reassigned_run_nr: Whether runNr was reassigned
+    :param lookup_key: Key to use for looking up existing items
+    """
+    # Prepare lookup filter
+    if lookup_key == "_id" and "_id" in item:
+        lookup_filter = {lookup_key: ObjectId(item["_id"])}
+    else:
+        lookup_filter = {lookup_key: item[lookup_key]}
+    
+    # Check if item exists
+    existing_item = db.getOne(collection, lookup_filter)
+    
+    # For reassigned runNr or benchmarks/jobs/outputs, always insert as new
+    if is_reassigned_run_nr and collection in ["benchmarks", "jobs", "outputs"]:
+        _remove_id(item)
+        db.insertOne(collection, item)
+    elif not existing_item:
+        _remove_id(item)
+        db.insertOne(collection, item)
+    elif update_collections:
+        _remove_id(item)
+        db.replaceOne(collection, lookup_filter, item)
+
+
 def process_collection(collection, data, db, update_collections,
                        is_reassigned_run_nr):
-    if collection == "configurations":
-        for item in data if isinstance(data, list) else [data]:
-            if not db.getOne(collection, {"_id": ObjectId(item["_id"])}):
-                db.insertOne(collection, item)
-            else:
-                if update_collections:
-                    db.replaceOne(collection, {"_id": ObjectId(item["_id"])},
-                                  item)
-    elif collection == "projects":
-        if isinstance(data, list):
-            for item in data:
-                if not db.getOne(collection, {"_id": ObjectId(item["_id"])}):
-                    db.insertOne(collection, item)
-                else:
-                    if update_collections:
-                        db.replaceOne(collection,
-                                      {"_id": ObjectId(item["_id"])}, item)
-        else:
-            if not db.getOne(collection, {"_id": ObjectId(data["_id"])}):
-                db.insertOne(collection, data)
-            else:
-                if update_collections:
-                    db.replaceOne(collection, {"_id": ObjectId(data["_id"])},
-                                  data)
-    elif collection == "users":
-        if not db.getOne(collection, {"user_name": data["user_name"]}):
-            db.insertOne(collection, data)
-        else:
-            if update_collections:
-                db.replaceOne(collection, {"user_name": data["user_name"]},
-                              data)
-    elif collection == "nodes":
-        if isinstance(data, list):
-            for item in data:
-                if not db.getOne(collection, {"hash": item["hash"]}):
-                    db.insertOne(collection, item)
-                else:
-                    if update_collections:
-                        db.replaceOne(collection, {"hash": item["hash"]}, item)
-        else:
-            if not db.getOne(collection, {"hash": data["hash"]}):
-                db.insertOne(collection, data)
-            else:
-                if update_collections:
-                    db.replaceOne(collection, {"hash": data["hash"]}, data)
-    elif collection in ["benchmarks", "jobs", "outputs"]:
-        if isinstance(data, list):
-            for item in data:
-                if is_reassigned_run_nr or not db.getOne(
-                        collection, {"_id": ObjectId(item["_id"])}):
-                    item.pop(
-                        "_id", None
-                    )  # Remove _id to avoid duplication when inserting as new document
-                    db.insertOne(collection, item)
-                else:
-                    if update_collections:
-                        db.replaceOne(collection,
-                                      {"_id": ObjectId(item["_id"])}, item)
-        else:
-            if is_reassigned_run_nr or not db.getOne(
-                    collection, {"_id": ObjectId(data["_id"])}):
-                data.pop(
-                    "_id", None
-                )  # Remove _id to avoid duplication when inserting as new document
-                db.insertOne(collection, data)
-            else:
-                if update_collections:
-                    db.replaceOne(collection, {"_id": ObjectId(data["_id"])},
-                                  data)
+    """
+    Process collection data for import.
+    
+    :param collection: Collection name
+    :param data: Data to process (single item or list)
+    :param db: Database instance
+    :param update_collections: Whether to update existing items
+    :param is_reassigned_run_nr: Whether runNr was reassigned
+    """
+    # Normalize data to list
+    items = data if isinstance(data, list) else [data]
+    
+    # Determine lookup key based on collection
+    lookup_keys = {
+        "users": "user_name",
+        "nodes": "hash",
+        "configurations": "_id",
+        "projects": "_id",
+        "benchmarks": "_id",
+        "jobs": "_id",
+        "outputs": "_id"
+    }
+    
+    lookup_key = lookup_keys.get(collection, "_id")
+    
+    # Process each item
+    for item in items:
+        _process_item(collection, item, db, update_collections, 
+                     is_reassigned_run_nr, lookup_key)
 
 
 def pigz_compress(input_path, uuid):

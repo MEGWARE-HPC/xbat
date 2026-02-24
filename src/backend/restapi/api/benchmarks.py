@@ -1,6 +1,7 @@
 import json
 import uuid
 import shutil
+import time
 from pathlib import Path
 from bson.objectid import ObjectId
 from werkzeug.utils import secure_filename
@@ -12,7 +13,8 @@ from shared.helpers import sanitize_mongo, replace_runNr, desanitize_mongo, str_
 from backend.restapi.grpc_client import XbatCtldRpcClient
 from backend.restapi.access_control import check_user_permissions
 from backend.restapi.user_helper import get_user_from_token, create_user_benchmark_filter
-from backend.restapi.backup import save_benchmarks, process_collection, replace_jobId_json, clickhouse_import_csvs, pigz_compress, pigz_decompress, count_csv_files
+from backend.utils.backup import save_benchmarks, process_collection, replace_jobId_json, clickhouse_import_csvs, pigz_compress, pigz_decompress, count_csv_files
+from backend.utils.questdb_clickhouse_migration import detect_format, convert_to_clickhouse
 from shared.clickhouse import ClickHouse
 import asyncio
 
@@ -334,6 +336,20 @@ async def import_benchmark():
         extract_folder = IMPORT_PATH / manager_uuid
         recreate_folder(extract_folder)
         pigz_decompress(tar_path, extract_folder)
+        
+        # Detect and convert QuestDB format to ClickHouse format if needed
+        format_type = detect_format(extract_folder)
+        app.logger.info(f"Detected import format: {format_type}")
+        
+        if format_type == "questdb":
+            app.logger.info("Converting from QuestDB to ClickHouse format...")
+            conversion_start = time.time()
+            new_folder = convert_to_clickhouse(extract_folder)
+            conversion_duration = time.time() - conversion_start
+            if new_folder:
+                extract_folder = new_folder
+                app.logger.info(f"Conversion completed successfully in {conversion_duration:.2f} seconds. New folder: {extract_folder}")
+
     except Exception as e:
         app.logger.error("Error occurred while extracting: %s" % e)
         raise httpErrors.InternalServerError("Error extracting files")
@@ -353,6 +369,9 @@ async def import_benchmark():
                 f"The following runNr(s) already exist: {', '.join(map(str, existing_run_nrs))}. Use 'Reassign RunNr' to assign new runNr(s) on import."
             )
 
+    
+    # Start timing the import process
+    import_start_time = time.time()
     # Track all reserved jobIds for cleanup
     all_reserved_jobIds = []
 
@@ -416,9 +435,10 @@ async def import_benchmark():
                         raise httpErrors.BadRequest(
                             "Invalid JSON file causing errors: %s" % e)
                     except Exception as e:
+                        app.logger.error("Error processing JSON file: %s", e)
                         raise httpErrors.InternalServerError(
-                            "An unexpected error occurred while processing: %s"
-                            % e)
+                            "An unexpected error occurred while processing JSON file"
+                        )
 
             # Process CSV files for ClickHouse
             jobs_folder = runNr_folder / "jobs"
@@ -439,6 +459,10 @@ async def import_benchmark():
                             "An unexpected error occurred while processing CSV files: %s"
                             % e)
 
+        
+        # Log total import duration
+        import_duration = time.time() - import_start_time
+        app.logger.info(f"Total import duration: {import_duration:.2f} seconds")
         # After successful import, release the reserved jobIds
         if all_reserved_jobIds:
             db.releaseReservedJobIds(all_reserved_jobIds)
@@ -450,7 +474,8 @@ async def import_benchmark():
         raise e
     finally:
         try:
-            shutil.rmtree(extract_folder)
+            print("Cleaning up extracted files...")
+            # shutil.rmtree(extract_folder)
         except Exception as e:
             app.logger.error("Error during deletion of extracted folder: %s",
                              e)

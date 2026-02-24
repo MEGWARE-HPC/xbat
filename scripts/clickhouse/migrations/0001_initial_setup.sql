@@ -243,6 +243,8 @@ CREATE TABLE IF NOT EXISTS likwid_core_power AS template_topology_float;
 
 CREATE TABLE IF NOT EXISTS likwid_dram_power AS template_topology_float;
 
+CREATE TABLE IF NOT EXISTS likwid_platform_power AS template_float;
+
 CREATE TABLE IF NOT EXISTS fpga_power AS template_device_float;
 
 CREATE TABLE IF NOT EXISTS gpu_power AS template_device_float;
@@ -426,6 +428,7 @@ DROP TABLE IF EXISTS xbat.likwid_mem_w_bw;
 DROP TABLE IF EXISTS xbat.likwid_mem_w_vol;
 DROP TABLE IF EXISTS xbat.likwid_packed_dp;
 DROP TABLE IF EXISTS xbat.likwid_packed_sp;
+DROP TABLE IF EXISTS xbat.likwid_platform_power;
 DROP TABLE IF EXISTS xbat.likwid_scalar_dp;
 DROP TABLE IF EXISTS xbat.likwid_scalar_sp;
 DROP TABLE IF EXISTS xbat.likwid_upi_bw;
