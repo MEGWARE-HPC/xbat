@@ -1,41 +1,81 @@
 <template>
     <div>
         <v-container fluid>
-            <ConfigurationSidebar
-                :configuration-cache="configurationCache"
-                :selected-id="state.currentEdit"
-                :user="$authStore.user"
-                :user-level="$authStore.userLevel"
-                :UserLevelEnum="$authStore.UserLevelEnum"
-                @select="(id) => (state.selectedEdit = [id])"
-                @create="addConfig"
-                @duplicate="addConfig"
-                @delete="(id) => setAction('delete', id)"
-            />
-            <ConfigurationEditor
-                ref="editorRef"
-                :form="form"
-                :validity="validity"
-                :current-edit="state.currentEdit"
-                :current-edit-not-yet-saved="currentEditNotYetSaved"
-                :settings-expanded="settingsExpandedCookie"
-                @update:settingsExpanded="settingsExpandedCookie = $event"
-                :vNotEmpty="vNotEmpty"
-                :vNumber="vNumber"
-                :vInteger="vInteger"
-                :projects="$authStore.user.projects"
-                :partitions="partitions"
-                :partition-tree="partitionTree"
-                :variable-count="variableCount"
-                :variant-tab="state.variantTab"
-                @update:variantTab="state.variantTab = $event"
-                :user-level="$authStore.userLevel"
-                :UserLevelEnum="$authStore.UserLevelEnum"
-                @add-variant="addVariant"
-                @remove-variant="removeVariant"
-                @save="save"
-                @cancel="cancelEdit"
-            />
+            <div class="page-layout">
+                <div class="left">
+                    <ConfigurationSidebar
+                        :configuration-cache="configurationCache"
+                        :selected-id="state.currentEdit"
+                        :user="$authStore.user"
+                        :user-level="$authStore.userLevel"
+                        :UserLevelEnum="$authStore.UserLevelEnum"
+                        @select="(id) => (state.selectedEdit = [id])"
+                        @select-folder="
+                            (fid) => {
+                                selectedFolderId = fid;
+                                state.selectedEdit = [];
+                            }
+                        "
+                        @create="addConfig"
+                        @duplicate="addConfig"
+                        @delete="(id) => setAction('delete', id)"
+                    />
+                </div>
+                <div class="right">
+                    <ConfigurationEditor
+                        v-if="state.currentEdit"
+                        ref="editorRef"
+                        :form="form"
+                        :validity="validity"
+                        :current-edit="state.currentEdit"
+                        :current-edit-not-yet-saved="currentEditNotYetSaved"
+                        :settings-expanded="settingsExpandedCookie"
+                        @update:settingsExpanded="
+                            settingsExpandedCookie = $event
+                        "
+                        :vNotEmpty="vNotEmpty"
+                        :vNumber="vNumber"
+                        :vInteger="vInteger"
+                        :projects="$authStore.user.projects"
+                        :partitions="partitions"
+                        :partition-tree="partitionTree"
+                        :variable-count="variableCount"
+                        :variant-tab="state.variantTab"
+                        @update:variantTab="state.variantTab = $event"
+                        :user-level="$authStore.userLevel"
+                        :UserLevelEnum="$authStore.UserLevelEnum"
+                        @add-variant="addVariant"
+                        @remove-variant="removeVariant"
+                        @save="save"
+                        @cancel="cancelEdit"
+                    />
+                    <FolderBrowser
+                        v-else-if="selectedFolderNode"
+                        :folder="selectedFolderNode"
+                        :configs="
+                            configsByFolder.get(String(selectedFolderId)) || []
+                        "
+                        @open-folder="
+                            (fid) => {
+                                selectedFolderId = fid;
+                            }
+                        "
+                        @open-config="
+                            (cid) => {
+                                selectedFolderId = null;
+                                state.selectedEdit = [cid];
+                            }
+                        "
+                    />
+                    <v-main
+                        v-else
+                        class="empty"
+                        style="--v-layout-bottom: 0; --v-layout-top: 0px"
+                    >
+                        Select a configuration to edit, or a folder to browse.
+                    </v-main>
+                </div>
+            </div>
         </v-container>
         <v-dialog v-model="state.showActionDialog" max-width="600px">
             <v-card>
@@ -85,6 +125,7 @@ import { v4 as uuidv4 } from "uuid";
 
 import ConfigurationSidebar from "~/components/configuration/ConfigurationSidebar.vue";
 import ConfigurationEditor from "~/components/configuration/ConfigurationEditor.vue";
+import FolderBrowser from "~/components/configuration/FolderBrowser.vue";
 
 const { vNotEmpty, vNumber, vInteger } = useFormValidation();
 const { $authStore, $api, $snackbar, $store } = useNuxtApp();
@@ -124,6 +165,7 @@ const defaultForm = {
     sharedProjects: []
 };
 
+const selectedFolderId = ref(null);
 const configurationCache = ref({});
 const form = ref(deepClone(defaultForm));
 
@@ -365,4 +407,67 @@ watch(
         }
     }
 );
+
+const { data: folderTree } = await useAsyncData(
+    `configuration-folders-tree-page-${$authStore.user.user_name}`,
+    async () => (await $api.configurationFolders.get())?.data || []
+);
+
+const folderMap = computed(() => {
+    const map = new Map();
+    const walk = (nodes = [], parentId = null) => {
+        for (const n of nodes) {
+            if (!n?.id) continue;
+
+            const node = { ...n, __parentId: parentId };
+            map.set(String(node.id), node);
+
+            walk(n.children || [], String(node.id));
+        }
+    };
+    walk(folderTree.value || [], null);
+    return map;
+});
+
+const configsByFolder = computed(() => {
+    const m = new Map();
+    for (const [id, doc] of Object.entries(configurationCache.value || {})) {
+        const folderId = doc?.configuration?.folderId
+            ? String(doc.configuration.folderId)
+            : "root";
+        if (!m.has(folderId)) m.set(folderId, []);
+        m.get(folderId).push({ id, doc });
+    }
+    for (const [k, arr] of m.entries()) {
+        arr.sort((a, b) =>
+            (a.doc?.configuration?.configurationName || a.id).localeCompare(
+                b.doc?.configuration?.configurationName || b.id
+            )
+        );
+        m.set(k, arr);
+    }
+    return m;
+});
+
+const selectedFolderNode = computed(() => {
+    if (!selectedFolderId.value) return null;
+    return folderMap.value.get(String(selectedFolderId.value)) || null;
+});
 </script>
+
+<style lang="scss" scoped>
+@use "~/assets/css/colors.scss" as *;
+.empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+
+    height: 100%;
+    width: 100%;
+
+    font-size: 1rem;
+    color: $font-light;
+    font-style: italic;
+}
+</style>

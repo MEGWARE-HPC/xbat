@@ -99,7 +99,8 @@ import {
     mdiBackupRestore,
     mdiFolder,
     mdiFolderOpen,
-    mdiFolderPlusOutline
+    mdiFolderPlusOutline,
+    mdiArrowLeftTop
 } from "@mdi/js";
 
 /*
@@ -196,6 +197,7 @@ export default defineNuxtPlugin((app) => {
                 hide: mdiEyeOff,
                 arrowLeft: mdiArrowLeft,
                 arrowRight: mdiArrowRight,
+                arrowLeftTop: mdiArrowLeftTop,
                 color: mdiPalette,
                 currency: mdiCurrencyUsd,
                 server: mdiServer,

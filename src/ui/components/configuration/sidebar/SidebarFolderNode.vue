@@ -6,6 +6,7 @@
                 class="sb-row sb-tight"
                 density="comfortable"
                 :style="rowStyle"
+                @click="$emit('select-folder', node.id)"
             >
                 <template #prepend>
                     <v-icon
@@ -57,6 +58,7 @@
                 :depth="depth + 1"
                 :max-depth="maxDepth"
                 @select="$emit('select', $event)"
+                @select-folder="$emit('select-folder', $event)"
                 @duplicate="$emit('duplicate', $event)"
                 @delete="$emit('delete', $event)"
             />
@@ -79,7 +81,7 @@ const props = defineProps({
     maxDepth: { type: Number, default: 2 }
 });
 
-defineEmits(["select", "duplicate", "delete"]);
+defineEmits(["select", "select-folder", "duplicate", "delete"]);
 
 const INDENT = 12;
 const GUIDE_GAP = 6;

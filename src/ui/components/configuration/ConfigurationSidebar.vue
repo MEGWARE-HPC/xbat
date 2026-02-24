@@ -74,6 +74,7 @@
                             :depth="0"
                             :max-depth="myMaxDepth"
                             @select="$emit('select', $event)"
+                            @select-folder="$emit('select-folder', $event)"
                             @duplicate="$emit('duplicate', $event)"
                             @delete="$emit('delete', $event)"
                         />
@@ -219,7 +220,7 @@ const props = defineProps({
     UserLevelEnum: { type: Object, required: true }
 });
 
-defineEmits(["select", "create", "duplicate", "delete"]);
+defineEmits(["select", "select-folder", "create", "duplicate", "delete"]);
 
 const { $api } = useNuxtApp();
 
