@@ -16,8 +16,6 @@ services:
         depends_on:
             - xbat-ui
             - xbat-backend
-            - xbat-mongodb
-            - xbat-clickhouse
     xbat-backend:
         image: xbat_backend
         container_name: xbat-backend
@@ -136,6 +134,6 @@ services:
             - /etc/xbat/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
             - /etc/xbat/userlists.txt:/etc/pgbouncer/userlists.txt:ro
         depends_on:
-            - xbat-questdb
+            - xbat-clickhouse
         expose:
             - 6432
