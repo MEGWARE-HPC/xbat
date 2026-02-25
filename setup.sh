@@ -105,6 +105,7 @@ configure_compose() {
     if [[ "$EXPOSE_DATABASES" == true ]]; then
         sed -i "s!#- \"#FRONTEND_NETWORK#:7100:7100\"!- \"$FRONTEND_NETWORK:7100:7100\"!" "$COMPOSE_FILE"
         sed -i "s!#- \"#FRONTEND_NETWORK#:7102:7102\"!- \"$FRONTEND_NETWORK:7102:7102\"!" "$COMPOSE_FILE"
+        sed -i "s!#- \"#FRONTEND_NETWORK#:7103:7103\"!- \"$FRONTEND_NETWORK:7103:7103\"!" "$COMPOSE_FILE"
     fi
 
     sed -i "s!#FRONTEND_NETWORK#!$FRONTEND_NETWORK!g" "$COMPOSE_FILE"

@@ -13,6 +13,7 @@ services:
             #- "#FRONTEND_NETWORK#:7100:7100"  # MongoDB
             - "#FRONTEND_NETWORK#:7101:7101"   # ClickHouse native protocol (must always be open for xbatd)
             #- "#FRONTEND_NETWORK#:7102:7102"  # ClickHouse PostgreSQL protocol
+            #- "#FRONTEND_NETWORK#:7103:7103"  # ClickHouse UI
         depends_on:
             - xbat-ui
             - xbat-backend

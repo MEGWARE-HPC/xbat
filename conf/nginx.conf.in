@@ -21,6 +21,10 @@ stream {
         server xbat-clickhouse:9005;
     }
 
+    upstream clickhouse_http {
+        server #CLICKHOUSE_ADDRESS#;
+    }
+
     # MongoDB with SSL termination
     server {
         listen 7100 ssl;
@@ -50,6 +54,17 @@ stream {
         listen 7102;
         proxy_pass clickhouse_postgres;
         
+        proxy_connect_timeout 5s;
+    }
+
+    # ClickHouse HTTP protocol with SSL termination
+    server {
+        listen 7103 ssl;
+        proxy_pass clickhouse_http;
+        
+        ssl_certificate #SSL_CERTIFICATE#;
+        ssl_certificate_key #SSL_CERTIFICATE_KEY#;
+        ssl_protocols TLSv1.2 TLSv1.3;
         proxy_connect_timeout 5s;
     }
 }
@@ -88,15 +103,6 @@ http {
         server xbat-ui:7003;
     }
 
-    upstream docker-xbat-clickhouse {
-        server #CLICKHOUSE_ADDRESS#;
-    }
-
-    map $http_referer $is_clickhouse_referer {
-        default 0;
-        "~*clickhouse" 1;
-    }
-
     server {
         listen 7000 ssl;
         listen [::]:7000 ssl;
@@ -119,12 +125,6 @@ http {
         
 
         location / {
-
-            # pass all subsequent clickhouse requests with "clickhouse" in referer to xbat-clickhouse
-            if ($is_clickhouse_referer) {
-                proxy_pass http://docker-xbat-clickhouse;
-            }
-
             proxy_pass http://docker-xbat-ui;
             proxy_redirect http://docker-xbat-ui/ $scheme://$http_host/;
         }
@@ -151,20 +151,6 @@ http {
         location ~ /(api/v1|oauth|swagger)/ {
             proxy_pass http://docker-xbat-backend;
             proxy_redirect http://docker-xbat-backend/ $scheme://$http_host/;
-        }
-
-        # proxy initial clickhouse request to xbat-clickhouse
-        # to make clickhouse UI accessible through same port as xbat
-        location = /clickhouse {
-            return 301 /clickhouse/;
-        }
-
-        location /clickhouse/ {
-            proxy_pass http://docker-xbat-clickhouse/;
-
-            proxy_redirect / /clickhouse/;
-            # proxy_buffering off;
-            # add_header Cache-Control "no-store";
         }
     }
 

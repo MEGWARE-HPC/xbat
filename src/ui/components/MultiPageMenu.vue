@@ -59,16 +59,6 @@
                             ></v-icon></template
                         >REST-API Documentation
                     </v-list-item>
-                    <v-list-item
-                        v-bind:title.attr="'Visit web console of metric database'"
-                        :href="`${$authStore.backendUrl}/clickhouse/`"
-                        target="_blank"
-                    >
-                        <template #prepend
-                            ><v-icon size="small" icon="$database"></v-icon
-                        ></template>
-                        Metric Database
-                    </v-list-item>
                     <v-divider class="mt-2 mb-2"></v-divider>
                     <v-list-item to="/logout" v-bind:title.attr="'Sign out'">
                         <template #prepend
