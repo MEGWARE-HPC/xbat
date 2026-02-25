@@ -427,6 +427,14 @@ const folderMap = computed(() => {
     return map;
 });
 
+const rootIdSet = computed(() => {
+    const s = new Set();
+    for (const n of folderTree.value || []) {
+        if (n?.id) s.add(String(n.id));
+    }
+    return s;
+});
+
 const configsByFolder = computed(() => {
     const m = new Map();
     for (const [id, doc] of Object.entries(configurationCache.value || {})) {
@@ -474,7 +482,14 @@ const selectedFolderNode = computed(() => {
         };
     }
 
-    return folderMap.value.get(key) || null;
+    const real = folderMap.value.get(key) || null;
+    if (!real) return null;
+
+    if (isManager.value && rootIdSet.value.has(key)) {
+        return { ...real, __parentId: "__all__" };
+    }
+
+    return real;
 });
 
 const myHomeNode = computed(() => {
