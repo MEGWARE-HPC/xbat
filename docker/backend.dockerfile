@@ -7,6 +7,10 @@ RUN yum update -y \
     && yum install -y make gcc python3.12-devel python3.12-pip python3.12-setuptools sssd-client pam openldap-devel python-devel openssl-devel libffi-devel wget zlib-devel pigz \
     && yum clean -y all
 
+RUN yum install -y yum-utils && \
+    yum-config-manager --add-repo https://packages.clickhouse.com/rpm/clickhouse.repo && \
+    yum install -y clickhouse-client
+
 COPY ./src/setup.py /home/
 COPY ./src/backend /home/backend
 COPY ./src/shared /home/shared
