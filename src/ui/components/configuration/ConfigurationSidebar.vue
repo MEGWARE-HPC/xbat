@@ -112,7 +112,7 @@
                                             : '$chevronRight'
                                     "
                                 />
-                                <v-icon class="sb-folder-icon" icon="$share" />
+                                <v-icon class="sb-folder-icon" icon="$folderNetwork" />
                             </template>
 
                             <v-list-item-title class="sb-title">
