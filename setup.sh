@@ -95,7 +95,6 @@ configure_compose() {
         sed -i "s!#- HOME_MNT#!- $HOME_MNT:/external/$HOME_MNT!g" "$COMPOSE_FILE"
     fi
 
-    sed -i "s!#FRONTEND_NETWORK#!$FRONTEND_NETWORK!g" "$COMPOSE_FILE"
     sed -i "s!#XBAT_UID#!$(id -u "$XBAT_USER")!g" "$COMPOSE_FILE"
     sed -i "s!#XBAT_GID#!$(id -g "$XBAT_USER")!g" "$COMPOSE_FILE"
     sed -i "s!#VAR_LOG#!$LOG_BASE_PATH!g" "$COMPOSE_FILE"
@@ -107,6 +106,8 @@ configure_compose() {
         sed -i "s!#- \"#FRONTEND_NETWORK#:7100:7100\"!- \"$FRONTEND_NETWORK:7100:7100\"!" "$COMPOSE_FILE"
         sed -i "s!#- \"#FRONTEND_NETWORK#:7102:7102\"!- \"$FRONTEND_NETWORK:7102:7102\"!" "$COMPOSE_FILE"
     fi
+
+    sed -i "s!#FRONTEND_NETWORK#!$FRONTEND_NETWORK!g" "$COMPOSE_FILE"
 
     cp "$COMPOSE_FILE" "$INSTALL_PATH"
 }
