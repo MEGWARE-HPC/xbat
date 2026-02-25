@@ -41,10 +41,22 @@ class MongoConnector(object):
         if not len(self.address) or not len(self.database):
             raise ConnectionAbortedError("No address or database specified")
 
-        return pymongo.MongoClient(self.address,
-                                   username=self.user,
-                                   password=self.password,
-                                   authSource="admin")[self.database]
+        # Determine if we need TLS (external connection through nginx SSL proxy over SSH or internal connection without TLS)
+        use_tls = 'localhost' in self.address
+        
+        client_kwargs = {
+            'username': self.user,
+            'password': self.password,
+            'authSource': 'admin'
+        }
+        
+        if use_tls:
+            logger.info("Enabling TLS for external MongoDB connection")
+            client_kwargs['tls'] = True
+            client_kwargs['tlsAllowInvalidCertificates'] = True  # For self-signed certificates
+            client_kwargs['tlsAllowInvalidHostnames'] = True
+        
+        return pymongo.MongoClient(self.address, **client_kwargs)[self.database]
 
     def disconnect(self):
         if self.connection:
