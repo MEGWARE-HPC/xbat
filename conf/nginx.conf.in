@@ -17,8 +17,8 @@ stream {
         server xbat-clickhouse:9000;
     }
 
-    upstream pgbouncer {
-        server xbat-pgbouncer:6432;
+    upstream clickhouse_postgres {
+        server xbat-clickhouse:9005;
     }
 
     # MongoDB with SSL termination
@@ -43,14 +43,13 @@ stream {
         proxy_connect_timeout 5s;
     }
 
-    # PgBouncer (PostgreSQL connection pooler to ClickHouse) with SSL termination
+    # ClickHouse PostgreSQL-compatible protocol without SSL
+    # Nginx SSL not working with PgWire protocol
+    # TODO implement SSL at pgbouncer or clickhouse level
     server {
-        listen 7102 ssl;
-        proxy_pass pgbouncer;
+        listen 7102;
+        proxy_pass clickhouse_postgres;
         
-        ssl_certificate #SSL_CERTIFICATE#;
-        ssl_certificate_key #SSL_CERTIFICATE_KEY#;
-        ssl_protocols TLSv1.2 TLSv1.3;
         proxy_connect_timeout 5s;
     }
 }
