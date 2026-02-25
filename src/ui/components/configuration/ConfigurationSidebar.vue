@@ -18,6 +18,14 @@
                             class="sb-row sb-section-row"
                             density="comfortable"
                             :style="sectionRowStyle(0)"
+                            @click="
+                                $emit(
+                                    'select-folder',
+                                    isManager
+                                        ? '__all__'
+                                        : myHomeNode?.id || null
+                                )
+                            "
                         >
                             <template #prepend>
                                 <v-icon

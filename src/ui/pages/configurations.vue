@@ -52,9 +52,7 @@
                     <FolderBrowser
                         v-else-if="selectedFolderNode"
                         :folder="selectedFolderNode"
-                        :configs="
-                            configsByFolder.get(String(selectedFolderId)) || []
-                        "
+                        :configs="selectedFolderConfigs"
                         @open-folder="
                             (fid) => {
                                 selectedFolderId = fid;
@@ -450,8 +448,62 @@ const configsByFolder = computed(() => {
 });
 
 const selectedFolderNode = computed(() => {
-    if (!selectedFolderId.value) return null;
-    return folderMap.value.get(String(selectedFolderId.value)) || null;
+    const key = selectedFolderId.value ? String(selectedFolderId.value) : "";
+    if (!key) return null;
+
+    if (key === "__all__") {
+        const roots = (folderTree.value || []).map((n) => ({
+            ...n,
+            __parentId: "__all__"
+        }));
+
+        return {
+            id: "__all__",
+            name: "All Folders",
+            __parentId: null,
+            children: roots
+        };
+    }
+
+    if (key === "__shared__") {
+        return {
+            id: "__shared__",
+            name: "Shared Configurations",
+            __parentId: null,
+            children: []
+        };
+    }
+
+    return folderMap.value.get(key) || null;
+});
+
+const myHomeNode = computed(() => {
+    const roots = folderTree.value || [];
+    return roots.find((n) => n?.name === $authStore.user.user_name) || null;
+});
+
+const isManager = computed(
+    () => $authStore.userLevel >= $authStore.UserLevelEnum.manager
+);
+
+watchEffect(() => {
+    if (state.currentEdit) return;
+
+    if (selectedFolderId.value) return;
+
+    if (myHomeNode.value?.id) {
+        selectedFolderId.value = String(myHomeNode.value.id);
+    }
+});
+
+const selectedFolderConfigs = computed(() => {
+    const key = selectedFolderId.value ? String(selectedFolderId.value) : "";
+    if (!key) return [];
+
+    if (key === "__all__") return [];
+    if (key === "__shared__") return [];
+
+    return configsByFolder.value.get(key) || [];
 });
 </script>
 
