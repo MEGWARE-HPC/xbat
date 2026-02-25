@@ -24,7 +24,7 @@ EXECUTOR_COMPOSE="podman-compose"
 HOME_MNT=""
 HELP=false
 NODB=false
-EXPOSE_CLICKHOUSE=false
+EXPOSE_DATABASES=false
 FRONTEND_NETWORK="0.0.0.0"
 CLICKHOUSE_ADDRESS="xbat-clickhouse:8123"
 CLICKHOUSE_ADDRESS_SET=false
@@ -103,6 +103,11 @@ configure_compose() {
     sed -i "s!#FRONTEND_PORT#!$FRONTEND_PORT!g" "$COMPOSE_FILE"
     sed -i "s!#CERT_DIR#!$CERT_DIR!g" "$COMPOSE_FILE"
 
+    if [[ "$EXPOSE_DATABASES" == true ]]; then
+        sed -i "s!#- \"#FRONTEND_NETWORK#:7100:7100\"!- \"$FRONTEND_NETWORK:7100:7100\"!" "$COMPOSE_FILE"
+        sed -i "s!#- \"#FRONTEND_NETWORK#:7102:7102\"!- \"$FRONTEND_NETWORK:7102:7102\"!" "$COMPOSE_FILE"
+    fi
+
     cp "$COMPOSE_FILE" "$INSTALL_PATH"
 }
 
@@ -138,10 +143,6 @@ prepare_databases() {
 
         cp "$CONF_SRC_PATH/mongod.conf" "$CONF_DEST_PATH/mongod.conf"
         cp --recursive "$CONF_SRC_PATH/clickhouse" "$CONF_DEST_PATH/"
-
-        if [[ "$EXPOSE_CLICKHOUSE" == true ]]; then
-            sed -i "s!#- \"#FRONTEND_NETWORK#:9005:9005\"!- \"$FRONTEND_NETWORK:9005:9005\"!" docker-compose.yml
-        fi
     else
         # override file disables clickhouse and mongodb
         cp docker-compose.override.yml "$INSTALL_PATH"
@@ -314,7 +315,7 @@ show_help() {
     echo -e "\t[--frontend-network <ip>] Bind frontend network (default: 0.0.0.0)"
     echo -e "\t[--no-db] Deploy without databases"
     echo -e "\t[--clickhouse-address <address>] Clickhouse address (required with --no-db)"
-    echo -e "\t[--expose-clickhouse] Expose PGWire port of Clickhouse DB to frontend network"
+    echo -e "\t[--expose-databases] Expose database ports (for development purposes)"
     echo -e "\t[--workers <count>] Number of workers (default: 8)"
     echo -e "\t[--certificate-dir <dir>] Certificates directory (default: /etc/xbat/certs)"
     echo -e "\t[--user <user>] System user to run xbat (default: xbat)"
@@ -364,7 +365,7 @@ while [[ $# -gt 0 ]]; do
     --executor) EXECUTOR="$2"; shift; shift;;
     --home-mnt) HOME_MNT="$2"; shift; shift;;
     --no-db) NODB=true; shift;;
-    --expose-clickhouse) EXPOSE_CLICKHOUSE=true; shift;;
+    --expose-databases) EXPOSE_DATABASES=true; shift;;
     --port) FRONTEND_PORT="$2"; shift; shift;;
     --clickhouse-address) CLICKHOUSE_ADDRESS="$2"; CLICKHOUSE_ADDRESS_SET=true; shift; shift;;
     --frontend-network) FRONTEND_NETWORK="$2"; shift; shift;;

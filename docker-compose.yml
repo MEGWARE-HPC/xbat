@@ -10,11 +10,13 @@ services:
             -  #CERT_DIR#:/etc/ssl/:ro
         ports:
             - "#FRONTEND_NETWORK#:#FRONTEND_PORT#:7000"
-            - "#FRONTEND_NETWORK#:7101:7101"  # ClickHouse native protocol (SSL)
-            - "#FRONTEND_NETWORK#:7102:7102"  # ClickHouse PostgreSQL protocol (SSL)
+            #- "#FRONTEND_NETWORK#:7100:7100"  # MongoDB
+            - "#FRONTEND_NETWORK#:7101:7101"   # ClickHouse native protocol (must always be open for xbatd)
+            #- "#FRONTEND_NETWORK#:7102:7102"  # ClickHouse PostgreSQL protocol
         depends_on:
             - xbat-ui
             - xbat-backend
+            - xbat-mongodb
             - xbat-clickhouse
     xbat-backend:
         image: xbat_backend
@@ -87,8 +89,8 @@ services:
             # TODO mongo user fails creating socket in container due to permissions (but only with podman)
             # Mounting tmp is only a workaround
             - /tmp/:/tmp/
-        ports:
-            - "#FRONTEND_NETWORK#:27017:27017"
+        expose:
+            - 27017
 
     xbat-clickhouse:
         image: docker.io/clickhouse/clickhouse-server:25.11.9
