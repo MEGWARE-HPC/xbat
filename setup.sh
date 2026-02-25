@@ -24,10 +24,10 @@ EXECUTOR_COMPOSE="podman-compose"
 HOME_MNT=""
 HELP=false
 NODB=false
-EXPOSE_QUESTDB=false
+EXPOSE_CLICKHOUSE=false
 FRONTEND_NETWORK="0.0.0.0"
-QUESTDB_ADDRESS="xbat-questdb:9000"
-QUESTDB_ADDRESS_SET=false
+CLICKHOUSE_ADDRESS="xbat-clickhouse:8123"
+CLICKHOUSE_ADDRESS_SET=false
 WORKERS=8
 FRONTEND_PORT=7000
 XBAT_USER="xbat"
@@ -127,31 +127,23 @@ prepare_databases() {
 
     MONGODB_PATH="$LIB_BASE_PATH/mongodb"
     MONGODB_LOG_PATH="$LOG_BASE_PATH/mongodb"
-    QUESTDB_PATH="$LIB_BASE_PATH/questdb"
-    QUESTDB_CONF_PATH="$QUESTDB_PATH/conf"
-    QUESTDB_LOG_PATH="$LOG_BASE_PATH/questdb"
+
     CLICKHOUSE_PATH="$LIB_BASE_PATH/clickhouse"
     CLICKHOUSE_LOG_PATH="$LOG_BASE_PATH/clickhouse"
 
     if [[ "$NODB" == false ]]; then
 
-        sudo -u "$XBAT_USER" mkdir -p "$MONGODB_PATH" "$MONGODB_LOG_PATH" "$QUESTDB_PATH" "$QUESTDB_LOG_PATH" "$QUESTDB_CONF_PATH" "$CLICKHOUSE_PATH" "$CLICKHOUSE_LOG_PATH"
+        sudo -u "$XBAT_USER" mkdir -p "$MONGODB_PATH" "$MONGODB_LOG_PATH" "$CLICKHOUSE_PATH" "$CLICKHOUSE_LOG_PATH"
         sudo -u "$XBAT_USER" touch "$MONGODB_LOG_PATH/mongod.log"
 
         cp "$CONF_SRC_PATH/mongod.conf" "$CONF_DEST_PATH/mongod.conf"
         cp --recursive "$CONF_SRC_PATH/clickhouse" "$CONF_DEST_PATH/"
 
-        # TODO find out why this file is missing
-        # temporary fix for missing mime.types file in questdb
-        if [[ ! -f "$QUESTDB_CONF_PATH/mime.types" ]]; then
-            wget -O "$QUESTDB_CONF_PATH/mime.types" https://raw.githubusercontent.com/questdb/questdb/refs/heads/master/core/conf/mime.types
-        fi
-
-        if [[ "$EXPOSE_QUESTDB" == true ]]; then
-            sed -i "s!#- \"#FRONTEND_NETWORK#:8812:8812\"!- \"$FRONTEND_NETWORK:8812:8812\"!" docker-compose.yml
+        if [[ "$EXPOSE_CLICKHOUSE" == true ]]; then
+            sed -i "s!#- \"#FRONTEND_NETWORK#:9005:9005\"!- \"$FRONTEND_NETWORK:9005:9005\"!" docker-compose.yml
         fi
     else
-        # override file disables questdb and mongodb
+        # override file disables clickhouse and mongodb
         cp docker-compose.override.yml "$INSTALL_PATH"
     fi
 
@@ -167,8 +159,8 @@ prepare_databases() {
 }
 
 install_action() {
-    if [[ "$NODB" == true && "$QUESTDB_ADDRESS_SET" == false ]]; then
-        log_error "Please provide --questdb-address when using --no-db."
+    if [[ "$NODB" == true && "$CLICKHOUSE_ADDRESS_SET" == false ]]; then
+        log_error "Please provide --clickhouse-address when using --no-db."
         exit 1
     fi
 
@@ -181,7 +173,7 @@ install_action() {
     rsync -Rr --exclude 'build' . "$BUILD_PATH/"
     pushd "$BUILD_PATH" > /dev/null
 
-    sed -i "s!#QUESTDB_ADDRESS#!$QUESTDB_ADDRESS!" ./conf/nginx.conf.in
+    sed -i "s!#CLICKHOUSE_ADDRESS#!$CLICKHOUSE_ADDRESS!" ./conf/nginx.conf.in
     sed -i "s!workers = 8!workers = $WORKERS!" ./src/backend/config-prod.py
     sed -i "s!instances: \"8\"!instances: \"$WORKERS\"!" ./src/ui/ecosystem.config.cjs
 
@@ -321,8 +313,8 @@ show_help() {
     echo -e "\t[--port <port>] Frontend port (default: 7000)"
     echo -e "\t[--frontend-network <ip>] Bind frontend network (default: 0.0.0.0)"
     echo -e "\t[--no-db] Deploy without databases"
-    echo -e "\t[--questdb-address <address>] QuestDB address (required with --no-db)"
-    echo -e "\t[--expose-questdb] Expose QuestDB PGWire port"
+    echo -e "\t[--clickhouse-address <address>] Clickhouse address (required with --no-db)"
+    echo -e "\t[--expose-clickhouse] Expose PGWire port of Clickhouse DB to frontend network"
     echo -e "\t[--workers <count>] Number of workers (default: 8)"
     echo -e "\t[--certificate-dir <dir>] Certificates directory (default: /etc/xbat/certs)"
     echo -e "\t[--user <user>] System user to run xbat (default: xbat)"
@@ -372,9 +364,9 @@ while [[ $# -gt 0 ]]; do
     --executor) EXECUTOR="$2"; shift; shift;;
     --home-mnt) HOME_MNT="$2"; shift; shift;;
     --no-db) NODB=true; shift;;
-    --expose-questdb) EXPOSE_QUESTDB=true; shift;;
+    --expose-clickhouse) EXPOSE_CLICKHOUSE=true; shift;;
     --port) FRONTEND_PORT="$2"; shift; shift;;
-    --questdb-address) QUESTDB_ADDRESS="$2"; QUESTDB_ADDRESS_SET=true; shift; shift;;
+    --clickhouse-address) CLICKHOUSE_ADDRESS="$2"; CLICKHOUSE_ADDRESS_SET=true; shift; shift;;
     --frontend-network) FRONTEND_NETWORK="$2"; shift; shift;;
     --workers) WORKERS="$2"; shift; shift;;
     --certificate-dir) CERT_DIR="$2"; shift; shift;;

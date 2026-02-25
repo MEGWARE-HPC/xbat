@@ -10,9 +10,12 @@ services:
             -  #CERT_DIR#:/etc/ssl/:ro
         ports:
             - "#FRONTEND_NETWORK#:#FRONTEND_PORT#:7000"
+            - "#FRONTEND_NETWORK#:7101:7101"  # ClickHouse native protocol (SSL)
+            - "#FRONTEND_NETWORK#:7102:7102"  # ClickHouse PostgreSQL protocol (SSL)
         depends_on:
             - xbat-ui
             - xbat-backend
+            - xbat-clickhouse
     xbat-backend:
         image: xbat_backend
         container_name: xbat-backend
@@ -106,12 +109,9 @@ services:
                 soft: 262144
                 hard: 262144
         expose:
-            - 8123 # TODO remove once passed through nginx
+            - 8123
             - 9000
-        ports:
-            - "#FRONTEND_NETWORK#:8123:8123" # web UI and HTTP API
-            - "#FRONTEND_NETWORK#:9000:9000" # native protocol
-            - "#FRONTEND_NETWORK#:9005:9005" # postgreSQL-compatible protocol
+            - 9005
     xbat-valkey:
         image: docker.io/valkey/valkey:7.2-alpine
         restart: unless-stopped
