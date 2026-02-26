@@ -11,11 +11,14 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - unified font usage across browsers in the documentation (#184) and switched to Source Sans 3
+- upgraded xbat font from Source Sans Pro to Source Sans 3
 - improved xbatd for el8 and el9
 
 ### Fixed
 
 - jobs not being processed
+- duplicate headers in CSV export of measurements
+- nginx timeout for CSV exports
 
 ## v1.2.0 - 2026-01-05
 
