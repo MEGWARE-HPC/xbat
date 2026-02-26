@@ -126,6 +126,7 @@ def build_folder_tree(raw_folders):
             "id": str(folder_id),
             "name": raw_folder["folder"]["folderName"],
             "type": "folder",
+            "misc": raw_folder.get("misc", {}),
             "children": []
         }
 

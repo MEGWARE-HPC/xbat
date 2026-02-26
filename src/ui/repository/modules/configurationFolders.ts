@@ -5,6 +5,11 @@ export interface ConfigurationFolderNode {
     name: string;
     type: "folder";
     parentId: string | null;
+    misc?: {
+        owner: string;
+        created: string;
+        edited: string;
+    };
     children?: ConfigurationFolderNode[];
 }
 
