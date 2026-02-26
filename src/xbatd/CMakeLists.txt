@@ -10,6 +10,9 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 
+# Enable OpenSSL support for clickhouse-cpp
+set(WITH_OPENSSL ON CACHE BOOL "Enable OpenSSL support" FORCE)
+
 # Add clickhouse-cpp submodule
 add_subdirectory(src/external/clickhouse-cpp)
 
