@@ -76,12 +76,20 @@ def _get_clickhouse_base_cmd():
         logger.error("Invalid configuration: missing 'clickhouse' config.")
         return None
 
+    is_dev = app.config["BUILD"] == "dev"
+
     ch_config = config["clickhouse"]
-    host = ch_config.get("host", "localhost")
-    port = ch_config.get("daemon_port", 9000)
+    host = ch_config.get("host")
     user = ch_config.get("user")
     password = ch_config.get("password")
     database = ch_config.get("database")
+
+    # always use internally exposed 9000 port for regular setups
+    if host == "xbat-clickhouse":
+        port = 9000
+    # for --no-db setups or dev environments, use the "daemon_port" instead
+    else:
+        port = ch_config.get("daemon_port", 7101)
 
     base_cmd = ["clickhouse-client", "--host", host, "--port", str(port)]
     if database:
@@ -90,6 +98,9 @@ def _get_clickhouse_base_cmd():
         base_cmd.extend(["--user", user])
     if password:
         base_cmd.extend(["--password", password])
+
+    if is_dev:
+        base_cmd.extend(["--secure", "--accept-invalid-certificate"])
 
     return base_cmd
 

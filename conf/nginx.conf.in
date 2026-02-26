@@ -10,19 +10,19 @@ events {
 # Stream module for TCP proxying with SSL termination
 stream {
     upstream mongodb {
-        server xbat-mongodb:27017;
+        server #MONGODB_HOST#:27017;
     }
 
     upstream clickhouse_native {
-        server xbat-clickhouse:9000;
+        server #CLICKHOUSE_HOST#:9000;
     }
 
     upstream clickhouse_postgres {
-        server xbat-clickhouse:9005;
+        server #CLICKHOUSE_HOST#:9005;
     }
 
     upstream clickhouse_http {
-        server #CLICKHOUSE_ADDRESS#;
+        server #CLICKHOUSE_HOST#:8123;
     }
 
     # MongoDB with SSL termination

@@ -297,11 +297,11 @@ validate_clickhouse_section() {
     check_default_value "CLICKHOUSE_EXTERNAL_HOST" "changeme" "must be changed to a valid external hostname or IP that is accessible for the xbatd"
 
     check_infrastructure_value "CLICKHOUSE_HOST" "xbat-clickhouse" "has been changed from docker-compose default - only change this value if you are deploying with --no-db"
-    check_infrastructure_value "CLICKHOUSE_PORT" "9005" "has been changed from docker-compose default port - only change this value if you are deploying with --no-db"
+    check_infrastructure_value "CLICKHOUSE_PORT" "9005" "has been changed from docker-compose default port - only change this value if you are deploying with --no-db and non-default ports"
     check_infrastructure_value "CLICKHOUSE_USER" "xbat" "has been changed from default user name"
     check_infrastructure_value "CLICKHOUSE_DAEMON_USER" "xbatd" "has been changed from default daemon user name"
     check_infrastructure_value "CLICKHOUSE_DATABASE" "xbat" "has been changed from default database name"
-    check_infrastructure_value "CLICKHOUSE_DAEMON_PORT" "9000" "has been changed from default daemon port (9000)"
+    check_infrastructure_value "CLICKHOUSE_DAEMON_PORT" "7101" "has been changed from default daemon port (7101)"
 }
 
 validate_pgbouncer_section() {

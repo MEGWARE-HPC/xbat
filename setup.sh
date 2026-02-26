@@ -26,8 +26,10 @@ HELP=false
 NODB=false
 EXPOSE_DATABASES=false
 FRONTEND_NETWORK="0.0.0.0"
-CLICKHOUSE_ADDRESS="xbat-clickhouse:8123"
-CLICKHOUSE_ADDRESS_SET=false
+CLICKHOUSE_HOST="xbat-clickhouse"
+CLICKHOUSE_HOST_SET=false
+MONGODB_HOST="xbat-mongodb"
+MONGODB_HOST_SET=false
 WORKERS=8
 FRONTEND_PORT=7000
 XBAT_USER="xbat"
@@ -162,9 +164,15 @@ prepare_databases() {
 }
 
 install_action() {
-    if [[ "$NODB" == true && "$CLICKHOUSE_ADDRESS_SET" == false ]]; then
-        log_error "Please provide --clickhouse-address when using --no-db."
-        exit 1
+    if [[ "$NODB" == true ]]; then
+        if [[ "$CLICKHOUSE_HOST_SET" == false ]]; then
+            log_error "Please provide --clickhouse-host when using --no-db."
+            exit 1
+        fi
+        if [[ "$MONGODB_HOST_SET" == false ]]; then
+            log_error "Please provide --mongodb-host when using --no-db."
+            exit 1
+        fi
     fi
 
     check_prerequisites
@@ -176,7 +184,8 @@ install_action() {
     rsync -Rr --exclude 'build' . "$BUILD_PATH/"
     pushd "$BUILD_PATH" > /dev/null
 
-    sed -i "s!#CLICKHOUSE_ADDRESS#!$CLICKHOUSE_ADDRESS!" ./conf/nginx.conf.in
+    sed -i "s!#CLICKHOUSE_HOST#!$CLICKHOUSE_HOST!" ./conf/nginx.conf.in
+    sed -i "s!#MONGODB_HOST#!$MONGODB_HOST!" ./conf/nginx.conf.in
     sed -i "s!workers = 8!workers = $WORKERS!" ./src/backend/config-prod.py
     sed -i "s!instances: \"8\"!instances: \"$WORKERS\"!" ./src/ui/ecosystem.config.cjs
 
@@ -316,7 +325,8 @@ show_help() {
     echo -e "\t[--port <port>] Frontend port (default: 7000)"
     echo -e "\t[--frontend-network <ip>] Bind frontend network (default: 0.0.0.0)"
     echo -e "\t[--no-db] Deploy without databases"
-    echo -e "\t[--clickhouse-address <address>] Clickhouse address (required with --no-db)"
+    echo -e "\t[--clickhouse-host <host>] Clickhouse hostname or IP (required with --no-db)"
+    echo -e "\t[--mongodb-host <host>] MongoDB hostname or IP (required with --no-db)"
     echo -e "\t[--expose-databases] Expose database ports (for development purposes)"
     echo -e "\t[--workers <count>] Number of workers (default: 8)"
     echo -e "\t[--certificate-dir <dir>] Certificates directory (default: /etc/xbat/certs)"
@@ -369,7 +379,8 @@ while [[ $# -gt 0 ]]; do
     --no-db) NODB=true; shift;;
     --expose-databases) EXPOSE_DATABASES=true; shift;;
     --port) FRONTEND_PORT="$2"; shift; shift;;
-    --clickhouse-address) CLICKHOUSE_ADDRESS="$2"; CLICKHOUSE_ADDRESS_SET=true; shift; shift;;
+    --clickhouse-host) CLICKHOUSE_HOST="$2"; CLICKHOUSE_HOST_SET=true; shift; shift;;
+    --mongodb-host) MONGODB_HOST="$2"; MONGODB_HOST_SET=true; shift; shift;;
     --frontend-network) FRONTEND_NETWORK="$2"; shift; shift;;
     --workers) WORKERS="$2"; shift; shift;;
     --certificate-dir) CERT_DIR="$2"; shift; shift;;
