@@ -1,0 +1,214 @@
+name: VM Test
+
+on:
+  workflow_call:
+    inputs:
+      distro:
+        required: true
+        type: string   # 8 | 9 | 10
+      version:
+        required: true
+        type: string
+      release:
+        required: true
+        type: string
+
+jobs:
+  test-vm:
+    runs-on: [self-hosted, xbat]
+
+    env:
+      VM_NAME: ci-el${{ inputs.distro }}-${{ github.run_id }}
+      BASE_IMAGE: /data/libvirt/images/almalinux${{ inputs.distro }}-base.qcow2
+      OVERLAY: /data/libvirt/images/ci-el${{ inputs.distro }}-${{ github.run_id }}.qcow2
+      CLOUDINIT_ISO: /data/libvirt/cloudinit/seed.iso
+      SSH_KEY: /root/.ssh/id_rsa_test
+      REPO_URL: https://github.com/MEGWARE-HPC/xbat.git
+
+    steps:
+
+      # -------------------------------------------------------
+      # 1. create overlay
+      # -------------------------------------------------------
+      - name: Create overlay disk
+        run: |
+          qemu-img create -f qcow2 \
+            -b $BASE_IMAGE \
+            -F qcow2 \
+            $OVERLAY 20G
+
+      # -------------------------------------------------------
+      # 2. VM start
+      # -------------------------------------------------------
+      - name: Start ephemeral VM
+        run: |
+          virt-install \
+            --name $VM_NAME \
+            --memory 4096 \
+            --vcpus 2 \
+            --cpu host \
+            --disk $OVERLAY,format=qcow2,bus=virtio \
+            --cdrom $CLOUDINIT_ISO \
+            --import \
+            --network network=default,model=virtio \
+            --os-variant almalinux${{ inputs.distro }} \
+            --graphics none \
+            --noautoconsole \
+            --check path_in_use=off
+
+      # -------------------------------------------------------
+      # 3. waiting for IP + SSH
+      # -------------------------------------------------------
+      - name: Wait for VM to be reachable
+        run: |
+          MAC=$(virsh domiflist $VM_NAME | awk '/network/{print $5}')
+          echo "VM MAC: $MAC"
+
+          VM_IP=""
+          for i in $(seq 1 30); do
+            VM_IP=$(virsh net-dhcp-leases default \
+              | grep "$MAC" \
+              | awk '{print $5}' | cut -d'/' -f1)
+            if [[ -n "$VM_IP" ]]; then
+              echo "Got IP: $VM_IP"
+              break
+            fi
+            echo "Waiting for DHCP lease ($i)..."
+            sleep 4
+          done
+
+          if [[ -z "$VM_IP" ]]; then
+            echo "ERROR: No IP obtained"
+            exit 1
+          fi
+
+          echo "VM_IP=$VM_IP" >> $GITHUB_ENV
+
+          for i in $(seq 1 30); do
+            if ssh -i $SSH_KEY \
+                -o StrictHostKeyChecking=no \
+                -o ConnectTimeout=5 \
+                root@$VM_IP "echo ok" 2>/dev/null; then
+              echo "SSH ready"
+              exit 0
+            fi
+            echo "Waiting for SSH ($i)..."
+            sleep 4
+          done
+
+          echo "ERROR: SSH not reachable"
+          exit 1
+
+      # -------------------------------------------------------
+      # 4. Repo clone
+      # -------------------------------------------------------
+      - name: Clone repository in VM
+        run: |
+          ssh -i $SSH_KEY -o StrictHostKeyChecking=no root@$VM_IP bash << EOF
+          set -euo pipefail
+          git clone --depth 1 --branch ci-testing $REPO_URL /opt/xbat
+          echo "Checked out commit: ${{ github.sha }}"
+          EOF
+
+      # -------------------------------------------------------
+      # 5. RPM build
+      # -------------------------------------------------------
+      - name: Build RPM in VM
+        run: |
+          ssh -i $SSH_KEY -o StrictHostKeyChecking=no root@$VM_IP bash << EOF
+          set -euo pipefail
+          cd /opt/xbat/src/xbatd
+          chmod +x build.sh
+          ./build.sh ${{ inputs.version }} \
+            --release ${{ inputs.release }} \
+            --distro el${{ inputs.distro }} \
+            --executor docker
+          ls -lh *.rpm
+          EOF
+
+      # -------------------------------------------------------
+      # 6. install + Service testing
+      # -------------------------------------------------------
+      - name: Install RPM and test service
+        run: |
+          ssh -i $SSH_KEY -o StrictHostKeyChecking=no root@$VM_IP bash << 'EOF'
+          set -euo pipefail
+
+          RPM=$(ls /opt/xbat/src/xbatd/xbatd-*.rpm)
+          echo "Installing $RPM"
+          dnf install -y $RPM
+
+          echo "Starting service"
+          systemctl start xbatd
+
+          echo "Verifying service is active"
+          systemctl is-active --quiet xbatd
+
+          echo "Service OK"
+          EOF
+
+      # -------------------------------------------------------
+      # 7. Removal Test
+      # -------------------------------------------------------
+      - name: Remove RPM and verify cleanup
+        run: |
+          ssh -i $SSH_KEY -o StrictHostKeyChecking=no root@$VM_IP bash << 'EOF'
+          set -euo pipefail
+
+          systemctl stop xbatd
+          dnf remove -y xbatd
+
+          if systemctl list-unit-files | grep -q xbatd; then
+            echo "ERROR: Service unit still present"
+            exit 1
+          fi
+
+          echo "Removal successful"
+          EOF
+
+      # -------------------------------------------------------
+      # 8. Extra Debug Logs 
+      # -------------------------------------------------------
+      - name: Dump debug info on failure
+        if: failure()
+        run: |
+          ssh -i $SSH_KEY -o StrictHostKeyChecking=no root@$VM_IP bash << 'EOF' || true
+          echo "=== SYSTEMD STATUS ==="
+          systemctl status xbatd --no-pager || true
+          echo "=== JOURNAL ==="
+          journalctl -xe --no-pager | tail -n 100 || true
+          echo "=== DNF HISTORY ==="
+          dnf history || true
+          EOF
+
+      # -------------------------------------------------------
+      # 9. Cleanup on sucess
+      # -------------------------------------------------------
+      - name: Destroy VM on success
+        if: success()
+        run: |
+          echo "Pipeline successful – destroying VM"
+          virsh destroy $VM_NAME 2>/dev/null || true
+          virsh undefine $VM_NAME 2>/dev/null || true
+          rm -f $OVERLAY
+          echo "Cleanup complete"
+
+      # -------------------------------------------------------
+      # 10. keeping vm on failure (only for debugging)
+      # -------------------------------------------------------
+      - name: Keep VM for debugging
+        if: failure()
+        run: |
+          echo "================================================="
+          echo "Pipeline FAILED – VM kept for debugging"
+          echo "VM Name:  $VM_NAME"
+          echo "Overlay:  $OVERLAY"
+          echo ""
+          echo "To connect:"
+          echo "  ssh -i $SSH_KEY root@$VM_IP"
+          echo ""
+          echo "To destroy manually when done:"
+          echo "  virsh destroy $VM_NAME"
+          echo "  virsh undefine $VM_NAME"
+          echo "  rm -f $OVERLAY"
+          echo "================================================="

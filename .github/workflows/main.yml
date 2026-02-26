@@ -9,37 +9,9 @@ on:
       - ci-testing
 
 jobs:
-  build-el10:
-    uses: ./.github/workflows/build.yml
+  test-el8:
+    uses: ./.github/workflows/vm-test.yml
     with:
+      distro: el8
       version: 1.0.0
       release: rc0
-      executor: docker
-
-  install-el10:
-    needs: build-el10
-    uses: ./.github/workflows/install.yml
-    with:
-      rpm_artifact: rpm-el10
-
-  install-service-el10:
-    needs: install-el10
-    runs-on: [self-hosted, xbat]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/cache-node-modules
-      - uses: ./.github/actions/cache-nuxt-fonts
-      - name: Docker setup for AlmaLinux 10
-        run: |
-          sudo dnf remove -y podman-docker docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine || true
-          sudo dnf -y install dnf-plugins-core
-          sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-          sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-          sudo systemctl enable --now docker
-          docker --version
-          docker compose version
-      - name: Run setup.sh install and uninstall on host
-        run: |
-          chmod +x ./setup.sh
-          sudo ./setup.sh install --home-mnt /home/ --executor docker --workers 4
-          sudo ./setup.sh remove --yes
