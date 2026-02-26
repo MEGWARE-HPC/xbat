@@ -455,6 +455,70 @@ const configsByFolder = computed(() => {
     return m;
 });
 
+const projectNameById = computed(() => {
+    const m = new Map();
+    for (const p of $authStore.user?.projects || []) {
+        m.set(String(p._id), p.name);
+    }
+    return m;
+});
+
+const sharedConfigsFlat = computed(() => {
+    const arr = [];
+    for (const [id, doc] of Object.entries(configurationCache.value || {})) {
+        if (doc?.misc?.owner && doc.misc.owner !== $authStore.user.user_name) {
+            arr.push({ id, doc });
+        }
+    }
+    return arr;
+});
+
+const sharedBucket = (doc) => {
+    const ids = doc?.configuration?.sharedProjects || [];
+    for (const pid of ids) {
+        const k = String(pid);
+        if (projectNameById.value.has(k)) return k;
+    }
+    return "unknown";
+};
+
+// groups: [{ key: "__shared__:pid", pid, name, items: [{id,doc}]}]
+const sharedGroups = computed(() => {
+    const buckets = new Map();
+
+    for (const { id, doc } of sharedConfigsFlat.value) {
+        const pid = sharedBucket(doc);
+        const name =
+            pid === "unknown"
+                ? "Unknown / Other"
+                : projectNameById.value.get(String(pid)) || "Unknown / Other";
+
+        const groupKey = `__shared__:${pid}`;
+        if (!buckets.has(groupKey)) {
+            buckets.set(groupKey, { key: groupKey, pid, name, items: [] });
+        }
+        buckets.get(groupKey).items.push({ id, doc });
+    }
+
+    for (const g of buckets.values()) {
+        g.items.sort((a, b) =>
+            (a.doc?.configuration?.configurationName || a.id).localeCompare(
+                b.doc?.configuration?.configurationName || b.id
+            )
+        );
+    }
+
+    return Array.from(buckets.values()).sort((a, b) =>
+        a.name.localeCompare(b.name)
+    );
+});
+
+const sharedGroupByKey = computed(() => {
+    const m = new Map();
+    for (const g of sharedGroups.value) m.set(g.key, g);
+    return m;
+});
+
 const selectedFolderNode = computed(() => {
     const key = selectedFolderId.value ? String(selectedFolderId.value) : "";
     if (!key) return null;
@@ -474,10 +538,30 @@ const selectedFolderNode = computed(() => {
     }
 
     if (key === "__shared__") {
+        // children = project group "folders"
+        const children = sharedGroups.value.map((g) => ({
+            id: g.key,
+            name: g.name,
+            __parentId: "__shared__",
+            children: []
+        }));
+
         return {
             id: "__shared__",
             name: "Shared Configurations",
             __parentId: null,
+            children
+        };
+    }
+
+    if (key.startsWith("__shared__:")) {
+        const g = sharedGroupByKey.value.get(key);
+        if (!g) return null;
+
+        return {
+            id: g.key,
+            name: g.name,
+            __parentId: "__shared__",
             children: []
         };
     }
@@ -517,6 +601,11 @@ const selectedFolderConfigs = computed(() => {
 
     if (key === "__all__") return [];
     if (key === "__shared__") return [];
+
+    if (key.startsWith("__shared__:")) {
+        const g = sharedGroupByKey.value.get(key);
+        return g?.items || [];
+    }
 
     return configsByFolder.value.get(key) || [];
 });

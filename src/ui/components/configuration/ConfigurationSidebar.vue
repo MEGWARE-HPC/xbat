@@ -101,6 +101,7 @@
                             class="sb-row sb-section-row"
                             density="comfortable"
                             :style="sectionRowStyle(0)"
+                            @click="$emit('select-folder', '__shared__')"
                         >
                             <template #prepend>
                                 <v-icon
@@ -112,7 +113,10 @@
                                             : '$chevronRight'
                                     "
                                 />
-                                <v-icon class="sb-folder-icon" icon="$folderNetwork" />
+                                <v-icon
+                                    class="sb-folder-icon"
+                                    icon="$folderNetwork"
+                                />
                             </template>
 
                             <v-list-item-title class="sb-title">
@@ -140,6 +144,12 @@
                                         class="sb-row sb-tight"
                                         density="comfortable"
                                         :style="sectionRowStyle(1)"
+                                        @click="
+                                            $emit(
+                                                'select-folder',
+                                                `__shared__:${g.pid}`
+                                            )
+                                        "
                                     >
                                         <template #prepend>
                                             <v-icon
@@ -339,7 +349,7 @@ const sharedGroups = computed(() => {
                 : projectNameById.value.get(pid);
 
         const key = `shared-${pid}`;
-        if (!buckets.has(key)) buckets.set(key, { key, name, items: [] });
+        if (!buckets.has(key)) buckets.set(key, { key, pid, name, items: [] });
         buckets.get(key).items.push({ id, doc });
     }
 
