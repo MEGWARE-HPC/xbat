@@ -10,10 +10,10 @@ services:
             -  #CERT_DIR#:/etc/ssl/:ro
         ports:
             - "#FRONTEND_NETWORK#:#FRONTEND_PORT#:7000"
-            #- "#FRONTEND_NETWORK#:7100:7100"  # MongoDB
-            - "#FRONTEND_NETWORK#:7101:7101"   # ClickHouse native protocol (must always be open for xbatd)
-            #- "#FRONTEND_NETWORK#:7102:7102"  # ClickHouse PostgreSQL protocol
-            #- "#FRONTEND_NETWORK#:7103:7103"  # ClickHouse UI
+            #- "#FRONTEND_NETWORK#:#MONGODB_PORT#:#MONGODB_PORT#"  # MongoDB
+            - "#FRONTEND_NETWORK#:#CLICKHOUSE_NATIVE_PORT#:#CLICKHOUSE_NATIVE_PORT#" # ClickHouse native protocol (must always be open for xbatd)
+            #- "#FRONTEND_NETWORK#:#CLICKHOUSE_PG_PORT#:#CLICKHOUSE_PG_PORT#"  # ClickHouse PostgreSQL protocol
+            #- "#FRONTEND_NETWORK#:#CLICKHOUSE_HTTP_PORT#:#CLICKHOUSE_HTTP_PORT#"  # ClickHouse UI
         depends_on:
             - xbat-ui
             - xbat-backend
@@ -39,7 +39,7 @@ services:
             - xbat-valkey
             - xbat-pgbouncer
         expose:
-            - 7001
+            - 8001
     xbat-ctld:
         image: xbat_ctld
         container_name: xbat-ctld
@@ -58,7 +58,7 @@ services:
             - xbat-mongodb
             - xbat-pgbouncer
         expose:
-            - 7002
+            - 8002
     xbat-ui:
         image: xbat_ui
         container_name: xbat-ui
@@ -72,7 +72,7 @@ services:
         depends_on:
             - xbat-backend
         expose:
-            - 7003
+            - 8003
     xbat-mongodb:
         image: docker.io/mongo:8
         restart: unless-stopped

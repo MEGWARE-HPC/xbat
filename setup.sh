@@ -35,6 +35,12 @@ FRONTEND_PORT=7000
 XBAT_USER="xbat"
 CERT_DIR="/etc/xbat/certs"
 
+# Auxiliary ports (calculated from FRONTEND_PORT)
+MONGODB_PORT=$((FRONTEND_PORT + 1))
+CLICKHOUSE_NATIVE_PORT=$((FRONTEND_PORT + 2))
+CLICKHOUSE_PG_PORT=$((FRONTEND_PORT + 3))
+CLICKHOUSE_HTTP_PORT=$((FRONTEND_PORT + 4))
+
 SCRIPT_SRC_PATH="./scripts"
 CONF_SRC_PATH="./conf"
 CONF_FILE="xbat.conf"
@@ -105,12 +111,16 @@ configure_compose() {
     sed -i "s!#CERT_DIR#!$CERT_DIR!g" "$COMPOSE_FILE"
 
     if [[ "$EXPOSE_DATABASES" == true ]]; then
-        sed -i "s!#- \"#FRONTEND_NETWORK#:7100:7100\"!- \"$FRONTEND_NETWORK:7100:7100\"!" "$COMPOSE_FILE"
-        sed -i "s!#- \"#FRONTEND_NETWORK#:7102:7102\"!- \"$FRONTEND_NETWORK:7102:7102\"!" "$COMPOSE_FILE"
-        sed -i "s!#- \"#FRONTEND_NETWORK#:7103:7103\"!- \"$FRONTEND_NETWORK:7103:7103\"!" "$COMPOSE_FILE"
+        sed -i "s!#- \"#FRONTEND_NETWORK#:#MONGODB_PORT#:#MONGODB_PORT#\"!- \"$FRONTEND_NETWORK:#MONGODB_PORT#:#MONGODB_PORT#\"!" "$COMPOSE_FILE"
+        sed -i "s!#- \"#FRONTEND_NETWORK#:#CLICKHOUSE_PG_PORT#:#CLICKHOUSE_PG_PORT#\"!- \"$FRONTEND_NETWORK:#CLICKHOUSE_PG_PORT#:#CLICKHOUSE_PG_PORT#\"!" "$COMPOSE_FILE"
+        sed -i "s!#- \"#FRONTEND_NETWORK#:#CLICKHOUSE_HTTP_PORT#:#CLICKHOUSE_HTTP_PORT#\"!- \"$FRONTEND_NETWORK:#CLICKHOUSE_HTTP_PORT#:#CLICKHOUSE_HTTP_PORT#\"!" "$COMPOSE_FILE"
     fi
 
     sed -i "s!#FRONTEND_NETWORK#!$FRONTEND_NETWORK!g" "$COMPOSE_FILE"
+    sed -i "s!#MONGODB_PORT#!$MONGODB_PORT!g" "$COMPOSE_FILE"
+    sed -i "s!#CLICKHOUSE_NATIVE_PORT#!$CLICKHOUSE_NATIVE_PORT!g" "$COMPOSE_FILE"
+    sed -i "s!#CLICKHOUSE_PG_PORT#!$CLICKHOUSE_PG_PORT!g" "$COMPOSE_FILE"
+    sed -i "s!#CLICKHOUSE_HTTP_PORT#!$CLICKHOUSE_HTTP_PORT!g" "$COMPOSE_FILE"
 
     cp "$COMPOSE_FILE" "$INSTALL_PATH"
 }
@@ -184,8 +194,24 @@ install_action() {
     rsync -Rr --exclude 'build' . "$BUILD_PATH/"
     pushd "$BUILD_PATH" > /dev/null
 
+    # Recalculate auxiliary ports in case FRONTEND_PORT was changed
+    MONGODB_PORT=$((FRONTEND_PORT + 1))
+    CLICKHOUSE_NATIVE_PORT=$((FRONTEND_PORT + 2))
+    CLICKHOUSE_PG_PORT=$((FRONTEND_PORT + 3))
+    CLICKHOUSE_HTTP_PORT=$((FRONTEND_PORT + 4))
+
+    if [[ "$FRONTEND_PORT" -ne 7000 ]]; then
+        log_warning "Frontend port set to $FRONTEND_PORT (auxiliary ports: $((FRONTEND_PORT + 1))-$((FRONTEND_PORT + 4)))"
+        log_warning "Make sure to adjust '[restapi]->port' to $FRONTEND_PORT and [clickhouse]->daemon_port to $CLICKHOUSE_NATIVE_PORT in /etc/xbat/xbat.conf"
+    fi
+
+
     sed -i "s!#CLICKHOUSE_HOST#!$CLICKHOUSE_HOST!" ./conf/nginx.conf.in
     sed -i "s!#MONGODB_HOST#!$MONGODB_HOST!" ./conf/nginx.conf.in
+    sed -i "s!#MONGODB_PORT#!$MONGODB_PORT!" ./conf/nginx.conf.in
+    sed -i "s!#CLICKHOUSE_NATIVE_PORT#!$CLICKHOUSE_NATIVE_PORT!" ./conf/nginx.conf.in
+    sed -i "s!#CLICKHOUSE_PG_PORT#!$CLICKHOUSE_PG_PORT!" ./conf/nginx.conf.in
+    sed -i "s!#CLICKHOUSE_HTTP_PORT#!$CLICKHOUSE_HTTP_PORT!" ./conf/nginx.conf.in
     sed -i "s!workers = 8!workers = $WORKERS!" ./src/backend/config-prod.py
     sed -i "s!instances: \"8\"!instances: \"$WORKERS\"!" ./src/ui/ecosystem.config.cjs
 
@@ -323,6 +349,7 @@ show_help() {
     echo -e "\t[--executor (docker|podman)] Container executor (default: podman)"
     echo -e "\t[--home-mnt <path>] Mount home directory path"
     echo -e "\t[--port <port>] Frontend port (default: 7000)"
+    echo -e "\t                Note: Auxiliary ports count up from frontend port (+1 to +4)"
     echo -e "\t[--frontend-network <ip>] Bind frontend network (default: 0.0.0.0)"
     echo -e "\t[--no-db] Deploy without databases"
     echo -e "\t[--clickhouse-host <host>] Clickhouse hostname or IP (required with --no-db)"

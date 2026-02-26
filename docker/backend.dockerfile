@@ -23,7 +23,7 @@ RUN ln -fs /usr/bin/python3.12 /usr/bin/python3 && ln -fs /usr/bin/python3.12 /u
 
 RUN pip3 install --no-cache-dir --trusted-host pypi.org --trusted-host files.pythonhosted.org -r backend/requirements.txt && pip3 install -e .
 
-EXPOSE 7001
+EXPOSE 8001
 WORKDIR /home/backend
 
 ENV BUILD=prod

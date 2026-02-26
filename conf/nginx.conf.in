@@ -27,7 +27,7 @@ stream {
 
     # MongoDB with SSL termination
     server {
-        listen 7100 ssl;
+        listen #MONGODB_PORT# ssl;
         proxy_pass mongodb;
         
         ssl_certificate #SSL_CERTIFICATE#;
@@ -38,7 +38,7 @@ stream {
 
     # ClickHouse native protocol with SSL termination
     server {
-        listen 7101 ssl;
+        listen #CLICKHOUSE_NATIVE_PORT# ssl;
         proxy_pass clickhouse_native;
         
         ssl_certificate #SSL_CERTIFICATE#;
@@ -51,7 +51,7 @@ stream {
     # Nginx SSL not working with PgWire protocol
     # TODO implement SSL at pgbouncer or clickhouse level
     server {
-        listen 7102;
+        listen #CLICKHOUSE_PG_PORT#;
         proxy_pass clickhouse_postgres;
         
         proxy_connect_timeout 5s;
@@ -59,7 +59,7 @@ stream {
 
     # ClickHouse HTTP protocol with SSL termination
     server {
-        listen 7103 ssl;
+        listen #CLICKHOUSE_HTTP_PORT# ssl;
         proxy_pass clickhouse_http;
         
         ssl_certificate #SSL_CERTIFICATE#;
@@ -96,11 +96,11 @@ http {
     gzip_min_length 256;
 
     upstream docker-xbat-backend {
-        server xbat-backend:7001;
+        server xbat-backend:8001;
     }
 
     upstream docker-xbat-ui {
-        server xbat-ui:7003;
+        server xbat-ui:8003;
     }
 
     server {
