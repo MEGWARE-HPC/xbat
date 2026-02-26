@@ -53,23 +53,6 @@
                         class="sb-children sb-section-children"
                         :style="sectionChildrenStyle(0)"
                     >
-                        <template v-if="showMyHome">
-                            <SidebarConfigItem
-                                v-for="c in myHomeConfigs"
-                                :key="c.id"
-                                :id="c.id"
-                                :doc="c.doc"
-                                :depth="1"
-                                :selected-id="selectedId"
-                                :user="user"
-                                :user-level="userLevel"
-                                :UserLevelEnum="UserLevelEnum"
-                                @select="$emit('select', $event)"
-                                @duplicate="$emit('duplicate', $event)"
-                                @delete="$emit('delete', $event)"
-                            />
-                        </template>
-
                         <SidebarFolderNode
                             v-for="n in myFolderRoots"
                             :key="n.id"
@@ -86,6 +69,23 @@
                             @duplicate="$emit('duplicate', $event)"
                             @delete="$emit('delete', $event)"
                         />
+
+                        <template v-if="showMyHome">
+                            <SidebarConfigItem
+                                v-for="c in myHomeConfigs"
+                                :key="c.id"
+                                :id="c.id"
+                                :doc="c.doc"
+                                :depth="1"
+                                :selected-id="selectedId"
+                                :user="user"
+                                :user-level="userLevel"
+                                :UserLevelEnum="UserLevelEnum"
+                                @select="$emit('select', $event)"
+                                @duplicate="$emit('duplicate', $event)"
+                                @delete="$emit('delete', $event)"
+                            />
+                        </template>
                     </div>
                 </v-list-group>
 

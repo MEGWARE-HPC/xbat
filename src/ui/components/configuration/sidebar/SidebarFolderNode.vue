@@ -28,22 +28,6 @@
         </template>
 
         <div class="sb-children" :style="childrenStyle">
-            <!-- configs in this folder -->
-            <SidebarConfigItem
-                v-for="c in configsHere"
-                :key="c.id"
-                :id="c.id"
-                :doc="c.doc"
-                :selected-id="selectedId"
-                :user="user"
-                :user-level="userLevel"
-                :UserLevelEnum="UserLevelEnum"
-                :depth="depth + 1"
-                @select="$emit('select', $event)"
-                @duplicate="$emit('duplicate', $event)"
-                @delete="$emit('delete', $event)"
-            />
-
             <!-- subfolders -->
             <SidebarFolderNode
                 v-for="child in node.children || []"
@@ -59,6 +43,22 @@
                 :max-depth="maxDepth"
                 @select="$emit('select', $event)"
                 @select-folder="$emit('select-folder', $event)"
+                @duplicate="$emit('duplicate', $event)"
+                @delete="$emit('delete', $event)"
+            />
+
+            <!-- configs in this folder -->
+            <SidebarConfigItem
+                v-for="c in configsHere"
+                :key="c.id"
+                :id="c.id"
+                :doc="c.doc"
+                :selected-id="selectedId"
+                :user="user"
+                :user-level="userLevel"
+                :UserLevelEnum="UserLevelEnum"
+                :depth="depth + 1"
+                @select="$emit('select', $event)"
                 @duplicate="$emit('duplicate', $event)"
                 @delete="$emit('delete', $event)"
             />
