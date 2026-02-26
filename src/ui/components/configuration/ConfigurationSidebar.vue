@@ -204,23 +204,6 @@
                 </v-list-group>
             </v-list>
         </div>
-
-        <v-list-item>
-            <div
-                v-if="userLevel > UserLevelEnum.guest"
-                class="d-flex justify-center"
-            >
-                <v-btn
-                    title="Add Configuration"
-                    elevation="0"
-                    variant="tonal"
-                    prepend-icon="$newFile"
-                    @click="$emit('create')"
-                >
-                    New configuration
-                </v-btn>
-            </div>
-        </v-list-item>
     </v-navigation-drawer>
 </template>
 

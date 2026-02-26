@@ -18,6 +18,18 @@
                     </div>
                 </div>
 
+                <!-- Actions -->
+                <div class="fb-actions" v-if="canCreate">
+                    <v-btn
+                        color="primary-light"
+                        title="Add Configuration"
+                        prepend-icon="$newFile"
+                        @click="$emit('create-config')"
+                    >
+                        New
+                    </v-btn>
+                </div>
+
                 <!-- Table header -->
                 <div class="fb-row fb-row--head" :style="rowGridStyle">
                     <div class="fb-col fb-col--name">Name</div>
@@ -163,10 +175,16 @@ import { computed } from "vue";
 
 const props = defineProps({
     folder: { type: Object, default: null }, // expects { id, name, children?, __parentId? }
-    configs: { type: Array, default: () => [] }
+    configs: { type: Array, default: () => [] },
+    userLevel: { type: Number, required: true },
+    UserLevelEnum: { type: Object, required: true }
 });
 
-defineEmits(["open-folder", "open-config"]);
+defineEmits(["open-folder", "open-config", "create-config"]);
+
+const canCreate = computed(
+    () => props.userLevel > (props.UserLevelEnum?.guest ?? 0)
+);
 
 const folderId = computed(() => String(props.folder?.id ?? ""));
 
@@ -257,6 +275,13 @@ const formatDate = (v) => {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.fb-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 12px 0 8px;
 }
 
 .fb-list {

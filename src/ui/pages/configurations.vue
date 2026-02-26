@@ -16,7 +16,6 @@
                                 state.selectedEdit = [];
                             }
                         "
-                        @create="addConfig"
                         @duplicate="addConfig"
                         @delete="(id) => setAction('delete', id)"
                     />
@@ -53,6 +52,9 @@
                         v-else-if="selectedFolderNode"
                         :folder="selectedFolderNode"
                         :configs="selectedFolderConfigs"
+                        :user-level="$authStore.userLevel"
+                        :UserLevelEnum="$authStore.UserLevelEnum"
+                        @create-config="addConfig"
                         @open-folder="
                             (fid) => {
                                 selectedFolderId = fid;
