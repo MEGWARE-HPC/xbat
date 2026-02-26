@@ -24,7 +24,7 @@ jobs:
       release: rc0
 
   test-el10:
-    uses: ./.github/workflows/vm-test.yml
+    uses: ./.github/workflows/vm-test.yml #commit to create new run id
     with:
       distro: 10
       version: 1.0.0
