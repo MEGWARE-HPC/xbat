@@ -10,16 +10,20 @@
                 <div class="fb-header">
                     <div class="fb-title">
                         <v-icon
-                            class="mr-2 fb-ico--folder"
-                            icon="$folderOpen"
+                            class="mr-2"
+                            :class="headerIconClass"
+                            :icon="headerIcon"
                         />
                         <span class="fb-title-text">{{ folder.name }}</span>
                     </div>
                 </div>
 
                 <!-- Table header -->
-                <div class="fb-row fb-row--head">
+                <div class="fb-row fb-row--head" :style="rowGridStyle">
                     <div class="fb-col fb-col--name">Name</div>
+                    <div v-if="showOwner" class="fb-col fb-col--owner">
+                        Owner
+                    </div>
                     <div class="fb-col fb-col--created">Created</div>
                     <div class="fb-col fb-col--edited">Modified</div>
                 </div>
@@ -39,9 +43,15 @@
                         </template>
 
                         <v-list-item-title>
-                            <div class="fb-row">
+                            <div class="fb-row" :style="rowGridStyle">
                                 <div class="fb-col fb-col--name fb-name">
                                     ..
+                                </div>
+                                <div
+                                    v-if="showOwner"
+                                    class="fb-col fb-col--owner fb-owner"
+                                >
+                                    —
                                 </div>
                                 <div class="fb-col fb-col--created fb-date">
                                     —
@@ -62,15 +72,22 @@
                     >
                         <template #prepend>
                             <v-icon
-                                icon="$folder"
-                                class="fb-ico fb-ico--folder"
+                                :icon="childFolderIcon"
+                                class="fb-ico"
+                                :class="childFolderIconClass"
                             />
                         </template>
 
                         <v-list-item-title>
-                            <div class="fb-row">
+                            <div class="fb-row" :style="rowGridStyle">
                                 <div class="fb-col fb-col--name fb-name">
                                     {{ child.name }}
+                                </div>
+                                <div
+                                    v-if="showOwner"
+                                    class="fb-col fb-col--owner fb-owner"
+                                >
+                                    —
                                 </div>
                                 <div class="fb-col fb-col--created fb-date">
                                     {{ formatDate(child?.misc?.created) }}
@@ -91,7 +108,7 @@
                     >
                         <template #prepend>
                             <v-icon
-                                class="fb-ico"
+                                class="fb-ico fb-ico--config"
                                 :icon="
                                     c.doc?.configuration?.sharedProjects?.length
                                         ? '$share'
@@ -102,12 +119,18 @@
                         </template>
 
                         <v-list-item-title>
-                            <div class="fb-row">
+                            <div class="fb-row" :style="rowGridStyle">
                                 <div class="fb-col fb-col--name fb-name">
                                     {{
                                         c.doc?.configuration
                                             ?.configurationName || c.id
                                     }}
+                                </div>
+                                <div
+                                    v-if="showOwner"
+                                    class="fb-col fb-col--owner fb-owner"
+                                >
+                                    {{ c.doc?.misc?.owner || "—" }}
                                 </div>
                                 <div class="fb-col fb-col--created fb-date">
                                     {{ formatDate(c.doc?.misc?.created) }}
@@ -145,11 +168,47 @@ const props = defineProps({
 
 defineEmits(["open-folder", "open-config"]);
 
+const folderId = computed(() => String(props.folder?.id ?? ""));
+
+const isSharedView = computed(() => folderId.value.startsWith("__shared__"));
+const isSharedRoot = computed(() => folderId.value === "__shared__");
+const isSharedProject = computed(() =>
+    folderId.value.startsWith("__shared__:")
+);
+
+const showOwner = computed(() => isSharedView.value);
+
 const parentId = computed(() => props.folder?.__parentId ?? null);
 
 const canGoUp = computed(() => !!props.folder && !!parentId.value);
 
 const folders = computed(() => (props.folder?.children || []).slice());
+
+const rowGridStyle = computed(() => ({
+    "--fb-cols": showOwner.value ? "1fr 160px 160px 160px" : "1fr 160px 160px"
+}));
+
+const headerIcon = computed(() => {
+    if (isSharedRoot.value) return "$folderNetwork";
+    if (isSharedProject.value) return "$group";
+    return "$folderOpen";
+});
+
+const headerIconClass = computed(() => {
+    if (isSharedRoot.value) return "fb-ico--shared-root";
+    if (isSharedProject.value) return "fb-ico--shared-project";
+    return "fb-ico--folder";
+});
+
+const childFolderIcon = computed(() => {
+    if (isSharedRoot.value) return "$group";
+    return "$folder";
+});
+
+const childFolderIconClass = computed(() => {
+    if (isSharedRoot.value) return "fb-ico--shared-project";
+    return "fb-ico--folder";
+});
 
 const formatDate = (v) => {
     if (!v) return "—";
@@ -207,7 +266,7 @@ const formatDate = (v) => {
 
 .fb-row {
     display: grid;
-    grid-template-columns: 1fr 160px 160px;
+    grid-template-columns: var(--fb-cols, 1fr 160px 160px);
     align-items: center;
     gap: 10px;
     width: 100%;
@@ -229,6 +288,14 @@ const formatDate = (v) => {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.fb-owner {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.75;
+    font-size: 0.82rem;
 }
 
 .fb-date {
@@ -256,6 +323,20 @@ const formatDate = (v) => {
     color: $primary-light;
     opacity: 0.8;
     filter: brightness(1.1);
+}
+
+.fb-ico--shared-root {
+    color: $primary-light;
+    opacity: 0.8;
+}
+
+.fb-ico--shared-project {
+    color: $primary-light;
+    opacity: 0.8;
+}
+
+.fb-ico--config {
+    margin-inline-end: 8px;
 }
 
 .fb-ico--nav {
