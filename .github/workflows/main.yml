@@ -1,5 +1,5 @@
 name: Build and Test xbat daemon
-#runner now running as root
+
 on:
   push:
     branches:
@@ -13,5 +13,19 @@ jobs:
     uses: ./.github/workflows/vm-test.yml
     with:
       distro: 8
+      version: 1.0.0
+      release: rc0
+
+  test-el9:
+    uses: ./.github/workflows/vm-test.yml
+    with:
+      distro: 9
+      version: 1.0.0
+      release: rc0
+
+  test-el10:
+    uses: ./.github/workflows/vm-test.yml
+    with:
+      distro: 10
       version: 1.0.0
       release: rc0
