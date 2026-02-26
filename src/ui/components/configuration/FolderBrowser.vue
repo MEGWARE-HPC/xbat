@@ -14,7 +14,7 @@
                             :class="headerIconClass"
                             :icon="headerIcon"
                         />
-                        <span class="fb-title-text">{{ folder.name }}</span>
+                        <span class="fb-title-text">{{ headerTitle }}</span>
                     </div>
                 </div>
 
@@ -177,7 +177,8 @@ const props = defineProps({
     folder: { type: Object, default: null }, // expects { id, name, children?, __parentId? }
     configs: { type: Array, default: () => [] },
     userLevel: { type: Number, required: true },
-    UserLevelEnum: { type: Object, required: true }
+    UserLevelEnum: { type: Object, required: true },
+    myRootId: { type: String, default: "" }
 });
 
 defineEmits(["open-folder", "open-config", "create-config"]);
@@ -185,6 +186,20 @@ defineEmits(["open-folder", "open-config", "create-config"]);
 const canCreate = computed(
     () => props.userLevel > (props.UserLevelEnum?.guest ?? 0)
 );
+
+const isMyRoot = computed(() => {
+    const fid = String(props.folder?.id ?? "");
+    return !!props.myRootId && fid === String(props.myRootId);
+});
+
+const headerTitle = computed(() => {
+    if (isSharedView.value) return props.folder?.name || "";
+    if (folderId.value === "__all__") return props.folder?.name || "";
+
+    if (isMyRoot.value) return "Home";
+
+    return props.folder?.name || "";
+});
 
 const folderId = computed(() => String(props.folder?.id ?? ""));
 

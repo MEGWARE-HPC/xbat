@@ -54,6 +54,9 @@
                         :configs="selectedFolderConfigs"
                         :user-level="$authStore.userLevel"
                         :UserLevelEnum="$authStore.UserLevelEnum"
+                        :my-root-id="
+                            myHomeNode?.id ? String(myHomeNode.id) : ''
+                        "
                         @create-config="addConfig"
                         @open-folder="
                             (fid) => {
