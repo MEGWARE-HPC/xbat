@@ -12,6 +12,6 @@ jobs:
   test-el8:
     uses: ./.github/workflows/vm-test.yml
     with:
-      distro: el8
+      distro: 8
       version: 1.0.0
       release: rc0
