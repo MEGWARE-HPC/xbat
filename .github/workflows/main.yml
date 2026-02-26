@@ -1,5 +1,5 @@
 name: Build and Test xbat daemon
-
+#runner now running as root
 on:
   push:
     branches:
