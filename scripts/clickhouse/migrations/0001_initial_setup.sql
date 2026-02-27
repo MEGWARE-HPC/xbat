@@ -239,6 +239,8 @@ CREATE TABLE IF NOT EXISTS gpu_mm_util AS template_device_float;
 
 CREATE TABLE IF NOT EXISTS likwid_cpu_power AS template_topology_float;
 
+CREATE TABLE IF NOT EXISTS likwid_cpu_energy AS template_topology_float;
+
 CREATE TABLE IF NOT EXISTS likwid_core_power AS template_topology_float;
 
 CREATE TABLE IF NOT EXISTS likwid_dram_power AS template_topology_float;
@@ -355,6 +357,7 @@ DROP TABLE IF EXISTS xbat.likwid_clk;
 DROP TABLE IF EXISTS xbat.likwid_clk_uncore;
 DROP TABLE IF EXISTS xbat.likwid_core_power;
 DROP TABLE IF EXISTS xbat.likwid_cpi;
+DROP TABLE IF EXISTS xbat.likwid_cpu_energy;
 DROP TABLE IF EXISTS xbat.likwid_cpu_temp;
 DROP TABLE IF EXISTS xbat.likwid_cpu_power;
 DROP TABLE IF EXISTS xbat.likwid_cycle_stalls;
