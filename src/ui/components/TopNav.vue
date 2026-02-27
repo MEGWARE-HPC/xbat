@@ -70,7 +70,7 @@ const { $store, $authStore } = useNuxtApp();
 const emit = defineEmits(["update:theme"]);
 </script>
 
-<style scoped lang="scss">
+<style lang="scss" scoped>
 @use "~/assets/css/colors.scss" as *;
 
 .app-bar {

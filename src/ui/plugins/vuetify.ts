@@ -50,6 +50,7 @@ import {
     mdiFileDocumentPlusOutline,
     mdiCompare,
     mdiChevronDown,
+    mdiChevronRight,
     mdiAccountMultipleRemoveOutline,
     mdiCancel,
     mdiDeleteAlertOutline,
@@ -95,7 +96,12 @@ import {
     mdiFormatListGroupPlus,
     mdiCheckboxMarked,
     mdiCheckboxBlankOutline,
-    mdiBackupRestore
+    mdiBackupRestore,
+    mdiFolder,
+    mdiFolderOpen,
+    mdiFolderPlusOutline,
+    mdiArrowLeftTop,
+    mdiFolderNetwork
 } from "@mdi/js";
 
 /*
@@ -156,6 +162,7 @@ export default defineNuxtPlugin((app) => {
                 notEqual: mdiNotEqual,
                 chevronUp: mdiChevronUp,
                 chevronDown: mdiChevronDown,
+                chevronRight: mdiChevronRight,
                 chevronDoubleLeft: mdiChevronDoubleLeft,
                 chevronDoubleRight: mdiChevronDoubleRight,
                 plus: mdiPlus,
@@ -191,6 +198,7 @@ export default defineNuxtPlugin((app) => {
                 hide: mdiEyeOff,
                 arrowLeft: mdiArrowLeft,
                 arrowRight: mdiArrowRight,
+                arrowLeftTop: mdiArrowLeftTop,
                 color: mdiPalette,
                 currency: mdiCurrencyUsd,
                 server: mdiServer,
@@ -235,7 +243,11 @@ export default defineNuxtPlugin((app) => {
                 addArray: mdiFormatListGroupPlus,
                 checkboxMark: mdiCheckboxMarked,
                 checkboxBlank: mdiCheckboxBlankOutline,
-                backupRestore: mdiBackupRestore
+                backupRestore: mdiBackupRestore,
+                folder: mdiFolder,
+                folderOpen: mdiFolderOpen,
+                newFolder: mdiFolderPlusOutline,
+                folderNetwork: mdiFolderNetwork
             },
             sets: {
                 mdi
