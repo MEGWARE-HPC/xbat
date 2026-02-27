@@ -225,11 +225,11 @@ Copyright (c) LIKWID developers and contributors
 
 License: [GPLv3.0](#gpl30) <!--https://github.com/RRZE-HPC/likwid/blob/master/COPYING-->
 
-### [c-questdb-client](https://github.com/questdb/c-questdb-client)
+### [clickhouse-cpp](https://github.com/ClickHouse/clickhouse-cpp)
 
-Copyright (c) QuestDB developers and contributors
+Copyright (c) ClickHouse Inc. and contributors
 
-License: [Apache-2.0](#apache20) <!--https://github.com/questdb/c-questdb-client/blob/main/LICENSE-->
+License: [Apache-2.0](#apache20) <!--https://github.com/ClickHouse/clickhouse-cpp/blob/master/LICENSE-->
 
 ### [boost C++ Libraries](https://www.boost.org/)
 
