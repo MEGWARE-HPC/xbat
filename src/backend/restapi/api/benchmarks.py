@@ -364,7 +364,7 @@ async def import_benchmark():
         if format_type == "questdb":
             app.logger.info("Converting from QuestDB to ClickHouse format...")
             conversion_start = time.time()
-            new_folder = convert_to_clickhouse(extract_folder)
+            new_folder = await convert_to_clickhouse(extract_folder)
             conversion_duration = time.time() - conversion_start
             if new_folder:
                 extract_folder = new_folder

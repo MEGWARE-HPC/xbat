@@ -1,6 +1,7 @@
 import csv
 import uuid
 import shutil
+import asyncio
 from pathlib import Path
 from typing import Literal, Optional
 from collections import defaultdict
@@ -58,7 +59,7 @@ def _convert_timestamp(timestamp_str: str) -> str:
 
 
 def _format_csv_value(value: str, is_numeric_column: bool,
-                      is_timestamp: bool) -> str:
+                      is_timestamp: bool, is_integer: bool = False) -> str:
     """
     Format a CSV value according to ClickHouse requirements.
     
@@ -80,8 +81,13 @@ def _format_csv_value(value: str, is_numeric_column: bool,
 
     if is_numeric_column:
         try:
+            # If this should be an integer, convert float to int
+            if is_integer:
+                float_val = float(value)
+                int_val = int(float_val)
+                return str(int_val)
             # Check if it's an integer
-            if '.' not in value:
+            elif '.' not in value:
                 int(value)
                 return value
             else:
@@ -95,7 +101,45 @@ def _format_csv_value(value: str, is_numeric_column: bool,
     return f'"{value}"'
 
 
-def _get_column_info(headers: list[str]) -> dict:
+async def _get_table_schemas() -> dict:
+    """
+    Query ClickHouse to get the schema for all tables.
+    
+    Returns:
+        Dictionary mapping table names to their column types
+    """
+    from shared import clickhouse as cdb
+    
+    clickhouse = cdb.ClickHouse()
+    clickhouse.setup()
+    
+    table_names = await clickhouse.get_table_names(exclude_templates=True)
+    
+    schemas = {}
+    for table_name in table_names:
+        try:
+            result = await clickhouse.execute_query(f"DESCRIBE TABLE {table_name}")
+            column_types = {}
+            for row in result:
+                col_name = row.get('name', '')
+                col_type = row.get('type', '')
+                column_types[col_name] = col_type
+            schemas[table_name] = column_types
+        except Exception:
+            pass
+    
+    return schemas
+
+
+def _is_integer_type(col_type: str) -> bool:
+    """
+    Check if a ClickHouse column type is an integer type.
+    """
+    int_types = ['UInt8', 'UInt16', 'UInt32', 'UInt64', 'Int8', 'Int16', 'Int32', 'Int64']
+    return any(col_type.startswith(int_type) for int_type in int_types)
+
+
+def _get_column_info(headers: list[str], table_name: str = None, table_schemas: dict = None) -> dict:
     """
     Determine which columns are numeric based on header names.
     
@@ -116,22 +160,32 @@ def _get_column_info(headers: list[str]) -> dict:
     column_info = {}
     for idx, header in enumerate(headers):
         header = header.strip('"')
+        
+        # Check if value column should be integer based on schema
+        is_integer = False
+        if header == 'value' and table_name and table_schemas:
+            schema = table_schemas.get(table_name, {})
+            col_type = schema.get('value', '')
+            is_integer = _is_integer_type(col_type)
+        
         column_info[idx] = {
             'name': header,
             'is_numeric': header in numeric_columns,
-            'is_timestamp': header in timestamp_columns
+            'is_timestamp': header in timestamp_columns,
+            'is_integer': is_integer
         }
 
     return column_info
 
 
-def _convert_csv_file(csv_path: Path, jobs_folder: Path) -> None:
+def _convert_csv_file(csv_path: Path, jobs_folder: Path, table_schemas: dict = None) -> None:
     """
     Convert a QuestDB CSV file to ClickHouse format and split by jobId.
     
     Args:
         csv_path: Path to the CSV file to convert
         jobs_folder: Path to the jobs folder where jobId subfolders will be created
+        table_schemas: Dictionary of table schemas from ClickHouse
     """
     # Read the CSV file and group by jobId
     job_data = defaultdict(list)
@@ -141,6 +195,9 @@ def _convert_csv_file(csv_path: Path, jobs_folder: Path) -> None:
         'jobId', 'node', 'level', 'device', 'core', 'numa', 'socket', 'thread',
         'value', 'timestamp'
     ]
+    
+    # Get table name from CSV filename (without extension)
+    table_name = csv_path.stem
 
     with open(csv_path, 'r', encoding='utf-8') as f:
         reader = csv.reader(f)
@@ -158,8 +215,8 @@ def _convert_csv_file(csv_path: Path, jobs_folder: Path) -> None:
         # Clean headers and create index mapping
         cleaned_headers = [h.strip('"') for h in header]
 
-        # Get column information
-        column_info = _get_column_info(cleaned_headers)
+        # Get column information with schema info
+        column_info = _get_column_info(cleaned_headers, table_name, table_schemas)
 
         # Find jobId column index
         jobId_idx = None
@@ -193,7 +250,8 @@ def _convert_csv_file(csv_path: Path, jobs_folder: Path) -> None:
                 col_info = column_info[idx]
                 formatted_value = _format_csv_value(
                     value, col_info['is_numeric'],
-                    col_info['is_timestamp'])
+                    col_info['is_timestamp'],
+                    col_info.get('is_integer', False))
                 formatted_row.append(formatted_value)
 
             job_data[jobId].append(','.join(formatted_row))
@@ -241,12 +299,12 @@ def detect_format(
 
 def _convert_csv_file_wrapper(args):
     """Wrapper function for multiprocessing."""
-    csv_path, jobs_folder = args
-    _convert_csv_file(csv_path, jobs_folder)
+    csv_path, jobs_folder, table_schemas = args
+    _convert_csv_file(csv_path, jobs_folder, table_schemas)
     return csv_path.name
 
 
-def convert_to_clickhouse(extract_folder: Path) -> Optional[Path]:
+async def convert_to_clickhouse(extract_folder: Path) -> Optional[Path]:
     """
     Convert QuestDB format export to ClickHouse format.
     
@@ -275,6 +333,13 @@ def convert_to_clickhouse(extract_folder: Path) -> Optional[Path]:
     if format_type == "unknown":
         # No CSV files found, nothing to convert
         return None
+
+    # Get table schemas from ClickHouse
+    try:
+        table_schemas = await _get_table_schemas()
+    except Exception as e:
+        print(f"Warning: Could not fetch table schemas from ClickHouse: {e}")
+        table_schemas = {}
 
     # Create new folder with UUID in the same parent directory
     new_uuid = str(uuid.uuid4())
@@ -305,8 +370,8 @@ def convert_to_clickhouse(extract_folder: Path) -> Optional[Path]:
             jobs_folder.mkdir(exist_ok=True)
 
             # Parallelize CSV file conversion
-            max_workers = min(max(multiprocessing.cpu_count(), MAX_WORKER_COUNT), len(csv_files))
-            conversion_args = [(csv_file, jobs_folder) for csv_file in csv_files]
+            max_workers = min(min(multiprocessing.cpu_count(), MAX_WORKER_COUNT), len(csv_files))
+            conversion_args = [(csv_file, jobs_folder, table_schemas) for csv_file in csv_files]
             
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
                 futures = [executor.submit(_convert_csv_file_wrapper, args) for args in conversion_args]
