@@ -10,6 +10,7 @@ import multiprocessing
 
 MAX_WORKER_COUNT = 8  # Limit the number of parallel workers to avoid overwhelming the system
 
+
 def _find_runNr_folders(extract_folder: Path) -> list[Path]:
     """
     Recursively find all runNr directories (numeric folder names with benchmarks.json).
@@ -58,8 +59,10 @@ def _convert_timestamp(timestamp_str: str) -> str:
     return timestamp_str
 
 
-def _format_csv_value(value: str, is_numeric_column: bool,
-                      is_timestamp: bool, is_integer: bool = False) -> str:
+def _format_csv_value(value: str,
+                      is_numeric_column: bool,
+                      is_timestamp: bool,
+                      is_integer: bool = False) -> str:
     """
     Format a CSV value according to ClickHouse requirements.
     
@@ -109,16 +112,17 @@ async def _get_table_schemas() -> dict:
         Dictionary mapping table names to their column types
     """
     from shared import clickhouse as cdb
-    
+
     clickhouse = cdb.ClickHouse()
     clickhouse.setup()
-    
+
     table_names = await clickhouse.get_table_names(exclude_templates=True)
-    
+
     schemas = {}
     for table_name in table_names:
         try:
-            result = await clickhouse.execute_query(f"DESCRIBE TABLE {table_name}")
+            result = await clickhouse.execute_query(
+                f"DESCRIBE TABLE {table_name}")
             column_types = {}
             for row in result:
                 col_name = row.get('name', '')
@@ -127,7 +131,7 @@ async def _get_table_schemas() -> dict:
             schemas[table_name] = column_types
         except Exception:
             pass
-    
+
     return schemas
 
 
@@ -135,11 +139,16 @@ def _is_integer_type(col_type: str) -> bool:
     """
     Check if a ClickHouse column type is an integer type.
     """
-    int_types = ['UInt8', 'UInt16', 'UInt32', 'UInt64', 'Int8', 'Int16', 'Int32', 'Int64']
+    int_types = [
+        'UInt8', 'UInt16', 'UInt32', 'UInt64', 'Int8', 'Int16', 'Int32',
+        'Int64'
+    ]
     return any(col_type.startswith(int_type) for int_type in int_types)
 
 
-def _get_column_info(headers: list[str], table_name: str = None, table_schemas: dict = None) -> dict:
+def _get_column_info(headers: list[str],
+                     table_name: str = None,
+                     table_schemas: dict = None) -> dict:
     """
     Determine which columns are numeric based on header names.
     
@@ -160,14 +169,14 @@ def _get_column_info(headers: list[str], table_name: str = None, table_schemas: 
     column_info = {}
     for idx, header in enumerate(headers):
         header = header.strip('"')
-        
+
         # Check if value column should be integer based on schema
         is_integer = False
         if header == 'value' and table_name and table_schemas:
             schema = table_schemas.get(table_name, {})
             col_type = schema.get('value', '')
             is_integer = _is_integer_type(col_type)
-        
+
         column_info[idx] = {
             'name': header,
             'is_numeric': header in numeric_columns,
@@ -178,7 +187,9 @@ def _get_column_info(headers: list[str], table_name: str = None, table_schemas: 
     return column_info
 
 
-def _convert_csv_file(csv_path: Path, jobs_folder: Path, table_schemas: dict = None) -> None:
+def _convert_csv_file(csv_path: Path,
+                      jobs_folder: Path,
+                      table_schemas: dict = None) -> None:
     """
     Convert a QuestDB CSV file to ClickHouse format and split by jobId.
     
@@ -195,11 +206,12 @@ def _convert_csv_file(csv_path: Path, jobs_folder: Path, table_schemas: dict = N
         'jobId', 'node', 'level', 'device', 'core', 'numa', 'socket', 'thread',
         'value', 'timestamp'
     ]
-    
+
     # Get table name from CSV filename (without extension)
     table_name = csv_path.stem
 
-    with open(csv_path, 'r', encoding='utf-8') as f:
+    with open(csv_path, 'r', encoding='utf-8',
+              buffering=1024 * 1024) as f:  # 1MB buffer
         reader = csv.reader(f)
 
         # Read header
@@ -216,7 +228,8 @@ def _convert_csv_file(csv_path: Path, jobs_folder: Path, table_schemas: dict = N
         cleaned_headers = [h.strip('"') for h in header]
 
         # Get column information with schema info
-        column_info = _get_column_info(cleaned_headers, table_name, table_schemas)
+        column_info = _get_column_info(cleaned_headers, table_name,
+                                       table_schemas)
 
         # Find jobId column index
         jobId_idx = None
@@ -232,7 +245,15 @@ def _convert_csv_file(csv_path: Path, jobs_folder: Path, table_schemas: dict = N
         header_to_idx = {name: idx for idx, name in enumerate(cleaned_headers)}
 
         # Filter ClickHouse order to only include columns present in source
-        active_columns = [col for col in clickhouse_order if col in header_to_idx]
+        active_columns = [
+            col for col in clickhouse_order if col in header_to_idx
+        ]
+
+        # Pre-compute column indices and info for faster lookup
+        column_indices = [
+            header_to_idx[col_name] for col_name in active_columns
+        ]
+        column_infos = [column_info[idx] for idx in column_indices]
 
         # Process each row
         for row in reader:
@@ -244,27 +265,24 @@ def _convert_csv_file(csv_path: Path, jobs_folder: Path, table_schemas: dict = N
 
             # Reorder and format the row according to ClickHouse column order (only present columns)
             formatted_row = []
-            for col_name in active_columns:
-                idx = header_to_idx[col_name]
+            for idx, col_info in zip(column_indices, column_infos):
                 value = row[idx]
-                col_info = column_info[idx]
                 formatted_value = _format_csv_value(
-                    value, col_info['is_numeric'],
-                    col_info['is_timestamp'],
+                    value, col_info['is_numeric'], col_info['is_timestamp'],
                     col_info.get('is_integer', False))
                 formatted_row.append(formatted_value)
 
             job_data[jobId].append(','.join(formatted_row))
 
-    # Write split CSV files for each jobId
+    # Write split CSV files for each jobId with buffering
     for jobId, rows in job_data.items():
         job_folder = jobs_folder / jobId
         job_folder.mkdir(parents=True, exist_ok=True)
 
         output_path = job_folder / csv_path.name
-        with open(output_path, 'w', encoding='utf-8') as f:
-            for row in rows:
-                f.write(row + '\n')
+        with open(output_path, 'w', encoding='utf-8',
+                  buffering=1024 * 1024) as f:  # 1MB buffer
+            f.write('\n'.join(rows) + '\n')  # Single write operation
 
 
 def detect_format(
@@ -370,11 +388,17 @@ async def convert_to_clickhouse(extract_folder: Path) -> Optional[Path]:
             jobs_folder.mkdir(exist_ok=True)
 
             # Parallelize CSV file conversion
-            max_workers = min(min(multiprocessing.cpu_count(), MAX_WORKER_COUNT), len(csv_files))
-            conversion_args = [(csv_file, jobs_folder, table_schemas) for csv_file in csv_files]
-            
+            max_workers = min(
+                min(multiprocessing.cpu_count(), MAX_WORKER_COUNT),
+                len(csv_files))
+            conversion_args = [(csv_file, jobs_folder, table_schemas)
+                               for csv_file in csv_files]
+
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
-                futures = [executor.submit(_convert_csv_file_wrapper, args) for args in conversion_args]
+                futures = [
+                    executor.submit(_convert_csv_file_wrapper, args)
+                    for args in conversion_args
+                ]
                 for future in as_completed(futures):
                     try:
                         future.result()
