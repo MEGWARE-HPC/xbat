@@ -140,8 +140,8 @@ http {
             
         }
 
-        # /export route with higher read timeout
-        location ~ /benchmarks/export {
+        # /export and /measurements routes with higher read timeout
+        location ~ /(benchmarks/export|measurements/[^/]+/(csv|json)) {
             proxy_pass http://docker-xbat-backend;
             proxy_redirect http://docker-xbat-backend/ $scheme://$http_host/;
             proxy_read_timeout 300s;
