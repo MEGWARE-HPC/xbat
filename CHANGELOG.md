@@ -4,10 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+This release contains many breaking changes and improvements. Please refer to the [Upgrade Guide](/docs/admin/upgrade-guide) for detailed instructions on how to upgrade from v1.2.0 to v2.0.0.
+
 ### Added
+
+- Configuration validator via `./setup.sh validate` to check for issues with the configuration
+- Database migrations via `./setup.sh migrate` for ClickHouse
 
 ### Changed
 
+- replaced QuestDB with ClickHouse DB
+- migrated MongoDB from v5 to v8 (to retain data from the previous database, please follow the migration guide.) (#90)
+- xbatd to use CMake instead of Makefile based build system
+- unified font usage across browsers in the documentation (#184) and switched to Source Sans 3
+- upgraded xbat font from Source Sans Pro to Source Sans 3
+- UI of ClickHouse is now available at port 7004 (or --port <port> + 4) instead of being proxied over 7000
 - unified font usage across browsers in the documentation (#184) and switched to Source Sans 3
 - upgraded xbat font from Source Sans Pro to Source Sans 3
 

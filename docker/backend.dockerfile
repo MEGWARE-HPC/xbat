@@ -7,6 +7,10 @@ RUN yum update -y \
     && yum install -y make gcc python3.12-devel python3.12-pip python3.12-setuptools sssd-client pam openldap-devel python-devel openssl-devel libffi-devel wget zlib-devel pigz \
     && yum clean -y all
 
+RUN yum install -y yum-utils && \
+    yum-config-manager --add-repo https://packages.clickhouse.com/rpm/clickhouse.repo && \
+    yum install -y clickhouse-client
+
 COPY ./src/setup.py /home/
 COPY ./src/backend /home/backend
 COPY ./src/shared /home/shared
@@ -19,7 +23,7 @@ RUN ln -fs /usr/bin/python3.12 /usr/bin/python3 && ln -fs /usr/bin/python3.12 /u
 
 RUN pip3 install --no-cache-dir --trusted-host pypi.org --trusted-host files.pythonhosted.org -r backend/requirements.txt && pip3 install -e .
 
-EXPOSE 7001
+EXPOSE 8001
 WORKDIR /home/backend
 
 ENV BUILD=prod

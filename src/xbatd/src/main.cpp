@@ -10,6 +10,7 @@
 #include <signal.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -17,26 +18,24 @@
 #include <iostream>
 #include <list>
 #include <map>
-#include <questdb/ingress/line_sender.hpp>
 #include <thread>
 #include <variant>
 
 #include "CLikwidPerfctr.hpp"
 #include "CLogging.hpp"
+#include "CQueue.hpp"
+#include "ClickHouseWriter.hpp"
 #include "CurlClient.hpp"
-#include "clipp.h"
+#include "external/clipp/include/clipp.h"
+#include "external/nlohmann-json/include/nlohmann/json.hpp"
 #include "helper.hpp"
-#include "nlohmann/json.hpp"
 #include "threadhelper.hpp"
 
 #define WATCHDOGSLEEP 3
-#define QUEUE_TIMEOUT 3
-#define BUFFER_SIZE 1000
 #define JOB_INFO_PATH "/run/xbatd/job"
 #define BENCHMARK_STATUS_FILE_PATH "/run/xbatd/benchmarkInProgress"
 
 using namespace std::literals::string_view_literals;
-using namespace questdb::ingress::literals;
 
 bool daemonMode = false;
 std::string outputPath = "";
@@ -67,76 +66,15 @@ statusInfo::~statusInfo() {
             delete *i;
 }
 
-template <typename T>
-void addToBuffer(questdb::ingress::line_sender_buffer &buffer, CQueue::ILP<T> &ilp, std::string jobId, std::string hostname) {
-    buffer.table(ilp.measurement).symbol("jobId", jobId).symbol("node", hostname);
-
-    // TODO convert any value to string for symbol value
-    for (auto const &tag : ilp.tags) {
-        buffer.symbol(tag.first, tag.second);
-    }
-
-    buffer.column("value", T{ilp.value});
-
-    // TODO check potential performance impact of conversion to questdb::ingress::timestamp_nanos which is required since 3.0.0
-    auto duration = ilp.ts.time_since_epoch();
-    auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
-    buffer.at(questdb::ingress::timestamp_nanos(nanos));
-}
-
-/**
- * @brief Writes results to database
- *
- *
- * @param dataQueue Queue with results
- * @param config Configuration
- */
-void writeToDb(CQueue &dataQueue, config_map &config) {
-    try {
-        std::string confStr = "http::addr=" + std::get<std::string>(config["questdb_host"]) + ":" + std::to_string(std::get<uint>(config["questdb_port"])) + ";username=" + std::get<std::string>(config["questdb_user"]) + ";password=" + std::get<std::string>(config["questdb_password"]) + ";retry_timeout=15000;";
-        auto sender = questdb::ingress::line_sender::from_conf(confStr);
-        questdb::ingress::line_sender_buffer buffer;
-
-        std::string jobId = std::to_string(std::get<uint>(config["jobId"]));
-        std::string hostname = std::get<std::string>(config["hostname"]);
-
-        int bufferSize = 0;
-        while (!canceled) {
-            CQueue::ILPEntries data;
-            // wait with timeout in case no new data is coming in and measurements are canceled
-            if (dataQueue.waitAndPopAll(data, QUEUE_TIMEOUT) != 0)
-                continue;
-
-            for (auto &v : data.ilp_int64_t)
-                addToBuffer<int64_t>(buffer, v, jobId, hostname);
-
-            for (auto &v : data.ilp_double)
-                addToBuffer<double>(buffer, v, jobId, hostname);
-
-            bufferSize += data.ilp_int64_t.size() + data.ilp_double.size();
-            if (bufferSize >= BUFFER_SIZE) {
-                sender.flush(buffer);
-                bufferSize = 0;
-            }
-        }
-        if (bufferSize > 0)
-            sender.flush(buffer);
-
-    } catch (const questdb::ingress::line_sender_error &e) {
-        CLogging::log("DbWriter", CLogging::error, "Database Error - " + boost::current_exception_diagnostic_information());
-        canceled = true;
-    }
-}
-
 /**
  * @brief Periodically checks and manages all measurement threads.
  *
  * @param statusList List of statusInfo
  */
-void watchdog(std::unique_ptr<statusInfo> &statusList) {
+void watchdog(std::unique_ptr<statusInfo>& statusList) {
     do {
         time_t currentTime = Helper::getSecondsSinceEpoch();
-        for (const auto &entry : statusList->classList) {
+        for (const auto& entry : statusList->classList) {
             /* Check whether thread is hung and forcefully terminate it if this is the case.
              * Restart thread on next watchdog execution.
              */
@@ -158,13 +96,13 @@ void watchdog(std::unique_ptr<statusInfo> &statusList) {
     } while (!canceled);
 }
 
-int measure(config_map &config, Topology::cpuTopology &topology) {
+int measure(config_map& config, Topology::cpuTopology& topology) {
     std::unique_ptr<statusInfo> statusList(new statusInfo);
 
     CQueue dataQueue = CQueue();
 
     std::thread watchdogThread(&watchdog, std::ref(statusList));
-    std::thread writeThread(&writeToDb, std::ref(dataQueue), std::ref(config));
+    std::thread writeThread(&ClickHouseWriter::writeToDb, std::ref(dataQueue), std::ref(config));
 
     ThreadHelper::init(statusList, &dataQueue, config, topology);
 
@@ -180,7 +118,7 @@ int measure(config_map &config, Topology::cpuTopology &topology) {
     return 0;
 }
 
-std::map<std::string, double> benchmarkSystem(Topology::cpuTopology &topology) {
+std::map<std::string, double> benchmarkSystem(Topology::cpuTopology& topology) {
     std::map<std::string, double> values;
     if (Helper::writeToFile(BENCHMARK_STATUS_FILE_PATH, "") != 0)
         return values;
@@ -191,7 +129,7 @@ std::map<std::string, double> benchmarkSystem(Topology::cpuTopology &topology) {
         return path + " -t " + benchmark + " " + workgroup;
     };
 
-    auto benchmarkAvailable = [](std::string &available, std::string benchmark) {
+    auto benchmarkAvailable = [](std::string& available, std::string benchmark) {
         // available benchmarks are suffixed with " -"
         return available.find(benchmark + " -") != std::string::npos;
     };
@@ -212,7 +150,7 @@ std::map<std::string, double> benchmarkSystem(Topology::cpuTopology &topology) {
     int threads = topology.coresPerSocket * topology.threadsPerCore * topology.sockets;
 
     std::string output;
-    for (auto &benchmark : flopBenchmarks) {
+    for (auto& benchmark : flopBenchmarks) {
         if (!benchmarkAvailable(available, benchmark)) continue;
         if (Helper::getCommandOutput(generateBenchmarkCommand(benchmark, threads, topology.l1CacheTotal), output) != 0)
             continue;
@@ -222,7 +160,7 @@ std::map<std::string, double> benchmarkSystem(Topology::cpuTopology &topology) {
 
     std::vector<std::string> stream = {"l1", "l2", "l3", "mem"};
 
-    for (auto &variant : stream) {
+    for (auto& variant : stream) {
         std::string benchmark = "load";
         if (!benchmarkAvailable(available, benchmark)) continue;
         int cacheSize = 0;
@@ -259,7 +197,7 @@ std::map<std::string, double> benchmarkSystem(Topology::cpuTopology &topology) {
  * @param argv arguments
  * @return int Exit status
  */
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     bool help = false;
     std::string confPath = "/etc/xbatd/xbatd.conf";
     uint jobId = 0;
@@ -303,13 +241,13 @@ int main(int argc, char *argv[]) {
             {"restapi_port", pt.get<uint>("restapi.port")},
             {"restapi_client_id", pt.get<std::string>("restapi.client_id")},
             {"restapi_client_secret", pt.get<std::string>("restapi.client_secret")},
-            {"questdb_host", pt.get<std::string>("questdb.host")},
-            {"questdb_port", pt.get<uint>("questdb.port")},
-            {"questdb_database", pt.get<std::string>("questdb.database")},
-            {"questdb_user", pt.get<std::string>("questdb.user")},
-            {"questdb_password", pt.get<std::string>("questdb.password")}};
+            {"clickhouse_host", pt.get<std::string>("clickhouse.host")},
+            {"clickhouse_port", pt.get<uint>("clickhouse.port")},
+            {"clickhouse_database", pt.get<std::string>("clickhouse.database")},
+            {"clickhouse_user", pt.get<std::string>("clickhouse.user")},
+            {"clickhouse_password", pt.get<std::string>("clickhouse.password")}};
 
-    } catch (boost::property_tree::ptree_bad_path const &) {
+    } catch (boost::property_tree::ptree_bad_path const&) {
         std::cerr << "Invalid configuration at " << confPath << "\n"
                   << boost::current_exception_diagnostic_information();
         return EXIT_FAILURE;
@@ -385,7 +323,7 @@ int main(int argc, char *argv[]) {
         if (benchmarkValues.empty())
             logger.log(CLogging::error, "Failed to benchmark system");
 
-        for (auto &v : benchmarkValues) {
+        for (auto& v : benchmarkValues) {
             systemInfo["benchmarks"][v.first] = v.second;
         }
         curlClient.registerNode(systeminfoHash, systemInfo);

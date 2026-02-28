@@ -10,7 +10,7 @@
 
 #include <iostream>
 
-#include "nlohmann/json.hpp"
+#include "external/nlohmann-json/include/nlohmann/json.hpp"
 
 /**
  * @brief Construct a new CIOStat::CIOStat object and initialize parameters
@@ -77,7 +77,6 @@ int CIOStat::parseIOStat() {
 
     auto disks = iostat["sysstat"]["hosts"][0]["statistics"][0]["disk"];
 
-    std::vector<CQueue::ILP<double>> ilps;
     for (auto const &disk : disks) {
         std::string device = disk["disk_device"];
         if (device.find("loop") != std::string::npos) continue;
@@ -89,15 +88,9 @@ int CIOStat::parseIOStat() {
 
             auto meta = metricInfo[key];
 
-            // TODO move to separate function
-            std::map<std::string, std::string> tags = {{"level", "device"}, {"device", device}};
-            CQueue::ILP<double> ilp = {meta.label,
-                                       tags,
-                                       value * meta.scale,
-                                       intervalEnd};
-            ilps.push_back(ilp);
+            // Push to device measurement queue with scaled value
+            dataQueue->push(CQueue::DeviceMeasurement<double>{meta.label, "device", device, value * meta.scale, intervalEnd});
         }
     }
-    dataQueue->pushMultiple<double>(ilps);
     return 0;
 }

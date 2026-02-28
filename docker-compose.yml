@@ -10,6 +10,10 @@ services:
             -  #CERT_DIR#:/etc/ssl/:ro
         ports:
             - "#FRONTEND_NETWORK#:#FRONTEND_PORT#:7000"
+            #- "#FRONTEND_NETWORK#:#MONGODB_PORT#:#MONGODB_PORT#"  # MongoDB
+            - "#FRONTEND_NETWORK#:#CLICKHOUSE_NATIVE_PORT#:#CLICKHOUSE_NATIVE_PORT#" # ClickHouse native protocol (must always be open for xbatd)
+            #- "#FRONTEND_NETWORK#:#CLICKHOUSE_PG_PORT#:#CLICKHOUSE_PG_PORT#"  # ClickHouse PostgreSQL protocol
+            #- "#FRONTEND_NETWORK#:#CLICKHOUSE_HTTP_PORT#:#CLICKHOUSE_HTTP_PORT#"  # ClickHouse UI
         depends_on:
             - xbat-ui
             - xbat-backend
@@ -35,7 +39,7 @@ services:
             - xbat-valkey
             - xbat-pgbouncer
         expose:
-            - 7001
+            - 8001
     xbat-ctld:
         image: xbat_ctld
         container_name: xbat-ctld
@@ -54,7 +58,7 @@ services:
             - xbat-mongodb
             - xbat-pgbouncer
         expose:
-            - 7002
+            - 8002
     xbat-ui:
         image: xbat_ui
         container_name: xbat-ui
@@ -68,12 +72,14 @@ services:
         depends_on:
             - xbat-backend
         expose:
-            - 7003
+            - 8003
     xbat-mongodb:
-        image: xbat_mongodb
+        image: docker.io/mongo:8
         restart: unless-stopped
         container_name: xbat-mongodb
         user: "#XBAT_UID#:#XBAT_GID#"
+        entrypoint: ["mongod"]
+        command: ["--config", "/etc/mongod.conf"]
         volumes:
             -  #VAR_LIB#/mongodb/:/var/lib/mongodb/
             -  #VAR_LOG#/mongodb/mongod.log:/var/log/mongodb/mongod.log
@@ -82,26 +88,31 @@ services:
             # TODO mongo user fails creating socket in container due to permissions (but only with podman)
             # Mounting tmp is only a workaround
             - /tmp/:/tmp/
-        ports:
-            - "#FRONTEND_NETWORK#:27017:27017"
+        expose:
+            - 27017
 
-    xbat-questdb:
-        image: docker.io/questdb/questdb:9.0.3
+    xbat-clickhouse:
+        image: docker.io/clickhouse/clickhouse-server:25.11.9
         restart: unless-stopped
-        container_name: xbat-questdb
+        container_name: xbat-clickhouse
         user: "#XBAT_UID#:#XBAT_GID#"
         volumes:
             - /etc/localtime:/etc/localtime:ro
-            -  #VAR_LIB#/questdb:/var/lib/questdb
-            -  #VAR_LOG#/questdb:/var/log/questdb
-            - /etc/xbat/questdb.conf:/var/lib/questdb/conf/server.conf:ro
-            - /etc/xbat/questdb-log.conf:/var/lib/questdb/conf/log.conf:ro
+            -  #VAR_LIB#/clickhouse:/var/lib/clickhouse/
+            -  #VAR_LOG#/clickhouse:/var/log/clickhouse-server/
+            - /etc/xbat/clickhouse/config/:/etc/clickhouse-server/config.d/:ro
+            - /etc/xbat/clickhouse/users/:/etc/clickhouse-server/users.d/:ro
+        cap_add:
+            - SYS_NICE
+            - IPC_LOCK
+        ulimits:
+            nofile:
+                soft: 262144
+                hard: 262144
         expose:
-            - 8812
-        ports:
-            #- "#FRONTEND_NETWORK#:8812:8812"
-            - "#FRONTEND_NETWORK#:9000:9000"
-            - "#FRONTEND_NETWORK#:9003:9003"
+            - 8123
+            - 9000
+            - 9005
     xbat-valkey:
         image: docker.io/valkey/valkey:7.2-alpine
         restart: unless-stopped
@@ -124,6 +135,6 @@ services:
             - /etc/xbat/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
             - /etc/xbat/userlists.txt:/etc/pgbouncer/userlists.txt:ro
         depends_on:
-            - xbat-questdb
+            - xbat-clickhouse
         expose:
             - 6432

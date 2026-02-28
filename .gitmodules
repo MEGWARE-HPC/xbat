@@ -1,0 +1,9 @@
+[submodule "src/xbatd/src/external/clickhouse-cpp"]
+	path = src/xbatd/src/external/clickhouse-cpp
+	url = https://github.com/ClickHouse/clickhouse-cpp.git
+[submodule "src/xbatd/src/external/nlohmann-json"]
+	path = src/xbatd/src/external/nlohmann-json
+	url = https://github.com/nlohmann/json.git
+[submodule "src/xbatd/src/external/clipp"]
+	path = src/xbatd/src/external/clipp
+	url = https://github.com/muellan/clipp.git

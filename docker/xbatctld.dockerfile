@@ -15,7 +15,7 @@ RUN pip3 install --no-cache-dir -r xbatctld/requirements.txt && pip3 install -e 
 
 WORKDIR /home/xbatctld
 
-EXPOSE 7002
+EXPOSE 8002
 
 ENV BUILD=prod
 

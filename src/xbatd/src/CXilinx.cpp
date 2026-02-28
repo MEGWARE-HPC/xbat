@@ -86,14 +86,7 @@ int CXilinx::readUsage() {
 
         // values are stored in uW
         double value = std::stoll(valueStr) / 1000000.0;
-        std::map<std::string, std::string> tags = {{"level", "device"}, {"device", bdf}};
-        CQueue::ILP<double> ilp = {
-            "fpga_power",
-            tags,
-            value,
-            intervalEnd};
-
-        dataQueue->pushSingle<double>(ilp);
+        dataQueue->push(CQueue::DeviceMeasurement<double>{"fpga_power", "device", bdf, value, intervalEnd});
         devicesFound++;
     }
     return devicesFound;

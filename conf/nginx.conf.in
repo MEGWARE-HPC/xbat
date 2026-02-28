@@ -7,6 +7,68 @@ events {
     worker_connections  1024;
 }
 
+# Stream module for TCP proxying with SSL termination
+stream {
+    upstream mongodb {
+        server #MONGODB_HOST#:27017;
+    }
+
+    upstream clickhouse_native {
+        server #CLICKHOUSE_HOST#:9000;
+    }
+
+    upstream clickhouse_postgres {
+        server #CLICKHOUSE_HOST#:9005;
+    }
+
+    upstream clickhouse_http {
+        server #CLICKHOUSE_HOST#:8123;
+    }
+
+    # MongoDB with SSL termination
+    server {
+        listen #MONGODB_PORT# ssl;
+        proxy_pass mongodb;
+        
+        ssl_certificate #SSL_CERTIFICATE#;
+        ssl_certificate_key #SSL_CERTIFICATE_KEY#;
+        ssl_protocols TLSv1.2 TLSv1.3;
+        proxy_connect_timeout 5s;
+    }
+
+    # ClickHouse native protocol with SSL termination
+    server {
+        listen #CLICKHOUSE_NATIVE_PORT# ssl;
+        proxy_pass clickhouse_native;
+        
+        ssl_certificate #SSL_CERTIFICATE#;
+        ssl_certificate_key #SSL_CERTIFICATE_KEY#;
+        ssl_protocols TLSv1.2 TLSv1.3;
+        proxy_connect_timeout 5s;
+    }
+
+    # ClickHouse PostgreSQL-compatible protocol without SSL
+    # Nginx SSL not working with PgWire protocol
+    # TODO implement SSL at pgbouncer or clickhouse level
+    server {
+        listen #CLICKHOUSE_PG_PORT#;
+        proxy_pass clickhouse_postgres;
+        
+        proxy_connect_timeout 5s;
+    }
+
+    # ClickHouse HTTP protocol with SSL termination
+    server {
+        listen #CLICKHOUSE_HTTP_PORT# ssl;
+        proxy_pass clickhouse_http;
+        
+        ssl_certificate #SSL_CERTIFICATE#;
+        ssl_certificate_key #SSL_CERTIFICATE_KEY#;
+        ssl_protocols TLSv1.2 TLSv1.3;
+        proxy_connect_timeout 5s;
+    }
+}
+
 http {
 
 	include       /etc/nginx/mime.types;
@@ -34,20 +96,11 @@ http {
     gzip_min_length 256;
 
     upstream docker-xbat-backend {
-        server xbat-backend:7001;
+        server xbat-backend:8001;
     }
 
     upstream docker-xbat-ui {
-        server xbat-ui:7003;
-    }
-
-    upstream docker-xbat-questdb {
-        server #QUESTDB_ADDRESS#;
-    }
-
-    map $http_referer $is_questdb_referer {
-        default 0;
-        "~*questdb" 1;
+        server xbat-ui:8003;
     }
 
     server {
@@ -72,12 +125,6 @@ http {
         
 
         location / {
-
-            # pass all subsequent questdb request with "questdb" in referer to xbat-questdb
-            if ($is_questdb_referer) {
-                proxy_pass http://docker-xbat-questdb;
-            }
-
             proxy_pass http://docker-xbat-ui;
             proxy_redirect http://docker-xbat-ui/ $scheme://$http_host/;
         }
@@ -104,20 +151,6 @@ http {
         location ~ /(api/v1|oauth|swagger)/ {
             proxy_pass http://docker-xbat-backend;
             proxy_redirect http://docker-xbat-backend/ $scheme://$http_host/;
-        }
-
-        # proxy initial questdb request to xbat-questdb
-        # to make questdb UI accessible through same port as xbat
-        location = /questdb {
-            return 301 /questdb/;
-        }
-
-        location /questdb/ {
-            proxy_pass http://docker-xbat-questdb/;
-
-            proxy_redirect / /questdb/;
-            # proxy_buffering off;
-            # add_header Cache-Control "no-store";
         }
     }
 

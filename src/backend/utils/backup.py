@@ -5,192 +5,19 @@ import logging
 import time
 import shutil
 import subprocess
+import re
 from pathlib import Path
+from datetime import datetime, timedelta
 from bson.objectid import ObjectId
 from flask import current_app as app
-from aiohttp import ClientSession, BasicAuth, FormData
-from concurrent.futures import ThreadPoolExecutor
-from shared import questdb as qdb
 from shared import httpErrors
 from shared.files import recreate_folder, contains_files
 from shared.helpers import sanitize_mongo
 from shared.configuration import get_logger, get_config
+from shared import clickhouse as cdb
 
 logger = logging.getLogger(get_logger())
-
-questdb = qdb.QuestDB()
-
-
-class QuestDBAPI:
-
-    def __init__(self):
-        """
-        Initialize QuestDB API.
-        """
-        self.config = get_config()
-        if "questdb" not in self.config:
-            logger.error("Invalid configuration: missing 'questdb' config.")
-            return
-        self.config = self.config["questdb"]
-        self.host = self.config.get("host", "localhost")
-        self.port = self.config.get("api_port", 9000)
-        self.username = self.config.get("api_user")
-        self.password = self.config.get("api_password")
-
-    def _get_auth(self):
-        """
-        Get authentication information.
-        """
-        auth = {}
-        if self.username and self.password:
-            auth["auth"] = BasicAuth(self.username, self.password)
-        return auth
-
-    async def export_to_csv(self, table_name, path, job_id=None):
-        """
-        Export the data in the QuestDB table to a CSV file.
-        :param session: aiohttp ClientSession object
-        :param table_name: the name of the table to be exported
-        :param path: the path of the output CSV file
-        """
-        query = f"SELECT * FROM {table_name}"
-        if job_id:
-            query += f" WHERE jobId IN {job_id}"
-        url = f"http://{self.host}:{self.port}/exp"
-        params = {"query": query}
-        auth = self._get_auth()
-        try:
-            async with ClientSession() as session:
-                async with session.get(url, params=params, **auth) as response:
-                    if response.status == 200:
-                        data = await response.read()
-                        csv_content = data.decode('utf-8').strip()
-                        csv_row = csv_content.split('\n')
-                        if len(csv_row) < 2:
-                            return False
-                        with open(path, "wb") as file:
-                            file.write(data)
-                        return True
-                    else:
-                        logger.error(
-                            f"Export failed for table '{table_name}', status code: {response.status}, "
-                            f"error message: {await response.text()}")
-                        return False
-        except Exception as e:
-            logger.error(
-                f"An error occurred while exporting data from table '{table_name}': {e}"
-            )
-
-    async def export_tables(self, table_names, runNr_path, job_id=None):
-        """
-        Asynchronously export multiple tables to CSV files based on the provided job IDs.
-
-        :param table_names: list of table names to be exported
-        :param job_id: list of job IDs to filter by (optional)
-        """
-        start_time = time.time()
-        tasks = []
-        for table_name in table_names:
-            path = runNr_path / Path(table_name + ".csv")
-            task = self.export_to_csv(table_name, path, job_id)
-            tasks.append(task)
-
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        end_time = time.time()
-        logger.debug(
-            f"Export duration from QuestDB: {end_time - start_time: .2f} seconds"
-        )
-        success_count = sum(1 for result in results if result is True)
-        skip_count = sum(1 for result in results if result is False)
-        failure_count = len(results) - (success_count + skip_count)
-        logger.info(
-            f"Export completed: {success_count} successful, {skip_count} skipped (no data), {failure_count} failed"
-        )
-        return success_count
-
-    async def import_from_csv(self, table_name, path):
-        """
-        Import data from CSV file into QuestDB table
-        
-        :param table_name: the name of the table to be imported
-        :param path: the path to the CSV file to import from
-        """
-        url = f"http://{self.host}:{self.port}/imp"
-        auth = self._get_auth()
-        params = {
-            "name": table_name,
-            "partitionBy": "DAY",
-            "timestamp": "timestamp",
-            "create": "true"
-        }
-        try:
-            with open(path, 'r', encoding='utf-8') as file:
-                csv_reader = csv.reader(file)
-                csv_header = next(csv_reader)
-            schema_list = []
-            for column in csv_header:
-                if column == "value":
-                    col_type = "DOUBLE"
-                    schema_list.append({"name": column, "type": col_type})
-                elif column == "timestamp":
-                    col_type = "TIMESTAMP"
-                    pattern = "yyyy-MM-ddTHH:mm:ss.SSSUUUz"
-                    schema_list.append({
-                        "name": column,
-                        "type": col_type,
-                        "pattern": pattern
-                    })
-                else:
-                    col_type = "SYMBOL"
-                    schema_list.append({"name": column, "type": col_type})
-            schema_str = json.dumps(schema_list)
-            form_data = FormData()
-            form_data.add_field('schema', schema_str)
-
-            with open(path, "r", encoding='utf-8') as csvfile:
-                csv_data = csvfile.read()
-                form_data.add_field('data',
-                                    csv_data,
-                                    filename=table_name + ".csv")
-                async with ClientSession() as session:
-                    async with session.post(url,
-                                            params=params,
-                                            data=form_data,
-                                            **auth) as response:
-                        if response.status == 200:
-                            return True
-                        else:
-                            return False
-        except Exception as e:
-            logger.error(
-                f"Error occurred while importing data into  '{table_name}': {e}"
-            )
-            return False
-
-    async def import_csvs(self, table_paths):
-        """
-        Import CSV files into QuestDB tables
-        
-        :param table_paths: a dictionary mapping table names to CSV file paths
-        """
-        start_time = time.time()
-        tasks = []
-        for table_name, path in table_paths.items():
-            task = self.import_from_csv(table_name, path)
-            tasks.append(task)
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        end_time = time.time()
-        logger.debug(
-            f"Import duration to QuestDB: {end_time - start_time: .2f} seconds"
-        )
-        success_count = sum(1 for result in results if result is True)
-        failure_count = len(results) - success_count
-        logger.info(
-            f"Import completed: {success_count} successful, {failure_count} failed"
-        )
-
-
-questapi = QuestDBAPI()
+clickhouse = cdb.ClickHouse()
 
 
 def data_anonymise(collection_db, username):
@@ -238,27 +65,197 @@ def save_as_json(path, collection, filter_key, filter_value, anonymise,
                     json.dump(sanitize_mongo(collection_db), file)
 
 
-async def get_table_names():
+def _get_clickhouse_base_cmd():
     """
-    Get all the table names from QuestDB.
-
-    :return: List of table names.
+    Get ClickHouse client base command with configuration.
+    
+    :return: Base command array for clickhouse-client
     """
-    query = "SELECT table_name FROM tables() ORDER BY table_name ASC;"
-    result = await questdb.execute_query(query)
-    if not result:
-        return []
-    table_names = [row["table_name"] for row in result]
+    config = get_config()
+    if "clickhouse" not in config:
+        logger.error("Invalid configuration: missing 'clickhouse' config.")
+        return None
 
-    return table_names
+    is_dev = app.config["BUILD"] == "dev"
+
+    ch_config = config["clickhouse"]
+    host = ch_config.get("host")
+    user = ch_config.get("user")
+    password = ch_config.get("password")
+    database = ch_config.get("database")
+
+    # always use internally exposed 9000 port for regular setups
+    if host == "xbat-clickhouse":
+        port = 9000
+    # for --no-db setups or dev environments, use the "daemon_port" instead
+    else:
+        port = ch_config.get("daemon_port", 7101)
+
+    base_cmd = ["clickhouse-client", "--host", host, "--port", str(port)]
+    if database:
+        base_cmd.extend(["--database", database])
+    if user:
+        base_cmd.extend(["--user", user])
+    if password:
+        base_cmd.extend(["--password", password])
+
+    if is_dev:
+        base_cmd.extend(["--secure", "--accept-invalid-certificate"])
+
+    return base_cmd
 
 
-async def save_as_csv(job_id, runNr_path):
-    if job_id == "()" or not job_id:
-        raise httpErrors.NotFound("JobId not found")
-    table_names = await get_table_names()
-    csv_count = await questapi.export_tables(table_names, runNr_path, job_id)
-    return csv_count
+async def clickhouse_import_csvs(csv_paths, old_jobId, new_jobId):
+    """
+    Replace jobId in CSV files and import them into ClickHouse in parallel.
+    
+    :param csv_paths: List of CSV file paths to import
+    :param old_jobId: Old jobId to replace
+    :param new_jobId: New jobId to use as replacement
+    """
+
+    start_time = time.time()
+    semaphore = asyncio.Semaphore(8)
+
+    base_cmd = _get_clickhouse_base_cmd()
+    if base_cmd is None:
+        return False
+
+    def _replace_csv_job_id(csv_file, old_jobId, new_jobId):
+        try:
+            if old_jobId == new_jobId:
+                return True
+
+            with open(csv_file, mode='r', encoding='utf-8') as infile:
+                content = infile.read()
+
+            # Replace jobId in the first column
+            pattern = rf'^{re.escape(str(old_jobId))},'
+            replacement = f'{new_jobId},'
+            content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
+
+            with open(csv_file, mode='w', encoding='utf-8') as outfile:
+                outfile.write(content)
+            return True
+        except Exception as e:
+            logger.error(
+                f"Unexpected error replacing jobId in file {csv_file}: {e}")
+            return False
+
+    async def _import_csv(csv_file):
+        async with semaphore:
+            return await _import_csv_inner(csv_file)
+
+    async def _import_csv_inner(csv_file):
+        table_name = csv_file.stem
+
+        # First replace jobId if needed
+        replace_success = await asyncio.to_thread(_replace_csv_job_id,
+                                                  csv_file, old_jobId,
+                                                  new_jobId)
+        if not replace_success:
+            return False
+
+        # Then import the CSV into ClickHouse
+        query = f"INSERT INTO {table_name} FORMAT CSV"
+        cmd = base_cmd + ["--query", query]
+
+        def _run():
+            try:
+                with open(csv_file, "rb") as csvfile:
+                    result = subprocess.run(cmd,
+                                            stdin=csvfile,
+                                            stderr=subprocess.PIPE,
+                                            check=False)
+                return result
+            except Exception as e:
+                logger.error(f"Error importing {csv_file}: {e}")
+                return None
+
+        result = await asyncio.to_thread(_run)
+        if result is None or result.returncode != 0:
+            error_msg = result.stderr.decode(
+                "utf-8", errors="ignore")[:512] if result else "Unknown error"
+            logger.error("ClickHouse import failed for table '%s': %s",
+                         table_name, error_msg)
+            return False
+        return True
+
+    tasks = []
+    for csv_path in csv_paths:
+        tasks.append(_import_csv(csv_path))
+
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    total_duration = time.time() - start_time
+
+    success_count = sum(1 for result in results if result is True)
+    failure_count = len(results) - success_count
+
+    logger.debug("ClickHouse import total duration: %.2f seconds",
+                 total_duration)
+    logger.info(
+        f"ClickHouse import completed: {success_count} successful, {failure_count} failed"
+    )
+
+    return success_count > 0
+
+
+async def clickhouse_save_as_csv(job_id, runNr_path):
+    path = runNr_path / Path(str(job_id))
+    recreate_folder(path, parents=True)
+
+    tables = await clickhouse.get_table_names()
+    export_start_time = time.time()
+    # Use a semaphore to limit the number of concurrent exports
+    semaphore = asyncio.Semaphore(8)
+
+    base_cmd = _get_clickhouse_base_cmd()
+    if base_cmd is None:
+        return
+
+    async def _export_table(table_name, output_path):
+        async with semaphore:
+            return await _export_table_inner(table_name, output_path)
+
+    async def _export_table_inner(table_name, output_path):
+        query = f"SELECT * FROM {table_name} WHERE job_id = '{job_id}'"
+        cmd = base_cmd + ["--format", "CSV", "--query", query]
+
+        def _run():
+            start_time = time.time()
+            with open(output_path, "wb") as csvfile:
+                result = subprocess.run(cmd,
+                                        stdout=csvfile,
+                                        stderr=subprocess.PIPE,
+                                        check=False)
+            duration = time.time() - start_time
+            logger.debug(
+                "ClickHouse export duration for table '%s': %.2f seconds",
+                table_name, duration)
+            return result
+
+        result = await asyncio.to_thread(_run)
+        if result.returncode != 0:
+            logger.error("ClickHouse export failed for table '%s': %s",
+                         table_name,
+                         result.stderr.decode("utf-8", errors="ignore")[:512])
+            if output_path.exists():
+                output_path.unlink()
+            return False
+
+        if output_path.exists() and output_path.stat().st_size == 0:
+            output_path.unlink()
+            return False
+        return True
+
+    tasks = []
+    for table in tables:
+        csv_file_path = path / Path(f"{table}.csv")
+        tasks.append(_export_table(table, csv_file_path))
+    await asyncio.gather(*tasks)
+    total_duration = time.time() - export_start_time
+    logger.debug("ClickHouse export total duration: %.2f seconds",
+                 total_duration)
 
 
 def replace_key_fields(data, target_keys, target_value, replaced_value='demo'):
@@ -390,34 +387,12 @@ def process_csv(csv_file, jobId_map):
         logger.error(f"Unexpected error processing file {csv_file}: {e}")
 
 
-async def replace_jobId_csv(path, jobId_map):
-    """
-    Replace jobIds in CSV files with new jobIds based on the provided mapping.
-
-    :param path: Path to the directory containing CSV files.
-    :param jobId_map: Dictionary mapping old jobIds to new jobIds (dict)
-    """
-    if not isinstance(path, Path) or not path.is_dir():
-        logger.error(f"Invalid path or directory not found: {path}")
-        return
-    jobId_map_str = {str(k): str(v) for k, v in jobId_map.items()}
-    with ThreadPoolExecutor() as executor:
-        loop = asyncio.get_running_loop()
-        tasks = []
-        for csv_file in path.glob("*.csv"):
-            task = loop.run_in_executor(executor, process_csv, csv_file,
-                                        jobId_map_str)
-            tasks.append(task)
-
-        await asyncio.gather(*tasks)
-
-
-def get_new_jobIds(benchmark_db, db, maxjobId):
+def get_new_jobIds(benchmark_db, db):
     """
     Generate a new jobId mapping relationship.
 
-    :param jobIds: old jobId array.
-    :param maxjobId: current maximum jobId.
+    :param benchmark_db: Benchmark database entry
+    :param db: MongoDB database instance
 
     :return dict: Contains the mapping relationship from old jobId to new jobId.
     """
@@ -435,9 +410,10 @@ def get_new_jobIds(benchmark_db, db, maxjobId):
                 if 'jobId' in job_data:
                     if job_data['jobId'] not in jobIds:
                         jobIds.append(job_data['jobId'])
+
     jobId_map = {}
-    for i, jobId in enumerate(jobIds):
-        new_jobId = maxjobId + 1 + i
+    for jobId in jobIds:
+        new_jobId = db.getNextAvailableJobId()
         jobId_map[jobId] = new_jobId
 
     return jobId_map
@@ -472,6 +448,7 @@ async def save_benchmarks(runNr, anonymise, folder_path, db):
             )
             return
         node_hashes = []
+        job_list = []
         if 'jobIds' in benchmark_db and benchmark_db['jobIds']:
             if len(benchmark_db['jobIds']) > 1:
                 job_db = list(db.getMany("jobs", {"runNr": runNr}))
@@ -508,7 +485,6 @@ async def save_benchmarks(runNr, anonymise, folder_path, db):
         else:
             # for compatibility with old benchmarks that did not save jobIds in the benchmark.
             job_db = list(db.getMany("jobs", {"runNr": runNr}))
-            job_list = []
             if job_db is None:
                 raise httpErrors.NotFound(
                     "Job with runNr %s not found in jobs collection" % runNr)
@@ -525,7 +501,6 @@ async def save_benchmarks(runNr, anonymise, folder_path, db):
                 if node_hash not in node_hashes:
                     node_hashes.append(node_hash)
 
-        job_id = '(' + ', '.join(f"'{str(item)}'" for item in job_list) + ')'
         nodes_list = extract_hash(list(node_hashes))
 
         collections = {
@@ -569,9 +544,9 @@ async def save_benchmarks(runNr, anonymise, folder_path, db):
         orig_username = benchmark_db['issuer']
         recreate_folder(runNr_path)
 
-        for collection in collections:
-            file_path = runNr_path / Path(collection + '.json')
-            try:
+        try:
+            for collection in collections:
+                file_path = runNr_path / Path(collection + '.json')
                 if collection == 'benchmarks':
                     if anonymise:
                         benchmark_db = data_anonymise(benchmark_db,
@@ -583,177 +558,104 @@ async def save_benchmarks(runNr, anonymise, folder_path, db):
                         job_db = data_anonymise(job_db, orig_username)
                     with open(file_path, "w") as file:
                         json.dump(sanitize_mongo(job_db), file)
-                    csv_count = await save_as_csv(job_id, runNr_path)
                 else:
                     save_as_json(file_path, collection,
                                  collections[collection]['filter'],
                                  collections[collection]['value'], anonymise,
                                  orig_username, db)
-            except Exception as e:
-                app.logger.error("Error occurred while saving: %s" % e)
-                raise httpErrors.InternalServerError(
-                    "Error saving %s for runNr %s to file." %
-                    (collection, runNr))
-        return csv_count
-
-
-async def get_import_runNr(data, db, reassignRunNr):
-    """
-    Get the runNr and maxJobId for importing data.
-
-    :return: new_runNr and maxJobId
-    """
-    # The type of the parameter (reassignRunNr) from the FormData is String
-    if reassignRunNr == "true":
-        if db.getOne("benchmarks", {"_id": ObjectId(data["_id"])}):
-            new_runNr = db.getOne("benchmarks",
-                                  {"_id": ObjectId(data["_id"])})["runNr"]
-            maxJobId = 0
-        else:
-            new_runNr = db.getNextRunNr()
-            jobID_questdb = await questdb.execute_query(
-                "SELECT MAX(jobId) AS maxJobId FROM cpu_usage;")
-            jobID_mongodb = list(
-                db.aggregate("jobs", [{
-                    "$group": {
-                        "_id": "null",
-                        "maxJobId": {
-                            "$max": "$jobId"
-                        }
-                    }
-                }]))
-            if jobID_mongodb or jobID_questdb:
-                maxJobId = max(int(jobID_questdb[0]['maxJobId']),
-                               int(jobID_mongodb[0]['maxJobId']))
-            else:
-                maxJobId = 30000
-
-        if db.getOne("benchmarks", {"runNr": data["runNr"]}):
-            return (new_runNr, maxJobId)
-        else:
-            return (data["runNr"],
-                    0) if data["runNr"] < new_runNr else (new_runNr, maxJobId)
-    else:
-        return (data["runNr"], 0)
-
-
-def get_tablepath_dict(path):
-    """
-    Get a dictionary mapping table names to their corresponding CSV file paths
-
-    """
-    csv_files = list(path.glob("*.csv"))
-    if not csv_files:
-        logger.error(f"No CSV files found in the directory:{path}")
-    table_dict = {}
-    for csv_file in csv_files:
-        table_name = csv_file.stem
-        table_dict[table_name] = csv_file
-    return table_dict
-
-
-def process_collection(collection, data, db, updateColl):
-    if collection == "configurations":
-        for item in data if isinstance(data, list) else [data]:
-            if not db.getOne(collection, {"_id": ObjectId(item["_id"])}):
-                db.insertOne(collection, item)
-            else:
-                if updateColl:
-                    db.replaceOne(collection, {"_id": ObjectId(item["_id"])},
-                                  item)
-    elif collection == "projects":
-        if isinstance(data, list):
-            for item in data:
-                if not db.getOne(collection, {"_id": ObjectId(item["_id"])}):
-                    db.insertOne(collection, item)
-                else:
-                    if updateColl:
-                        db.replaceOne(collection,
-                                      {"_id": ObjectId(item["_id"])}, item)
-        else:
-            if not db.getOne(collection, {"_id": ObjectId(data["_id"])}):
-                db.insertOne(collection, data)
-            else:
-                if updateColl:
-                    db.replaceOne(collection, {"_id": ObjectId(data["_id"])},
-                                  data)
-    elif collection == "users":
-        if not db.getOne(collection, {"user_name": data["user_name"]}):
-            db.insertOne(collection, data)
-        else:
-            if updateColl:
-                db.replaceOne(collection, {"user_name": data["user_name"]},
-                              data)
-    elif collection == "nodes":
-        if isinstance(data, list):
-            for item in data:
-                if not db.getOne(collection, {"hash": item["hash"]}):
-                    db.insertOne(collection, item)
-                else:
-                    if updateColl:
-                        db.replaceOne(collection, {"hash": item["hash"]}, item)
-        else:
-            if not db.getOne(collection, {"hash": data["hash"]}):
-                db.insertOne(collection, data)
-            else:
-                if updateColl:
-                    db.replaceOne(collection, {"hash": data["hash"]}, data)
-    elif collection in ["benchmarks", "jobs", "outputs"]:
-        if isinstance(data, list):
-            for item in data:
-                if not db.getOne(collection, {"_id": ObjectId(item["_id"])}):
-                    db.insertOne(collection, item)
-                else:
-                    if updateColl:
-                        db.replaceOne(collection,
-                                      {"_id": ObjectId(item["_id"])}, item)
-        else:
-            if not db.getOne(collection, {"_id": ObjectId(data["_id"])}):
-                db.insertOne(collection, data)
-            else:
-                if updateColl:
-                    db.replaceOne(collection, {"_id": ObjectId(data["_id"])},
-                                  data)
-
-
-async def process_table(csvs_path, jobId_map):
-    table_dict = get_tablepath_dict(csvs_path)
-    # TODO: Consider adding logic to conditionally import data when QuestDB data is absent.
-    # This can be achieved by checking if not table_dict.
-    if table_dict:
-        jobId_list = []
-        try:
-            with open(table_dict["cpu_usage"],
-                      'r',
-                      newline='',
-                      encoding='utf-8') as cpu_usage_file:
-                reader = csv.DictReader(cpu_usage_file)
-                if 'jobId' not in reader.fieldnames:
-                    logger.error(f"'jobId' column not found in {csvs_path}")
-                for row in reader:
-                    job_id = row["jobId"]
-                    if job_id not in jobId_list:
-                        jobId_list.append(job_id)
+            for job_id in job_list:
+                await clickhouse_save_as_csv(job_id, runNr_path / "jobs")
         except Exception as e:
-            logger.error(f"Error reading CPU usage CSV: {e}")
-        jobId_list_str = [f"'{x}'" for x in jobId_list]
-        jobIds = f"({', '.join(jobId_list_str)})"
-        data_count = await questdb.execute_query(
-            f"SELECT COUNT(*) AS count FROM cpu_usage WHERE jobId IN {jobIds};"
-        )
-        if data_count:
-            data_count = int(data_count[0]['count'])
-        else:
-            data_count = 0
-        if data_count > 0:
-            logger.info(
-                "The data already exists in the QuestDB database, skip the write process"
-            )
-            return
-        else:
-            if jobId_map:
-                await replace_jobId_csv(csvs_path, jobId_map)
-            await questapi.import_csvs(table_dict)
+            app.logger.error("Error occurred while saving: %s" % e)
+            raise httpErrors.InternalServerError(
+                "Error saving %s for runNr %s to file." % (collection, runNr))
+
+
+def count_csv_files(path: Path) -> int:
+    """Count all CSV files under path recursively."""
+    if not isinstance(path, Path):
+        path = Path(path)
+    if not path.exists():
+        return 0
+    return sum(1 for _ in path.rglob("*.csv"))
+
+
+def _remove_id(item):
+    """Remove _id field from item to avoid duplication during inserts."""
+    item.pop("_id", None)
+    return item
+
+
+def _process_item(collection,
+                  item,
+                  db,
+                  update_collections,
+                  is_reassigned_run_nr,
+                  lookup_key="_id"):
+    """
+    Process a single item for insert or update.
+    
+    :param collection: Collection name
+    :param item: Item to process
+    :param db: Database instance
+    :param update_collections: Whether to update existing items
+    :param is_reassigned_run_nr: Whether runNr was reassigned
+    :param lookup_key: Key to use for looking up existing items
+    """
+    # Prepare lookup filter
+    if lookup_key == "_id" and "_id" in item:
+        lookup_filter = {lookup_key: ObjectId(item["_id"])}
+    else:
+        lookup_filter = {lookup_key: item[lookup_key]}
+
+    # Check if item exists
+    existing_item = db.getOne(collection, lookup_filter)
+
+    # For reassigned runNr or benchmarks/jobs/outputs, always insert as new
+    if is_reassigned_run_nr and collection in [
+            "benchmarks", "jobs", "outputs"
+    ]:
+        _remove_id(item)
+        db.insertOne(collection, item)
+    elif not existing_item:
+        _remove_id(item)
+        db.insertOne(collection, item)
+    elif update_collections:
+        _remove_id(item)
+        db.replaceOne(collection, lookup_filter, item)
+
+
+def process_collection(collection, data, db, update_collections,
+                       is_reassigned_run_nr):
+    """
+    Process collection data for import.
+    
+    :param collection: Collection name
+    :param data: Data to process (single item or list)
+    :param db: Database instance
+    :param update_collections: Whether to update existing items
+    :param is_reassigned_run_nr: Whether runNr was reassigned
+    """
+    # Normalize data to list
+    items = data if isinstance(data, list) else [data]
+
+    # Determine lookup key based on collection
+    lookup_keys = {
+        "users": "user_name",
+        "nodes": "hash",
+        "configurations": "_id",
+        "projects": "_id",
+        "benchmarks": "_id",
+        "jobs": "_id",
+        "outputs": "_id"
+    }
+
+    lookup_key = lookup_keys.get(collection, "_id")
+
+    # Process each item
+    for item in items:
+        _process_item(collection, item, db, update_collections,
+                      is_reassigned_run_nr, lookup_key)
 
 
 def pigz_compress(input_path, uuid):
@@ -774,8 +676,8 @@ def pigz_compress(input_path, uuid):
         # Weighing compression efficiency and compressed file size, the current compression rate rating is chosen to be '3'
         command = [
             'tar', '--use-compress-program=pigz -3', '-cpf',
-            output_path.as_posix(),
-            source_folder.as_posix()
+            output_path.as_posix(), '-C',
+            source_folder.as_posix(), '.'
         ]
         try:
             subprocess.run(command, stderr=subprocess.PIPE, check=True)
@@ -809,7 +711,7 @@ def pigz_decompress(input_path, extract_folder):
     command = [
         'tar', '--use-compress-program=pigz', '-xpf',
         input_path.as_posix(), '-C',
-        extract_folder.as_posix(), '--strip-components=4'
+        extract_folder.as_posix()
     ]
     try:
         subprocess.run(command, stderr=subprocess.PIPE, check=True)

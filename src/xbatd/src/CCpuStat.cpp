@@ -132,7 +132,6 @@ int CCpuStat::readProc(std::map<std::string, std::vector<uint64_t>> &results) {
 
 void CCpuStat::calculateUsage(std::map<std::string, std::vector<uint64_t>> &previous, std::map<std::string, std::vector<uint64_t>> &current) {
     std::map<std::string, std::vector<uint64_t>> difference;
-    std::vector<CQueue::ILP<double>> ilps;
     for (auto &entry : current) {
         std::string key = entry.first;
         std::vector<uint64_t> values = entry.second;
@@ -152,54 +151,65 @@ void CCpuStat::calculateUsage(std::map<std::string, std::vector<uint64_t>> &prev
         // prevent division by zero
         if (total == 0.0) total = 1.0;
 
-        int hwThreadId = -1;
+        uint32_t hwThreadId = UINT32_MAX;  // Use max value as sentinel instead of -1
         std::regex reg("cpu(\\d+)");
         std::smatch match;
 
         std::string level = "thread";
-        if (key == "cpu")
+        if (key == "cpu") {
             level = "node";
-        else {
-            hwThreadId = std::stoi(std::regex_replace(key, reg, "$1"));
+        } else {
+            hwThreadId = static_cast<uint32_t>(std::stoi(std::regex_replace(key, reg, "$1")));
             if (!topology.smt)
                 level = "core";
         }
 
-        std::map<std::string, std::string> tags = {{"level", level}};
+        if (hwThreadId == UINT32_MAX)
+            continue;
 
-        if (hwThreadId != -1) {
-            tags["thread"] = std::to_string(hwThreadId);
-            tags["core"] = topology.hwThreads[hwThreadId].core;
-            tags["socket"] = topology.hwThreads[hwThreadId].socket;
-            tags["numa"] = topology.hwThreads[hwThreadId].numa;
-        }
-
-        ilps.insert(ilps.end(), {
-                                    {"cpu_usage",
-                                     tags,
-                                     ((total - idle) / total) * 100,
-                                     intervalEnd},
-                                    {"cpu_user",
-                                     tags,
-                                     (user / total) * 100,
-                                     intervalEnd},
-                                    {"cpu_system",
-                                     tags,
-                                     (sys / total) * 100,
-                                     intervalEnd},
-                                    {"cpu_iowait",
-                                     tags,
-                                     (iowait / total) * 100,
-                                     intervalEnd},
-                                    {"cpu_virtual",
-                                     tags,
-                                     (virt / total) * 100,
-                                     intervalEnd},
-                                    {"cpu_nice",
-                                     tags,
-                                     (nice / total) * 100,
-                                     intervalEnd},
-                                });
+        const auto hwThreadInfo = topology.hwThreads[hwThreadId];
+        // Use topology measurements for per-thread/core data
+        dataQueue->push(CQueue::TopologyMeasurement<double>{"cpu_usage", level,
+                                                            hwThreadId,
+                                                            hwThreadInfo.core,
+                                                            hwThreadInfo.numa,
+                                                            hwThreadInfo.socket,
+                                                            ((total - idle) / total) * 100,
+                                                            intervalEnd});
+        dataQueue->push(CQueue::TopologyMeasurement<double>{"cpu_user", level,
+                                                            hwThreadId,
+                                                            hwThreadInfo.core,
+                                                            hwThreadInfo.numa,
+                                                            hwThreadInfo.socket,
+                                                            (user / total) * 100,
+                                                            intervalEnd});
+        dataQueue->push(CQueue::TopologyMeasurement<double>{"cpu_system", level,
+                                                            hwThreadId,
+                                                            hwThreadInfo.core,
+                                                            hwThreadInfo.numa,
+                                                            hwThreadInfo.socket,
+                                                            (sys / total) * 100,
+                                                            intervalEnd});
+        dataQueue->push(CQueue::TopologyMeasurement<double>{"cpu_iowait", level,
+                                                            hwThreadId,
+                                                            hwThreadInfo.core,
+                                                            hwThreadInfo.numa,
+                                                            hwThreadInfo.socket,
+                                                            (iowait / total) * 100,
+                                                            intervalEnd});
+        dataQueue->push(CQueue::TopologyMeasurement<double>{"cpu_virtual", level,
+                                                            hwThreadId,
+                                                            hwThreadInfo.core,
+                                                            hwThreadInfo.numa,
+                                                            hwThreadInfo.socket,
+                                                            (virt / total) * 100,
+                                                            intervalEnd});
+        dataQueue->push(CQueue::TopologyMeasurement<double>{"cpu_nice", level,
+                                                            hwThreadId,
+                                                            hwThreadInfo.core,
+                                                            hwThreadInfo.numa,
+                                                            hwThreadInfo.socket,
+                                                            (nice / total) * 100,
+                                                            intervalEnd});
     }
-    dataQueue->pushMultiple<double>(ilps);
 }
