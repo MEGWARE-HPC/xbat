@@ -5,17 +5,20 @@ on:
     inputs:
       distro:
         required: true
-        type: string   # 8 | 9 | 10
+        type: string
       version:
         required: true
         type: string
       release:
         required: true
         type: string
+      runner:
+        required: true
+        type: string
 
 jobs:
   test-vm:
-    runs-on: [self-hosted, xbat]
+    runs-on: [self-hosted, "${{ inputs.runner }}"]
 
     env:
       VM_NAME: ci-el${{ inputs.distro }}-${{ github.run_id }}

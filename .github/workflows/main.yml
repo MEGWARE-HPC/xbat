@@ -1,5 +1,5 @@
 name: Build and Test xbat daemon
-#testing jobs on 3 runners
+
 on:
   push:
     branches:
@@ -15,6 +15,7 @@ jobs:
       distro: 8
       version: 1.0.0
       release: rc0
+      runner: xbat-el8
 
   test-el9:
     uses: ./.github/workflows/vm-test.yml
@@ -22,6 +23,7 @@ jobs:
       distro: 9
       version: 1.0.0
       release: rc0
+      runner: xbat-el9
 
   test-el10:
     uses: ./.github/workflows/vm-test.yml
@@ -29,3 +31,4 @@ jobs:
       distro: 10
       version: 1.0.0
       release: rc0
+      runner: xbat-el10
