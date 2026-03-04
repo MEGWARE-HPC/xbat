@@ -26,12 +26,29 @@
                         prepend-icon="$newFile"
                         @click="$emit('create-config')"
                     >
-                        New
+                        New Config
+                    </v-btn>
+                    <v-btn
+                        color="primary-light"
+                        title="Add Folder"
+                        prepend-icon="$newFolder"
+                        @click="$emit('create-folder')"
+                    >
+                        New Folder
                     </v-btn>
                 </div>
 
                 <!-- Table header -->
                 <div class="fb-row fb-row--head" :style="rowGridStyle">
+                    <div class="fb-col fb-col--check">
+                        <v-checkbox-btn
+                            v-model="headerChecked"
+                            :indeterminate="headerIndeterminate"
+                            density="compact"
+                            class="fb-check fb-check--head"
+                            @click.stop
+                        />
+                    </div>
                     <div class="fb-col fb-col--name">Name</div>
                     <div v-if="showOwner" class="fb-col fb-col--owner">
                         Owner
@@ -47,18 +64,20 @@
                         class="fb-rowitem"
                         @click="$emit('open-folder', parentId)"
                     >
-                        <template #prepend>
-                            <v-icon
-                                icon="$arrowLeftTop"
-                                class="fb-ico fb-ico--nav"
-                            />
-                        </template>
-
                         <v-list-item-title>
                             <div class="fb-row" :style="rowGridStyle">
+                                <div class="fb-col fb-col--check"></div>
+
                                 <div class="fb-col fb-col--name fb-name">
-                                    ..
+                                    <div class="fb-name-wrap">
+                                        <v-icon
+                                            icon="$arrowLeftTop"
+                                            class="fb-ico fb-ico--nav"
+                                        />
+                                        <span>..</span>
+                                    </div>
                                 </div>
+
                                 <div
                                     v-if="showOwner"
                                     class="fb-col fb-col--owner fb-owner"
@@ -82,19 +101,33 @@
                         class="fb-rowitem"
                         @click="$emit('open-folder', child.id)"
                     >
-                        <template #prepend>
-                            <v-icon
-                                :icon="childFolderIcon"
-                                class="fb-ico"
-                                :class="childFolderIconClass"
-                            />
-                        </template>
-
                         <v-list-item-title>
                             <div class="fb-row" :style="rowGridStyle">
-                                <div class="fb-col fb-col--name fb-name">
-                                    {{ child.name }}
+                                <div class="fb-col fb-col--check">
+                                    <v-checkbox-btn
+                                        :model-value="
+                                            isSelected(folderToken(child.id))
+                                        "
+                                        density="compact"
+                                        class="fb-check fb-check--row"
+                                        @click.stop
+                                        @update:modelValue="
+                                            toggleSelect(folderToken(child.id))
+                                        "
+                                    />
                                 </div>
+
+                                <div class="fb-col fb-col--name fb-name">
+                                    <div class="fb-name-wrap">
+                                        <v-icon
+                                            :icon="childFolderIcon"
+                                            class="fb-ico"
+                                            :class="childFolderIconClass"
+                                        />
+                                        <span>{{ child.name }}</span>
+                                    </div>
+                                </div>
+
                                 <div
                                     v-if="showOwner"
                                     class="fb-col fb-col--owner fb-owner"
@@ -118,26 +151,43 @@
                         class="fb-rowitem"
                         @click="$emit('open-config', c.id)"
                     >
-                        <template #prepend>
-                            <v-icon
-                                class="fb-ico fb-ico--config"
-                                :icon="
-                                    c.doc?.configuration?.sharedProjects?.length
-                                        ? '$share'
-                                        : '$textBox'
-                                "
-                                color="primary-light"
-                            />
-                        </template>
-
                         <v-list-item-title>
                             <div class="fb-row" :style="rowGridStyle">
-                                <div class="fb-col fb-col--name fb-name">
-                                    {{
-                                        c.doc?.configuration
-                                            ?.configurationName || c.id
-                                    }}
+                                <div class="fb-col fb-col--check">
+                                    <v-checkbox-btn
+                                        :model-value="
+                                            isSelected(configToken(c.id))
+                                        "
+                                        density="compact"
+                                        class="fb-check fb-check--row"
+                                        @click.stop
+                                        @update:modelValue="
+                                            toggleSelect(configToken(c.id))
+                                        "
+                                    />
                                 </div>
+
+                                <div class="fb-col fb-col--name fb-name">
+                                    <div class="fb-name-wrap">
+                                        <v-icon
+                                            class="fb-ico fb-ico--config"
+                                            :icon="
+                                                c.doc?.configuration
+                                                    ?.sharedProjects?.length
+                                                    ? '$share'
+                                                    : '$textBox'
+                                            "
+                                            color="primary-light"
+                                        />
+                                        <span>
+                                            {{
+                                                c.doc?.configuration
+                                                    ?.configurationName || c.id
+                                            }}
+                                        </span>
+                                    </div>
+                                </div>
+
                                 <div
                                     v-if="showOwner"
                                     class="fb-col fb-col--owner fb-owner"
@@ -154,7 +204,7 @@
                         </v-list-item-title>
                     </v-list-item>
 
-                    <!-- empty state inside a folder -->
+                    <!-- empty state -->
                     <v-list-item
                         v-if="
                             !canGoUp &&
@@ -171,17 +221,53 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 
 const props = defineProps({
     folder: { type: Object, default: null }, // expects { id, name, children?, __parentId? }
     configs: { type: Array, default: () => [] },
     userLevel: { type: Number, required: true },
     UserLevelEnum: { type: Object, required: true },
-    myRootId: { type: String, default: "" }
+    myRootId: { type: String, default: "" },
+    selected: { type: Array, default: () => [] } // string tokens: "f:<id>" | "c:<id>"
 });
 
-defineEmits(["open-folder", "open-config", "create-config"]);
+const emit = defineEmits([
+    "open-folder",
+    "open-config",
+    "create-config",
+    "create-folder",
+    "update:selected"
+]);
+
+const internalSelected = ref((props.selected || []).map(String));
+
+watch(
+    () => props.selected,
+    (v) => {
+        internalSelected.value = (v || []).map(String);
+    }
+);
+
+const selectedSet = computed(() => new Set(internalSelected.value));
+
+const folderToken = (id) => `f:${String(id)}`;
+const configToken = (id) => `c:${String(id)}`;
+
+const isSelected = (token) => selectedSet.value.has(String(token));
+
+const setSelected = (arr) => {
+    internalSelected.value = arr.map(String);
+    emit("update:selected", internalSelected.value.slice());
+};
+
+const toggleSelect = (token) => {
+    const t = String(token);
+    const s = new Set(selectedSet.value);
+    if (s.has(t)) s.delete(t);
+    else s.add(t);
+    setSelected(Array.from(s));
+};
 
 const canCreate = computed(
     () => props.userLevel > (props.UserLevelEnum?.guest ?? 0)
@@ -217,8 +303,48 @@ const canGoUp = computed(() => !!props.folder && !!parentId.value);
 
 const folders = computed(() => (props.folder?.children || []).slice());
 
+const visibleTokens = computed(() => {
+    const tokens = [];
+    for (const f of folders.value) if (f?.id) tokens.push(folderToken(f.id));
+    for (const c of props.configs || [])
+        if (c?.id) tokens.push(configToken(c.id));
+    return tokens;
+});
+
+const headerChecked = computed({
+    get() {
+        const toks = visibleTokens.value;
+        if (!toks.length) return false;
+        return toks.every((t) => selectedSet.value.has(t));
+    },
+    set(v) {
+        const toks = visibleTokens.value;
+        if (!toks.length) return;
+
+        const s = new Set(selectedSet.value);
+        if (v) {
+            for (const t of toks) s.add(t);
+        } else {
+            for (const t of toks) s.delete(t);
+        }
+        setSelected(Array.from(s));
+    }
+});
+
+const headerIndeterminate = computed(() => {
+    const toks = visibleTokens.value;
+    if (!toks.length) return false;
+
+    let hit = 0;
+    for (const t of toks) if (selectedSet.value.has(t)) hit++;
+
+    return hit > 0 && hit < toks.length;
+});
+
 const rowGridStyle = computed(() => ({
-    "--fb-cols": showOwner.value ? "1fr 160px 160px 160px" : "1fr 160px 160px"
+    "--fb-cols": showOwner.value
+        ? "32px 1fr 160px 160px 160px"
+        : "32px 1fr 160px 160px"
 }));
 
 const headerIcon = computed(() => {
@@ -306,7 +432,7 @@ const formatDate = (v) => {
 
 .fb-row {
     display: grid;
-    grid-template-columns: var(--fb-cols, 1fr 160px 160px);
+    grid-template-columns: var(--fb-cols, 32px 1fr 160px 160px);
     align-items: center;
     gap: 10px;
     width: 100%;
@@ -324,10 +450,36 @@ const formatDate = (v) => {
     min-width: 0;
 }
 
+.fb-col--check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fb-check {
+    margin: 0;
+}
+
+.fb-check--row :deep(.v-icon) {
+    font-size: 20px !important;
+}
+
+.fb-check--row :deep(.v-selection-control__wrapper) {
+    width: 20px;
+    height: 20px;
+}
+
 .fb-name {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.fb-name-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
 }
 
 .fb-owner {
@@ -356,7 +508,7 @@ const formatDate = (v) => {
 }
 
 .fb-ico {
-    margin-inline-end: 8px;
+    margin-inline-end: 0;
 }
 
 .fb-ico--folder {
@@ -376,7 +528,8 @@ const formatDate = (v) => {
 }
 
 .fb-ico--config {
-    margin-inline-end: 8px;
+    color: $primary-light;
+    opacity: 1;
 }
 
 .fb-ico--nav {
