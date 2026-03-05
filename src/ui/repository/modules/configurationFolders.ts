@@ -65,6 +65,22 @@ class ConfigurationFolderModule extends FetchFactory {
         );
     }
 
+    async getOne(id: string) {
+        return this.call<ConfigurationFolderFlat>(
+            "GET",
+            `${this.RESOURCE}/${id}`,
+            undefined
+        );
+    }
+
+    async getFlat() {
+        return this.call<ConfigurationFolderFlatResponse>(
+            "GET",
+            `${this.RESOURCE}?structure=flat`,
+            undefined
+        );
+    }
+
     async post(payload: CreateConfigurationFolderRequest) {
         return this.call<CreateConfigurationFolderResponse>(
             "POST",
