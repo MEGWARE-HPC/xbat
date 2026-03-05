@@ -1,5 +1,5 @@
 name: Build and Test xbat daemon
-#Disabling IPV6
+#disable docker-ce-stable
 on:
   push:
     branches:
