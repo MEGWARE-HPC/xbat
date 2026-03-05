@@ -42,8 +42,8 @@
                 <div class="fb-row fb-row--head" :style="rowGridStyle">
                     <div class="fb-col fb-col--check">
                         <v-checkbox-btn
-                            v-model="headerChecked"
-                            :indeterminate="headerIndeterminate"
+                            v-model="headerCheck"
+                            :indeterminate="headerState"
                             density="compact"
                             class="fb-check fb-check--head"
                             @click.stop
@@ -240,16 +240,16 @@ const emit = defineEmits([
     "update:selected"
 ]);
 
-const internalSelected = ref((props.selected || []).map(String));
+const selectItems = ref((props.selected || []).map(String));
 
 watch(
     () => props.selected,
     (v) => {
-        internalSelected.value = (v || []).map(String);
+        selectItems.value = (v || []).map(String);
     }
 );
 
-const selectedSet = computed(() => new Set(internalSelected.value));
+const selectedSet = computed(() => new Set(selectItems.value));
 
 const folderToken = (id) => `f:${String(id)}`;
 const configToken = (id) => `c:${String(id)}`;
@@ -257,8 +257,8 @@ const configToken = (id) => `c:${String(id)}`;
 const isSelected = (token) => selectedSet.value.has(String(token));
 
 const setSelected = (arr) => {
-    internalSelected.value = arr.map(String);
-    emit("update:selected", internalSelected.value.slice());
+    selectItems.value = arr.map(String);
+    emit("update:selected", selectItems.value.slice());
 };
 
 const toggleSelect = (token) => {
@@ -311,7 +311,7 @@ const visibleTokens = computed(() => {
     return tokens;
 });
 
-const headerChecked = computed({
+const headerCheck = computed({
     get() {
         const toks = visibleTokens.value;
         if (!toks.length) return false;
@@ -331,7 +331,7 @@ const headerChecked = computed({
     }
 });
 
-const headerIndeterminate = computed(() => {
+const headerState = computed(() => {
     const toks = visibleTokens.value;
     if (!toks.length) return false;
 
@@ -384,7 +384,7 @@ const formatDate = (v) => {
 };
 </script>
 
-<style scoped lang="scss">
+<style lang="scss" scoped>
 @use "~/assets/css/colors.scss" as *;
 
 .fb {
@@ -461,7 +461,7 @@ const formatDate = (v) => {
 }
 
 .fb-check--row :deep(.v-icon) {
-    font-size: 20px !important;
+    font-size: 19px !important;
 }
 
 .fb-check--row :deep(.v-selection-control__wrapper) {

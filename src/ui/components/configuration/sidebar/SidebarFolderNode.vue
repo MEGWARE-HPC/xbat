@@ -100,7 +100,7 @@ const childrenStyle = computed(() => ({
 }));
 </script>
 
-<style scoped lang="scss">
+<style lang="scss" scoped>
 :deep(.v-list-group__items) {
     padding-inline-start: 0 !important;
 }
