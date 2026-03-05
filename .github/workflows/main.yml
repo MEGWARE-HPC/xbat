@@ -1,5 +1,5 @@
 name: Build and Test xbat daemon
-#disable docker-ce-stable on el9 and 10
+#removing amd,rocm on el9 and 10
 on:
   push:
     branches:
