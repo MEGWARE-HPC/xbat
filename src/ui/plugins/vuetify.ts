@@ -101,7 +101,8 @@ import {
     mdiFolderOpen,
     mdiFolderPlusOutline,
     mdiArrowLeftTop,
-    mdiFolderNetwork
+    mdiFolderNetwork,
+    mdiFolderArrowRightOutline
 } from "@mdi/js";
 
 /*
@@ -247,7 +248,8 @@ export default defineNuxtPlugin((app) => {
                 folder: mdiFolder,
                 folderOpen: mdiFolderOpen,
                 newFolder: mdiFolderPlusOutline,
-                folderNetwork: mdiFolderNetwork
+                folderNetwork: mdiFolderNetwork,
+                folderMove: mdiFolderArrowRightOutline
             },
             sets: {
                 mdi

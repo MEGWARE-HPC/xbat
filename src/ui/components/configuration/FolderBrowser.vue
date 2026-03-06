@@ -20,22 +20,94 @@
 
                 <!-- Actions -->
                 <div class="fb-actions" v-if="canCreate">
-                    <v-btn
-                        color="primary-light"
-                        title="Add Configuration"
-                        prepend-icon="$newFile"
-                        @click="$emit('create-config')"
-                    >
-                        New Config
-                    </v-btn>
-                    <v-btn
-                        color="primary-light"
-                        title="Add Folder"
-                        prepend-icon="$newFolder"
-                        @click="$emit('create-folder')"
-                    >
-                        New Folder
-                    </v-btn>
+                    <div class="fb-action-group">
+                        <v-btn
+                            color="primary-light"
+                            prepend-icon="$newFile"
+                            @click="$emit('create-config')"
+                        >
+                            New Config
+                        </v-btn>
+
+                        <v-btn
+                            color="primary-light"
+                            prepend-icon="$newFolder"
+                            @click="openCreateFolder()"
+                            :disabled="
+                                isSharedView || folderId.startsWith('__')
+                            "
+                        >
+                            New Folder
+                        </v-btn>
+
+                        <!-- bulk actions -->
+                        <template v-if="hasSelect">
+                            <template v-if="mixedSelect">
+                                <v-btn
+                                    color="primary-light"
+                                    prepend-icon="$folderMove"
+                                    @click="openMove()"
+                                >
+                                    Move to
+                                </v-btn>
+
+                                <v-btn
+                                    color="primary-light"
+                                    prepend-icon="$trashCan"
+                                    @click="openDelete()"
+                                >
+                                    Delete
+                                </v-btn>
+                            </template>
+
+                            <template v-else>
+                                <v-btn
+                                    v-if="canDownload"
+                                    color="primary-light"
+                                    prepend-icon="$download"
+                                    @click="downloadSelected()"
+                                >
+                                    Download
+                                </v-btn>
+
+                                <v-btn
+                                    v-if="canShare"
+                                    color="primary-light"
+                                    prepend-icon="$share"
+                                    @click="openShare()"
+                                >
+                                    Share
+                                </v-btn>
+
+                                <v-btn
+                                    v-if="canRename"
+                                    color="primary-light"
+                                    prepend-icon="$edit"
+                                    @click="openRename()"
+                                >
+                                    Rename
+                                </v-btn>
+
+                                <v-btn
+                                    v-if="canMove"
+                                    color="primary-light"
+                                    prepend-icon="$folderMove"
+                                    @click="openMove()"
+                                >
+                                    Move to
+                                </v-btn>
+
+                                <v-btn
+                                    v-if="canDelete"
+                                    color="primary-light"
+                                    prepend-icon="$trashCan"
+                                    @click="openDelete()"
+                                >
+                                    Delete
+                                </v-btn>
+                            </template>
+                        </template>
+                    </div>
                 </div>
 
                 <!-- Table header -->
@@ -222,10 +294,13 @@
 
 <script setup>
 import { computed, ref, watch } from "vue";
+const { $api, $snackbar, $store } = useNuxtApp();
 
 const props = defineProps({
     folder: { type: Object, default: null }, // expects { id, name, children?, __parentId? }
     configs: { type: Array, default: () => [] },
+    userName: { type: String, required: true },
+    projects: { type: Array, default: () => [] },
     userLevel: { type: Number, required: true },
     UserLevelEnum: { type: Object, required: true },
     myRootId: { type: String, default: "" },
@@ -237,7 +312,8 @@ const emit = defineEmits([
     "open-config",
     "create-config",
     "create-folder",
-    "update:selected"
+    "update:selected",
+    "refresh"
 ]);
 
 const selectItems = ref((props.selected || []).map(String));
@@ -268,6 +344,72 @@ const toggleSelect = (token) => {
     else s.add(t);
     setSelected(Array.from(s));
 };
+
+const selectedTokens = computed(() => selectItems.value || []);
+
+const selectedFolderIds = computed(() =>
+    selectedTokens.value
+        .filter((t) => String(t).startsWith("f:"))
+        .map((t) => String(t).slice(2))
+);
+
+const selectedConfigIds = computed(() =>
+    selectedTokens.value
+        .filter((t) => String(t).startsWith("c:"))
+        .map((t) => String(t).slice(2))
+);
+
+const hasSelect = computed(
+    () => selectedFolderIds.value.length + selectedConfigIds.value.length > 0
+);
+
+const mixedSelect = computed(
+    () =>
+        selectedFolderIds.value.length > 0 && selectedConfigIds.value.length > 0
+);
+
+const configById = computed(() => {
+    const m = new Map();
+    for (const item of props.configs || []) m.set(String(item.id), item.doc);
+    return m;
+});
+
+const ownSelectConfigIds = computed(() =>
+    selectedConfigIds.value.filter((id) => {
+        const doc = configById.value.get(String(id));
+        return doc?.misc?.owner === props.userName;
+    })
+);
+
+const folderNodeById = computed(() => {
+    const m = new Map();
+    for (const f of props.folder?.children || []) m.set(String(f.id), f);
+    return m;
+});
+
+const ownSelectFolderIds = computed(() =>
+    selectedFolderIds.value.filter((id) => {
+        const node = folderNodeById.value.get(String(id));
+        return (
+            (node?.misc?.owner && node.misc.owner === props.userName) ||
+            props.userLevel >= props.UserLevelEnum.manager
+        );
+    })
+);
+
+const canDownload = computed(
+    () => !mixedSelect.value && selectedConfigIds.value.length > 0
+);
+const canShare = computed(
+    () => !mixedSelect.value && ownSelectConfigIds.value.length > 0
+);
+const canRename = computed(
+    () =>
+        !mixedSelect.value &&
+        selectedFolderIds.value.length + selectedConfigIds.value.length === 1
+);
+const canMove = computed(() => hasSelect.value);
+const canDelete = computed(() => hasSelect.value);
 
 const canCreate = computed(
     () => props.userLevel > (props.UserLevelEnum?.guest ?? 0)
@@ -423,6 +565,18 @@ const formatDate = (v) => {
     align-items: center;
     gap: 10px;
     margin: 12px 0 8px;
+    flex-wrap: wrap;
+}
+
+.fb-action-group {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.fb-action-group :deep(.v-btn) {
+    min-width: 145px;
+    justify-content: center;
 }
 
 .fb-list {
