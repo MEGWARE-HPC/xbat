@@ -126,7 +126,7 @@
                         density="comfortable"
                         size="small"
                         prepend-icon="$close"
-                        color="danger"
+                        color="info"
                         @click="setSelected([])"
                         title="Clear selection"
                     >
@@ -616,7 +616,6 @@ const formatDate = (v) => {
     margin: 0 0 10px;
     font-size: 0.88rem;
     color: $font-light;
-    opacity: 0.9;
 }
 
 .fb-selection-info :deep(.v-btn) {
@@ -635,7 +634,7 @@ const formatDate = (v) => {
     padding: 8px 12px;
     font-size: 0.78rem;
     font-weight: 600;
-    opacity: 0.75;
+    opacity: 0.8;
     border-bottom: 1px solid rgba(var(--v-theme-font-base), 0.08);
 }
 
@@ -679,7 +678,7 @@ const formatDate = (v) => {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    opacity: 0.75;
+    color: $font-light;
     font-size: 0.82rem;
 }
 
@@ -688,7 +687,7 @@ const formatDate = (v) => {
     overflow: hidden;
     text-overflow: ellipsis;
     text-align: right;
-    opacity: 0.75;
+    color: $font-light;
     font-size: 0.82rem;
 }
 
@@ -710,19 +709,11 @@ const formatDate = (v) => {
     filter: brightness(1.1);
 }
 
-.fb-ico--shared-root {
-    color: $primary-light;
-    opacity: 0.8;
-}
-
-.fb-ico--shared-project {
-    color: $primary-light;
-    opacity: 0.8;
-}
-
+.fb-ico--shared-root,
+.fb-ico--shared-project,
 .fb-ico--config {
     color: $primary-light;
-    opacity: 1;
+    opacity: 0.8;
 }
 
 .fb-ico--nav {
