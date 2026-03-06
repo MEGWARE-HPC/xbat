@@ -40,7 +40,6 @@
                             New Folder
                         </v-btn>
 
-                        <!-- bulk actions -->
                         <template v-if="hasSelect">
                             <template v-if="mixedSelect">
                                 <v-btn
@@ -108,6 +107,31 @@
                             </template>
                         </template>
                     </div>
+                </div>
+
+                <div v-if="hasSelect" class="fb-selection-info">
+                    <span>
+                        {{ selectedFolderIds.length }} folder<span
+                            v-if="selectedFolderIds.length !== 1"
+                            >s</span
+                        >, {{ selectedConfigIds.length }} configuration<span
+                            v-if="selectedConfigIds.length !== 1"
+                            >s</span
+                        >
+                        selected
+                    </span>
+
+                    <v-btn
+                        variant="text"
+                        density="comfortable"
+                        size="small"
+                        prepend-icon="$close"
+                        color="danger"
+                        @click="setSelected([])"
+                        title="Clear selection"
+                    >
+                        Clear selection
+                    </v-btn>
                 </div>
 
                 <!-- Table header -->
@@ -564,7 +588,7 @@ const formatDate = (v) => {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin: 12px 0 8px;
+    margin: 12px 0 15px;
     flex-wrap: wrap;
 }
 
@@ -572,6 +596,7 @@ const formatDate = (v) => {
     display: flex;
     gap: 16px;
     flex-wrap: wrap;
+    align-items: center;
 }
 
 .fb-action-group :deep(.v-btn) {
@@ -582,6 +607,20 @@ const formatDate = (v) => {
 .fb-list {
     border-radius: 8px;
     overflow: hidden;
+}
+
+.fb-selection-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 10px;
+    font-size: 0.88rem;
+    color: $font-light;
+    opacity: 0.9;
+}
+
+.fb-selection-info :deep(.v-btn) {
+    padding-inline: 6px;
 }
 
 .fb-row {
@@ -597,7 +636,7 @@ const formatDate = (v) => {
     font-size: 0.78rem;
     font-weight: 600;
     opacity: 0.75;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    border-bottom: 1px solid rgba(var(--v-theme-font-base), 0.08);
 }
 
 .fb-col {
