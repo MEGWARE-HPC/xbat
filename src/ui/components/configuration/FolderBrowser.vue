@@ -44,14 +44,6 @@
                             <template v-if="mixedSelect">
                                 <v-btn
                                     color="primary-light"
-                                    prepend-icon="$folderMove"
-                                    @click="openMove()"
-                                >
-                                    Move to
-                                </v-btn>
-
-                                <v-btn
-                                    color="primary-light"
                                     prepend-icon="$trashCan"
                                     @click="openDelete()"
                                 >
@@ -70,12 +62,12 @@
                                 </v-btn>
 
                                 <v-btn
-                                    v-if="canShare"
+                                    v-if="canDuplicate"
                                     color="primary-light"
-                                    prepend-icon="$share"
-                                    @click="openShare()"
+                                    prepend-icon="$duplicate"
+                                    @click="duplicateConfig()"
                                 >
-                                    Share
+                                    Duplicate
                                 </v-btn>
 
                                 <v-btn
@@ -85,6 +77,15 @@
                                     @click="openRename()"
                                 >
                                     Rename
+                                </v-btn>
+
+                                <v-btn
+                                    v-if="canShare"
+                                    color="primary-light"
+                                    prepend-icon="$share"
+                                    @click="openShare()"
+                                >
+                                    Share
                                 </v-btn>
 
                                 <v-btn
@@ -302,6 +303,114 @@
                 </v-list>
             </div>
         </div>
+        <v-dialog v-model="CreateFolderDlg" max-width="520">
+            <v-card>
+                <v-card-title>Create Folder</v-card-title>
+                <v-card-text>
+                    <v-text-field
+                        label="Folder name"
+                        v-model="inputFolderName"
+                        autofocus
+                    />
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn text @click="CreateFolderDlg = false">Cancel</v-btn>
+                    <v-btn color="primary" @click="createFolder">Create</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <v-dialog v-model="RenameDlg" max-width="520">
+            <v-card>
+                <v-card-title>Rename</v-card-title>
+                <v-card-text>
+                    <v-text-field
+                        label="New name"
+                        v-model="inputRename"
+                        autofocus
+                    />
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn text @click="RenameDlg = false">Cancel</v-btn>
+                    <v-btn color="primary" @click="applyRename">Save</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <v-dialog v-model="ShareDlg" max-width="720">
+            <v-card>
+                <v-card-title>Share configurations</v-card-title>
+                <v-card-text>
+                    <v-autocomplete
+                        :items="projects"
+                        v-model="shareProjectIds"
+                        chips
+                        closable-chips
+                        multiple
+                        item-title="name"
+                        item-value="_id"
+                        label="Share with Project(s)"
+                    />
+                    <div class="text-medium-emphasis text-caption mt-2">
+                        Only your own configurations will be updated.
+                    </div>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn text @click="ShareDlg = false">Cancel</v-btn>
+                    <v-btn color="primary" @click="applyShare">Apply</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <v-dialog v-model="MoveDlg" max-width="720">
+            <v-card>
+                <v-card-title>Move to...</v-card-title>
+                <v-card-text>
+                    <v-select
+                        label="Destination folder"
+                        :items="moveFolderFlat"
+                        item-title="title"
+                        item-value="value"
+                        v-model="moveDestId"
+                    />
+                    <div class="text-medium-emphasis text-caption mt-2">
+                        Only your own configurations could be moved.
+                    </div>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn text @click="MoveDlg = false">Cancel</v-btn>
+                    <v-btn color="primary" @click="applyMove">Move</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <v-dialog v-model="DeleteDlg" max-width="600">
+            <v-card>
+                <v-card-title>Delete</v-card-title>
+                <v-card-text>
+                    <div v-if="selectedFolderIds.length">
+                        Selected folders will be deleted recursively (rm -rf).
+                    </div>
+                    <div v-if="selectedConfigIds.length" class="mt-2">
+                        Selected configurations will be deleted.
+                    </div>
+                    <div class="text-medium-emphasis text-caption mt-2">
+                        Only items you own (or manager/admin) will be affected.
+                    </div>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn text @click="DeleteDlg = false">Cancel</v-btn>
+                    <v-btn color="red-darken-3" @click="applyDelete"
+                        >Delete</v-btn
+                    >
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </v-main>
 </template>
 
@@ -325,6 +434,7 @@ const emit = defineEmits([
     "open-config",
     "create-config",
     "create-folder",
+    "duplicate",
     "update:selected",
     "refresh"
 ]);
@@ -421,7 +531,18 @@ const canRename = computed(
         !mixedSelect.value &&
         selectedFolderIds.value.length + selectedConfigIds.value.length === 1
 );
-const canMove = computed(() => hasSelect.value);
+const canDuplicate = computed(
+    () =>
+        selectedFolderIds.value.length === 0 &&
+        ownSelectConfigIds.value.length > 0
+);
+const canMove = computed(
+    () =>
+        !mixedSelect.value &&
+        selectedFolderIds.value.length === 0 &&
+        selectedConfigIds.value.length > 0 &&
+        ownSelectConfigIds.value.length > 0
+);
 const canDelete = computed(() => hasSelect.value);
 
 const canCreate = computed(
@@ -532,6 +653,265 @@ const formatDate = (v) => {
         hour: "2-digit",
         minute: "2-digit"
     }).format(d);
+};
+
+const CreateFolderDlg = ref(false);
+const RenameDlg = ref(false);
+const MoveDlg = ref(false);
+const ShareDlg = ref(false);
+const DeleteDlg = ref(false);
+
+const inputFolderName = ref("");
+const inputRename = ref("");
+const shareProjectIds = ref([]); // string[]
+
+const moveDestId = ref(""); // string folder id
+const moveFolderFlat = ref([]); // flat folders list for selection dropdown
+
+const clearDialogs = () => {
+    CreateFolderDlg.value = false;
+    RenameDlg.value = false;
+    MoveDlg.value = false;
+    ShareDlg.value = false;
+    DeleteDlg.value = false;
+};
+
+const duplicateConfig = () => {
+    if (!canDuplicate.value) return;
+
+    for (const cid of ownSelectConfigIds.value) {
+        emit("duplicate", String(cid));
+    }
+
+    setSelected([]);
+};
+
+const openCreateFolder = () => {
+    inputFolderName.value = "";
+    CreateFolderDlg.value = true;
+};
+
+const createFolder = async () => {
+    if ($store?.demo) return $snackbar.show($store.demoMessage);
+
+    const name = (inputFolderName.value || "").trim();
+    if (!name) return;
+
+    const parent = folderId.value.startsWith("__")
+        ? null
+        : String(props.folder?.id || null);
+
+    await $api.configurationFolders.post({
+        folder: {
+            folderName: name,
+            parentFolderId: parent,
+            sharedProjects: []
+        }
+    });
+
+    CreateFolderDlg.value = false;
+    $snackbar.show("Folder created");
+    setSelected([]); // clear selection
+    emit("refresh");
+};
+
+const downloadSelected = () => {};
+
+const openShare = () => {
+    shareProjectIds.value = [];
+    ShareDlg.value = true;
+};
+
+const applyShare = async () => {
+    if ($store?.demo) return $snackbar.show($store.demoMessage);
+
+    const targetIds = ownSelectConfigIds.value;
+    const pids = (shareProjectIds.value || []).map(String);
+
+    for (const cid of targetIds) {
+        const doc = configById.value.get(String(cid));
+        if (!doc) continue;
+
+        const payload = {
+            _id: String(cid),
+            configuration: { ...doc.configuration, sharedProjects: pids },
+            misc: doc.misc
+        };
+
+        await $api.configurations.put(String(cid), payload);
+    }
+
+    ShareDlg.value = false;
+    $snackbar.show("Sharing updated");
+    setSelected([]);
+    emit("refresh");
+};
+
+const openRename = async () => {
+    inputRename.value = "";
+
+    // folder selected
+    if (selectedFolderIds.value.length === 1) {
+        const id = selectedFolderIds.value[0];
+        const node = folderNodeById.value.get(String(id));
+        inputRename.value = node?.name || "";
+        RenameDlg.value = true;
+        return;
+    }
+
+    // config selected
+    if (selectedConfigIds.value.length === 1) {
+        const id = selectedConfigIds.value[0];
+        const doc = configById.value.get(String(id));
+        inputRename.value = doc?.configuration?.configurationName || "";
+        RenameDlg.value = true;
+    }
+};
+
+const applyRename = async () => {
+    if ($store?.demo) return $snackbar.show($store.demoMessage);
+
+    const name = (inputRename.value || "").trim();
+    if (!name) return;
+
+    // rename folder
+    if (selectedFolderIds.value.length === 1) {
+        const fid = selectedFolderIds.value[0];
+
+        const full = await $api.configurationFolders.getOne(String(fid));
+        const updated = {
+            folder: {
+                ...full.folder,
+                folderName: name
+            },
+            misc: full.misc
+        };
+
+        await $api.configurationFolders.put(String(fid), updated);
+
+        RenameDlg.value = false;
+        $snackbar.show("Folder renamed");
+        setSelected([]);
+        emit("refresh");
+        return;
+    }
+
+    // rename config
+    if (selectedConfigIds.value.length === 1) {
+        const cid = selectedConfigIds.value[0];
+        const doc = configById.value.get(String(cid));
+        if (!doc) return;
+
+        // only owner or manager/admin should pass; we already filtered in UI
+        const payload = {
+            _id: String(cid),
+            configuration: { ...doc.configuration, configurationName: name },
+            misc: doc.misc
+        };
+
+        await $api.configurations.put(String(cid), payload);
+
+        RenameDlg.value = false;
+        $snackbar.show("Configuration renamed");
+        setSelected([]);
+        emit("refresh");
+    }
+};
+
+const buildFolderOptions = (flatFolders, owner) => {
+    const ownFolders = (flatFolders || []).filter(
+        (f) => f?.misc?.owner === owner
+    );
+
+    const byId = new Map();
+    for (const f of ownFolders) {
+        byId.set(String(f._id), f);
+    }
+
+    const buildPath = (folder) => {
+        const parts = [];
+        let current = folder;
+
+        while (current) {
+            const name = current?.folder?.folderName || "";
+            const parentId = current?.folder?.parentFolderId
+                ? String(current.folder.parentFolderId)
+                : null;
+
+            if (!parentId) {
+                parts.unshift("home");
+                break;
+            }
+
+            parts.unshift(name);
+            current = byId.get(parentId) || null;
+        }
+
+        return parts.join("/");
+    };
+
+    return ownFolders
+        .map((f) => ({
+            title: buildPath(f),
+            value: String(f._id)
+        }))
+        .sort((a, b) => a.title.localeCompare(b.title));
+};
+
+const openMove = async () => {
+    if (!canMove.value) return;
+
+    moveDestId.value = "";
+    MoveDlg.value = true;
+
+    const flat = await $api.configurationFolders.getFlat();
+    moveFolderFlat.value = buildFolderOptions(flat?.data || [], props.userName);
+};
+
+const applyMove = async () => {
+    if ($store?.demo) return $snackbar.show($store.demoMessage);
+
+    const dest = String(moveDestId.value || "");
+    if (!dest) return;
+
+    for (const cid of ownSelectConfigIds.value) {
+        const doc = configById.value.get(String(cid));
+        if (!doc) continue;
+
+        const payload = {
+            _id: String(cid),
+            configuration: { ...doc.configuration, folderId: dest },
+            misc: doc.misc
+        };
+
+        await $api.configurations.put(String(cid), payload);
+    }
+
+    MoveDlg.value = false;
+    $snackbar.show("Moved");
+    setSelected([]);
+    emit("refresh");
+};
+
+const openDelete = () => {
+    DeleteDlg.value = true;
+};
+
+const applyDelete = async () => {
+    if ($store?.demo) return $snackbar.show($store.demoMessage);
+
+    for (const fid of ownSelectFolderIds.value) {
+        await $api.configurationFolders.delete(String(fid));
+    }
+
+    for (const cid of ownSelectConfigIds.value) {
+        await $api.configurations.delete(String(cid));
+    }
+
+    DeleteDlg.value = false;
+    $snackbar.show("Deleted");
+    setSelected([]);
+    emit("refresh");
 };
 </script>
 
