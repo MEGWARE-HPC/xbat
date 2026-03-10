@@ -504,6 +504,20 @@ const ownSelectConfigIds = computed(() =>
     })
 );
 
+const cfgFolderIds = computed(() => {
+    const ids = [];
+
+    for (const cid of ownSelectConfigIds.value) {
+        const doc = configById.value.get(String(cid));
+        const fid = doc?.configuration?.folderId;
+        if (fid) ids.push(String(fid));
+    }
+
+    return ids;
+});
+
+const cfgFolderIdSet = computed(() => new Set(cfgFolderIds.value));
+
 const folderNodeById = computed(() => {
     const m = new Map();
     for (const f of props.folder?.children || []) m.set(String(f.id), f);
@@ -534,7 +548,8 @@ const canRename = computed(
 const canDuplicate = computed(
     () =>
         selectedFolderIds.value.length === 0 &&
-        ownSelectConfigIds.value.length > 0
+        selectedConfigIds.value.length === 1 &&
+        ownSelectConfigIds.value.length === 1
 );
 const canMove = computed(
     () =>
@@ -818,13 +833,21 @@ const applyRename = async () => {
     }
 };
 
-const buildFolderOptions = (flatFolders, owner) => {
-    const ownFolders = (flatFolders || []).filter(
+const buildFolderOptions = (
+    flatFolders,
+    owner,
+    excludedFolderIds = new Set()
+) => {
+    const allOwnFolders = (flatFolders || []).filter(
         (f) => f?.misc?.owner === owner
     );
 
+    const ownFolders = allOwnFolders.filter(
+        (f) => !excludedFolderIds.has(String(f._id))
+    );
+
     const byId = new Map();
-    for (const f of ownFolders) {
+    for (const f of allOwnFolders) {
         byId.set(String(f._id), f);
     }
 
@@ -865,7 +888,18 @@ const openMove = async () => {
     MoveDlg.value = true;
 
     const flat = await $api.configurationFolders.getFlat();
-    moveFolderFlat.value = buildFolderOptions(flat?.data || [], props.userName);
+
+    let excluded = new Set();
+
+    if (cfgFolderIdSet.value.size === 1) {
+        excluded = new Set([...cfgFolderIdSet.value]);
+    }
+
+    moveFolderFlat.value = buildFolderOptions(
+        flat?.data || [],
+        props.userName,
+        excluded
+    );
 };
 
 const applyMove = async () => {
