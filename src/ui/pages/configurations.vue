@@ -57,16 +57,23 @@
                         :my-root-id="
                             myHomeNode?.id ? String(myHomeNode.id) : ''
                         "
+                        :user-name="$authStore.user.user_name"
+                        :projects="$authStore.user.projects"
+                        v-model:selected="folderSelect"
+                        @duplicate="addConfig"
+                        @refresh="refreshAll"
                         @create-config="addConfig"
                         @open-folder="
                             (fid) => {
                                 selectedFolderId = fid;
+                                folderSelect = [];
                             }
                         "
                         @open-config="
                             (cid) => {
                                 selectedFolderId = null;
                                 state.selectedEdit = [cid];
+                                folderSelect = [];
                             }
                         "
                     />
@@ -166,6 +173,14 @@ const defaultForm = {
     interval: 5,
     configurationName: "new configuration",
     sharedProjects: []
+};
+
+const folderSelect = ref([]);
+
+const refreshAll = async () => {
+    await fetchConfigurations();
+    await refreshFolders();
+    folderSelect.value = [];
 };
 
 const selectedFolderId = ref(null);
@@ -411,7 +426,7 @@ watch(
     }
 );
 
-const { data: folderTree } = await useAsyncData(
+const { data: folderTree, refresh: refreshFolders } = await useAsyncData(
     `configuration-folders-tree-page-${$authStore.user.user_name}`,
     async () => (await $api.configurationFolders.get())?.data || []
 );
