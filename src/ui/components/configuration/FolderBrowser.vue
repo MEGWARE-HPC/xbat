@@ -146,9 +146,7 @@
                         />
                     </div>
                     <div class="fb-col fb-col--name">Name</div>
-                    <div v-if="showOwner" class="fb-col fb-col--owner">
-                        Owner
-                    </div>
+                    <div class="fb-col fb-col--owner">Owner</div>
                     <div class="fb-col fb-col--created">Created</div>
                     <div class="fb-col fb-col--edited">Modified</div>
                 </div>
@@ -174,10 +172,7 @@
                                     </div>
                                 </div>
 
-                                <div
-                                    v-if="showOwner"
-                                    class="fb-col fb-col--owner fb-owner"
-                                >
+                                <div class="fb-col fb-col--owner fb-owner">
                                     —
                                 </div>
                                 <div class="fb-col fb-col--created fb-date">
@@ -224,11 +219,8 @@
                                     </div>
                                 </div>
 
-                                <div
-                                    v-if="showOwner"
-                                    class="fb-col fb-col--owner fb-owner"
-                                >
-                                    —
+                                <div class="fb-col fb-col--owner fb-owner">
+                                    {{ child?.misc?.owner || "—" }}
                                 </div>
                                 <div class="fb-col fb-col--created fb-date">
                                     {{ formatDate(child?.misc?.created) }}
@@ -284,10 +276,7 @@
                                     </div>
                                 </div>
 
-                                <div
-                                    v-if="showOwner"
-                                    class="fb-col fb-col--owner fb-owner"
-                                >
+                                <div class="fb-col fb-col--owner fb-owner">
                                     {{ c.doc?.misc?.owner || "—" }}
                                 </div>
                                 <div class="fb-col fb-col--created fb-date">
@@ -461,8 +450,6 @@ const isSharedProject = computed(() =>
     folderId.value.startsWith("__shared__:")
 );
 
-const showOwner = computed(() => isSharedView.value);
-
 const parentId = computed(() => props.folder?.__parentId ?? null);
 
 const canGoUp = computed(() => !!props.folder && !!parentId.value);
@@ -508,9 +495,7 @@ const headerState = computed(() => {
 });
 
 const rowGridStyle = computed(() => ({
-    "--fb-cols": showOwner.value
-        ? "32px 1fr 160px 160px 160px"
-        : "32px 1fr 160px 160px"
+    "--fb-cols": "32px 1fr 160px 160px 160px"
 }));
 
 const headerIcon = computed(() => {
