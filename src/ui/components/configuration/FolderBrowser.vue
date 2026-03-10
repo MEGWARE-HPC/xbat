@@ -369,13 +369,25 @@
             <v-card>
                 <v-card-title>Move to...</v-card-title>
                 <v-card-text>
-                    <v-select
-                        label="Destination folder"
-                        :items="moveFolderFlat"
-                        item-title="title"
-                        item-value="value"
-                        v-model="moveDestId"
-                    />
+                    <div class="move-tree">
+                        <MoveFolderTreeNode
+                            v-for="node in moveFolderTree"
+                            :key="node.id || node.path"
+                            :node="node"
+                            :selected-id="moveDestId"
+                            @select="moveDestination"
+                        />
+                    </div>
+
+                    <div class="move-selected mt-4">
+                        <span class="text-medium-emphasis"
+                            >Selected destination:</span
+                        >
+                        <span class="ml-2">
+                            {{ moveFolderPath || "—" }}
+                        </span>
+                    </div>
+
                     <div class="text-medium-emphasis text-caption mt-2">
                         Only your own configurations could be moved.
                     </div>
@@ -383,7 +395,13 @@
                 <v-card-actions>
                     <v-spacer />
                     <v-btn text @click="MoveDlg = false">Cancel</v-btn>
-                    <v-btn color="primary" @click="applyMove">Move</v-btn>
+                    <v-btn
+                        color="primary"
+                        :disabled="!moveDestId"
+                        @click="applyMove"
+                    >
+                        Move
+                    </v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -416,6 +434,8 @@
 
 <script setup>
 import { computed, ref, watch } from "vue";
+import MoveFolderTreeNode from "./MoveFolderTreeNode.vue";
+
 const { $api, $snackbar, $store } = useNuxtApp();
 
 const props = defineProps({
@@ -681,7 +701,8 @@ const inputRename = ref("");
 const shareProjectIds = ref([]); // string[]
 
 const moveDestId = ref(""); // string folder id
-const moveFolderFlat = ref([]); // flat folders list for selection dropdown
+const moveFolderTree = ref([]);
+const moveFolderPath = ref("");
 
 const clearDialogs = () => {
     CreateFolderDlg.value = false;
@@ -833,61 +854,67 @@ const applyRename = async () => {
     }
 };
 
-const buildFolderOptions = (
-    flatFolders,
-    owner,
-    excludedFolderIds = new Set()
+const buildMoveTree = (
+    nodes,
+    excludedFolderIds = new Set(),
+    parentPath = "home"
 ) => {
-    const allOwnFolders = (flatFolders || []).filter(
-        (f) => f?.misc?.owner === owner
-    );
+    const result = [];
 
-    const ownFolders = allOwnFolders.filter(
-        (f) => !excludedFolderIds.has(String(f._id))
-    );
+    for (const node of nodes || []) {
+        if (!node?.id) continue;
 
-    const byId = new Map();
-    for (const f of allOwnFolders) {
-        byId.set(String(f._id), f);
-    }
+        const currentPath =
+            parentPath === "home"
+                ? `home/${node.name}`
+                : `${parentPath}/${node.name}`;
 
-    const buildPath = (folder) => {
-        const parts = [];
-        let current = folder;
+        const children = buildMoveTree(
+            node.children || [],
+            excludedFolderIds,
+            currentPath
+        );
 
-        while (current) {
-            const name = current?.folder?.folderName || "";
-            const parentId = current?.folder?.parentFolderId
-                ? String(current.folder.parentFolderId)
-                : null;
-
-            if (!parentId) {
-                parts.unshift("home");
-                break;
-            }
-
-            parts.unshift(name);
-            current = byId.get(parentId) || null;
+        if (excludedFolderIds.has(String(node.id))) {
+            result.push(...children);
+            continue;
         }
 
-        return parts.join("/");
-    };
+        result.push({
+            id: String(node.id),
+            name: node.name,
+            path: currentPath,
+            children
+        });
+    }
 
-    return ownFolders
-        .map((f) => ({
-            title: buildPath(f),
-            value: String(f._id)
-        }))
-        .sort((a, b) => a.title.localeCompare(b.title));
+    return result;
+};
+
+const findUserHomeTree = (treeNodes, userName) => {
+    return (
+        (treeNodes || []).find(
+            (n) => n?.name === userName && n?.misc?.owner === userName
+        ) || null
+    );
 };
 
 const openMove = async () => {
     if (!canMove.value) return;
 
     moveDestId.value = "";
+    moveFolderPath.value = "";
     MoveDlg.value = true;
 
-    const flat = await $api.configurationFolders.getFlat();
+    const treeResp = await $api.configurationFolders.get();
+    const fullTree = treeResp?.data || [];
+
+    const myHome = findUserHomeTree(fullTree, props.userName);
+
+    if (!myHome) {
+        moveFolderTree.value = [];
+        return;
+    }
 
     let excluded = new Set();
 
@@ -895,12 +922,30 @@ const openMove = async () => {
         excluded = new Set([...cfgFolderIdSet.value]);
     }
 
-    moveFolderFlat.value = buildFolderOptions(
-        flat?.data || [],
-        props.userName,
-        excluded
-    );
+    moveFolderTree.value = [
+        {
+            id: String(myHome.id),
+            name: "home",
+            path: "home",
+            children: buildMoveTree(myHome.children || [], excluded, "home")
+        }
+    ];
+
+    if (!excluded.has(String(myHome.id))) {
+        moveFolderTree.value[0].id = String(myHome.id);
+    } else {
+        moveFolderTree.value[0].id = "";
+    }
 };
+
+const moveDestination = (node) => {
+    if (!node?.id) return;
+    moveDestId.value = String(node.id);
+    moveFolderPath.value = node.path || "";
+};
+
+const selectMoveDestination = (node) =>
+    String(moveDestId.value || "") === String(node?.id || "");
 
 const applyMove = async () => {
     if ($store?.demo) return $snackbar.show($store.demoMessage);
