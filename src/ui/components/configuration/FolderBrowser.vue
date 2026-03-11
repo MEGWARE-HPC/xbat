@@ -318,7 +318,9 @@
                     <v-btn color="font-light" @click="CreateFolderDlg = false"
                         >Cancel</v-btn
                     >
-                    <v-btn color="primary-light" @click="createFolder">Create</v-btn>
+                    <v-btn color="primary-light" @click="createFolder"
+                        >Create</v-btn
+                    >
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -338,7 +340,9 @@
                     <v-btn color="font-light" @click="RenameDlg = false"
                         >Cancel</v-btn
                     >
-                    <v-btn color="primary-light" @click="applyRename">Save</v-btn>
+                    <v-btn color="primary-light" @click="applyRename"
+                        >Save</v-btn
+                    >
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -366,7 +370,9 @@
                     <v-btn color="font-light" @click="ShareDlg = false"
                         >Cancel</v-btn
                     >
-                    <v-btn color="primary-light" @click="applyShare">Apply</v-btn>
+                    <v-btn color="primary-light" @click="applyShare"
+                        >Apply</v-btn
+                    >
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -397,6 +403,17 @@
                     <div class="text-medium-emphasis text-caption mt-2">
                         Only your own configurations could be moved.
                     </div>
+
+                    <div
+                        v-if="
+                            moveDestId &&
+                            moveInvalid &&
+                            cfgFolderIdSet.size === 1
+                        "
+                        class="text-warning text-caption mt-2"
+                    >
+                        The selected configurations are already in this folder.
+                    </div>
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
@@ -405,7 +422,7 @@
                     >
                     <v-btn
                         color="primary-light"
-                        :disabled="!moveDestId"
+                        :disabled="moveInvalid"
                         @click="applyMove"
                     >
                         Move
@@ -433,9 +450,7 @@
                     <v-btn color="font-light" @click="DeleteDlg = false"
                         >Cancel</v-btn
                     >
-                    <v-btn color="danger" @click="applyDelete"
-                        >Delete</v-btn
-                    >
+                    <v-btn color="danger" @click="applyDelete">Delete</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -547,6 +562,17 @@ const cfgFolderIds = computed(() => {
 });
 
 const cfgFolderIdSet = computed(() => new Set(cfgFolderIds.value));
+
+const moveInvalid = computed(() => {
+    const dest = String(moveDestId.value || "");
+    if (!dest) return true;
+
+    if (cfgFolderIdSet.value.size === 1) {
+        return cfgFolderIdSet.value.has(dest);
+    }
+
+    return false;
+});
 
 const folderNodeById = computed(() => {
     const m = new Map();
@@ -864,11 +890,7 @@ const applyRename = async () => {
     }
 };
 
-const buildMoveTree = (
-    nodes,
-    excludedFolderIds = new Set(),
-    parentPath = "home"
-) => {
+const buildMoveTree = (nodes, parentPath = "home") => {
     const result = [];
 
     for (const node of nodes || []) {
@@ -879,22 +901,11 @@ const buildMoveTree = (
                 ? `home/${node.name}`
                 : `${parentPath}/${node.name}`;
 
-        const children = buildMoveTree(
-            node.children || [],
-            excludedFolderIds,
-            currentPath
-        );
-
-        if (excludedFolderIds.has(String(node.id))) {
-            result.push(...children);
-            continue;
-        }
-
         result.push({
             id: String(node.id),
             name: node.name,
             path: currentPath,
-            children
+            children: buildMoveTree(node.children || [], currentPath)
         });
     }
 
@@ -926,26 +937,14 @@ const openMove = async () => {
         return;
     }
 
-    let excluded = new Set();
-
-    if (cfgFolderIdSet.value.size === 1) {
-        excluded = new Set([...cfgFolderIdSet.value]);
-    }
-
     moveFolderTree.value = [
         {
             id: String(myHome.id),
             name: "home",
             path: "home",
-            children: buildMoveTree(myHome.children || [], excluded, "home")
+            children: buildMoveTree(myHome.children || [], "home")
         }
     ];
-
-    if (!excluded.has(String(myHome.id))) {
-        moveFolderTree.value[0].id = String(myHome.id);
-    } else {
-        moveFolderTree.value[0].id = "";
-    }
 };
 
 const moveDestination = (node) => {
