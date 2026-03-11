@@ -78,7 +78,7 @@
                                 :key="c.id"
                                 :id="c.id"
                                 :doc="c.doc"
-                                :depth="1"
+                                :depth="0"
                                 :selected-id="selectedId"
                                 :user="user"
                                 :user-level="userLevel"
@@ -147,7 +147,7 @@
                                         v-bind="groupProps2"
                                         class="sb-row sb-tight"
                                         density="comfortable"
-                                        :style="sectionRowStyle(1)"
+                                        :style="sectionRowStyle(0)"
                                         @click="
                                             $emit(
                                                 'select-folder',
@@ -179,14 +179,14 @@
 
                                 <div
                                     class="sb-children sb-tight"
-                                    :style="sectionChildrenStyle(1)"
+                                    :style="sectionChildrenStyle(0)"
                                 >
                                     <ConfigListItem
                                         v-for="c in g.items"
                                         :key="c.id"
                                         :id="c.id"
                                         :doc="c.doc"
-                                        :depth="2"
+                                        :depth="1"
                                         :selected-id="selectedId"
                                         :user="user"
                                         :user-level="userLevel"

@@ -106,6 +106,7 @@ const canDelete = computed(() => {
 }
 
 .sb-icon {
+    margin-inline-start: 22px;
     margin-inline-end: 6px;
 }
 </style>
