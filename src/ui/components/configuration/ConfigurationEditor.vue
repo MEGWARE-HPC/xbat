@@ -148,14 +148,26 @@
             </v-expansion-panels>
 
             <v-card class="mt-5">
-                <v-card-title>
-                    Job Script
-                    <v-icon
-                        color="error"
-                        v-show="!validity.jobscript"
-                        size="x-small"
-                        title="Invalid inputs detected in one or multiple variants"
-                        icon="$alertCircle"
+                <v-card-title class="editor-card-title">
+                    <div class="d-flex align-center">
+                        <span>Job Script</span>
+                        <v-icon
+                            class="ml-2"
+                            color="error"
+                            v-show="!validity.jobscript"
+                            size="x-small"
+                            title="Invalid inputs detected in one or multiple variants"
+                            icon="$alertCircle"
+                        />
+                    </div>
+
+                    <v-btn
+                        icon="$close"
+                        variant="text"
+                        density="comfortable"
+                        color="font-light"
+                        title="Close editor"
+                        @click="$emit('close')"
                     />
                 </v-card-title>
 
@@ -393,7 +405,7 @@
                     >
                         Save
                     </v-btn>
-                    <v-btn @click="$emit('cancel')">Cancel</v-btn>
+                    <v-btn @click="$emit('close')">Close</v-btn>
                 </div>
             </div>
         </div>
@@ -434,7 +446,7 @@ const emit = defineEmits([
     "add-variant",
     "remove-variant",
     "save",
-    "cancel"
+    "close"
 ]);
 
 const showConfigurationID = computed(() => {
@@ -479,5 +491,11 @@ const variantTabModel = computed({
 .expansion-title {
     font-size: 1.25rem;
     font-weight: 500;
+}
+
+.editor-card-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 </style>
