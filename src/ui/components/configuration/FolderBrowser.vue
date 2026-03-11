@@ -24,7 +24,11 @@
                         <v-btn
                             color="primary-light"
                             prepend-icon="$newFile"
-                            @click="$emit('create-config')"
+                            @click="
+                                $emit('create-config', {
+                                    folderId: createCfgFolderId
+                                })
+                            "
                         >
                             New Config
                         </v-btn>
@@ -412,7 +416,7 @@
                         "
                         class="text-warning text-caption mt-2"
                     >
-                        The selected configurations are already in this folder.
+                        The selected configuration(s) are already in this folder.
                     </div>
                 </v-card-text>
                 <v-card-actions>
@@ -748,11 +752,17 @@ const clearDialogs = () => {
     DeleteDlg.value = false;
 };
 
+const createCfgFolderId = computed(() => {
+    const fid = String(props.folder?.id || "");
+    if (!fid || fid.startsWith("__")) return "";
+    return fid;
+});
+
 const duplicateConfig = () => {
     if (!canDuplicate.value) return;
 
     for (const cid of ownSelectConfigIds.value) {
-        emit("duplicate", String(cid));
+        emit("duplicate", { presetId: String(cid) });
     }
 
     setSelected([]);

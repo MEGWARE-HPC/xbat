@@ -277,7 +277,7 @@ watch(
     }
 );
 
-const addConfig = (presetId = "") => {
+const addConfig = ({ presetId = "", folderId = "" } = {}) => {
     // generate random uuid as a temporary _id -> will be replaced after insertion to database
     const _id = uuidv4();
 
@@ -288,9 +288,15 @@ const addConfig = (presetId = "") => {
     );
 
     // TODO add "(copy)" n times when creating n copies
+    const targetFolderId =
+        folderId ||
+        newConfig.folderId ||
+        (myHomeNode.value?.id ? String(myHomeNode.value.id) : "");
+
     configurationCache.value[_id] = {
         configuration: {
             ...newConfig,
+            folderId: targetFolderId,
             configurationName:
                 presetId && presetId in configurationCache.value
                     ? `${configurationCache.value[presetId].configuration.configurationName} (copy)`
@@ -298,7 +304,7 @@ const addConfig = (presetId = "") => {
         }
     };
 
-    state.selectedEdit = [Object.keys(configurationCache.value).at(-1)];
+    state.selectedEdit = [_id];
 };
 
 const addVariant = () => {
