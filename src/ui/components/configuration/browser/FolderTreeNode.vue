@@ -30,8 +30,8 @@
         <div class="sb-children" :style="childrenStyle">
             <!-- subfolders -->
             <FolderTreeNode
-                v-for="child in node.children || []"
                 v-if="depth < maxDepth"
+                v-for="child in node.children || []"
                 :key="child.id"
                 :node="child"
                 :configs-by-folder="configsByFolder"

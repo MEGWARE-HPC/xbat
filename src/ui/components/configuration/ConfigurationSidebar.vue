@@ -66,7 +66,9 @@
                             :max-depth="myMaxDepth"
                             @select="$emit('select', $event)"
                             @select-folder="$emit('select-folder', $event)"
-                            @duplicate="$emit('duplicate', $event)"
+                            @duplicate="
+                                (id) => $emit('duplicate', { presetId: id })
+                            "
                             @delete="$emit('delete', $event)"
                         />
 
@@ -82,7 +84,9 @@
                                 :user-level="userLevel"
                                 :UserLevelEnum="UserLevelEnum"
                                 @select="$emit('select', $event)"
-                                @duplicate="$emit('duplicate', $event)"
+                                @duplicate="
+                                    (id) => $emit('duplicate', { presetId: id })
+                                "
                                 @delete="$emit('delete', $event)"
                             />
                         </template>
@@ -188,7 +192,12 @@
                                         :user-level="userLevel"
                                         :UserLevelEnum="UserLevelEnum"
                                         @select="$emit('select', $event)"
-                                        @duplicate="$emit('duplicate', $event)"
+                                        @duplicate="
+                                            (id) =>
+                                                $emit('duplicate', {
+                                                    presetId: id
+                                                })
+                                        "
                                         @delete="$emit('delete', $event)"
                                     />
                                 </div>
