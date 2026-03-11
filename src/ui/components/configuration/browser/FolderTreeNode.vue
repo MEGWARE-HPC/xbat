@@ -29,7 +29,7 @@
 
         <div class="sb-children" :style="childrenStyle">
             <!-- subfolders -->
-            <SidebarFolderNode
+            <FolderTreeNode
                 v-for="child in node.children || []"
                 v-if="depth < maxDepth"
                 :key="child.id"
@@ -48,7 +48,7 @@
             />
 
             <!-- configs in this folder -->
-            <SidebarConfigItem
+            <ConfigListItem
                 v-for="c in configsHere"
                 :key="c.id"
                 :id="c.id"
@@ -68,7 +68,7 @@
 
 <script setup>
 import { computed } from "vue";
-import SidebarConfigItem from "./SidebarConfigItem.vue";
+import ConfigListItem from "./ConfigListItem.vue";
 
 const props = defineProps({
     node: { type: Object, required: true },

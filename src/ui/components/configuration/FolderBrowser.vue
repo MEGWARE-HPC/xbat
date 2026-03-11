@@ -315,8 +315,10 @@
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
-                    <v-btn text @click="CreateFolderDlg = false">Cancel</v-btn>
-                    <v-btn color="primary" @click="createFolder">Create</v-btn>
+                    <v-btn color="font-light" @click="CreateFolderDlg = false"
+                        >Cancel</v-btn
+                    >
+                    <v-btn color="primary-light" @click="createFolder">Create</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -333,8 +335,10 @@
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
-                    <v-btn text @click="RenameDlg = false">Cancel</v-btn>
-                    <v-btn color="primary" @click="applyRename">Save</v-btn>
+                    <v-btn color="font-light" @click="RenameDlg = false"
+                        >Cancel</v-btn
+                    >
+                    <v-btn color="primary-light" @click="applyRename">Save</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -359,8 +363,10 @@
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
-                    <v-btn text @click="ShareDlg = false">Cancel</v-btn>
-                    <v-btn color="primary" @click="applyShare">Apply</v-btn>
+                    <v-btn color="font-light" @click="ShareDlg = false"
+                        >Cancel</v-btn
+                    >
+                    <v-btn color="primary-light" @click="applyShare">Apply</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -394,9 +400,11 @@
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
-                    <v-btn text @click="MoveDlg = false">Cancel</v-btn>
+                    <v-btn color="font-light" @click="MoveDlg = false"
+                        >Cancel</v-btn
+                    >
                     <v-btn
-                        color="primary"
+                        color="primary-light"
                         :disabled="!moveDestId"
                         @click="applyMove"
                     >
@@ -422,8 +430,10 @@
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
-                    <v-btn text @click="DeleteDlg = false">Cancel</v-btn>
-                    <v-btn color="red-darken-3" @click="applyDelete"
+                    <v-btn color="font-light" @click="DeleteDlg = false"
+                        >Cancel</v-btn
+                    >
+                    <v-btn color="danger" @click="applyDelete"
                         >Delete</v-btn
                     >
                 </v-card-actions>
@@ -434,7 +444,7 @@
 
 <script setup>
 import { computed, ref, watch } from "vue";
-import MoveFolderTreeNode from "./MoveFolderTreeNode.vue";
+import MoveFolderTreeNode from "./browser/MoveFolderTreeNode.vue";
 
 const { $api, $snackbar, $store } = useNuxtApp();
 

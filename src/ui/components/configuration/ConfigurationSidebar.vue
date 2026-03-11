@@ -53,7 +53,7 @@
                         class="sb-children sb-section-children"
                         :style="sectionChildrenStyle(0)"
                     >
-                        <SidebarFolderNode
+                        <FolderTreeNode
                             v-for="n in myFolderRoots"
                             :key="n.id"
                             :node="n"
@@ -71,7 +71,7 @@
                         />
 
                         <template v-if="showMyHome">
-                            <SidebarConfigItem
+                            <ConfigListItem
                                 v-for="c in myHomeConfigs"
                                 :key="c.id"
                                 :id="c.id"
@@ -177,7 +177,7 @@
                                     class="sb-children sb-tight"
                                     :style="sectionChildrenStyle(1)"
                                 >
-                                    <SidebarConfigItem
+                                    <ConfigListItem
                                         v-for="c in g.items"
                                         :key="c.id"
                                         :id="c.id"
@@ -210,8 +210,8 @@
 <script setup>
 import { computed, ref, watch, onMounted } from "vue";
 
-import SidebarFolderNode from "./sidebar/SidebarFolderNode.vue";
-import SidebarConfigItem from "./sidebar/SidebarConfigItem.vue";
+import FolderTreeNode from "./browser/FolderTreeNode.vue";
+import ConfigListItem from "./browser/ConfigListItem.vue";
 
 const props = defineProps({
     configurationCache: { type: Object, required: true },
