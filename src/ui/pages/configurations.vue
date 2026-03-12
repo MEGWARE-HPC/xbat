@@ -36,6 +36,7 @@
                         :vNumber="vNumber"
                         :vInteger="vInteger"
                         :projects="$authStore.user.projects"
+                        :folder-path="editorFolderPath"
                         :partitions="partitions"
                         :partition-tree="partitionTree"
                         :variable-count="variableCount"
@@ -47,6 +48,7 @@
                         @remove-variant="removeVariant"
                         @save="save"
                         @close="requestCloseEditor"
+                        @open-folder-picker="openFolderPicker"
                     />
                     <FolderBrowser
                         v-else-if="selectedFolderNode"
@@ -125,6 +127,40 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+        <v-dialog v-model="showFolderPickerDialog" max-width="720">
+            <v-card>
+                <v-card-title>Select Folder</v-card-title>
+                <v-card-text>
+                    <div class="move-tree">
+                        <MoveFolderTreeNode
+                            v-for="node in editorFolderTree"
+                            :key="node.id || node.path"
+                            :node="node"
+                            :selected-id="String(form.folderId || '')"
+                            @select="selectEditorFolder"
+                        />
+                    </div>
+
+                    <div class="move-selected mt-4">
+                        <span class="text-medium-emphasis"
+                            >Selected folder:</span
+                        >
+                        <span class="ml-2">
+                            {{ editorFolderPath || "—" }}
+                        </span>
+                    </div>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn
+                        color="font-light"
+                        @click="showFolderPickerDialog = false"
+                    >
+                        Close
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
         <v-dialog v-model="state.showCloseDialog" max-width="520px">
             <v-card>
                 <v-card-title>Close editor</v-card-title>
@@ -172,6 +208,7 @@ import { v4 as uuidv4 } from "uuid";
 import ConfigurationSidebar from "~/components/configuration/ConfigurationSidebar.vue";
 import ConfigurationEditor from "~/components/configuration/ConfigurationEditor.vue";
 import FolderBrowser from "~/components/configuration/FolderBrowser.vue";
+import MoveFolderTreeNode from "~/components/configuration/browser/MoveFolderTreeNode.vue";
 
 const { vNotEmpty, vNumber, vInteger } = useFormValidation();
 const { $authStore, $api, $snackbar, $store } = useNuxtApp();
@@ -208,6 +245,7 @@ const defaultForm = {
     enableMonitoring: true,
     interval: 5,
     configurationName: "new configuration",
+    folderId: "",
     sharedProjects: []
 };
 
@@ -280,6 +318,9 @@ const state = reactive({
 
 const editorRef = ref(null);
 const formBeforeEdit = ref({});
+
+const showFolderPickerDialog = ref(false);
+const editorFolderTree = ref([]);
 
 const currentEditNotYetSaved = computed(() =>
     (state.currentEdit || "").includes("-")
@@ -687,6 +728,92 @@ const myHomeNode = computed(() => {
     const roots = folderTree.value || [];
     return roots.find((n) => n?.name === $authStore.user.user_name) || null;
 });
+
+const folderPathById = computed(() => {
+    const map = new Map();
+    const roots = folderTree.value || [];
+    const ownHome = roots.find((n) => n?.name === $authStore.user.user_name);
+
+    const walk = (node, parts = []) => {
+        if (!node?.id) return;
+
+        const isHome = ownHome && String(node.id) === String(ownHome.id);
+        const nextParts = isHome ? ["home"] : [...parts, node.name];
+
+        map.set(String(node.id), nextParts.join("/"));
+
+        for (const child of node.children || []) {
+            walk(child, nextParts);
+        }
+    };
+
+    if (ownHome) walk(ownHome, []);
+    return map;
+});
+
+const editorFolderPath = computed(() => {
+    const fid = String(form.value?.folderId || "");
+    if (!fid) return "";
+    return folderPathById.value.get(fid) || "";
+});
+
+const buildMoveTree = (nodes, parentPath = "home") => {
+    const result = [];
+
+    for (const node of nodes || []) {
+        if (!node?.id) continue;
+
+        const currentPath =
+            parentPath === "home"
+                ? `home/${node.name}`
+                : `${parentPath}/${node.name}`;
+
+        result.push({
+            id: String(node.id),
+            name: node.name,
+            path: currentPath,
+            children: buildMoveTree(node.children || [], currentPath)
+        });
+    }
+
+    return result;
+};
+
+const findUserHomeTree = (treeNodes, userName) => {
+    return (
+        (treeNodes || []).find(
+            (n) => n?.name === userName && n?.misc?.owner === userName
+        ) || null
+    );
+};
+
+const openFolderPicker = () => {
+    const fullTree = folderTree.value || [];
+    const myHome = findUserHomeTree(fullTree, $authStore.user.user_name);
+
+    if (!myHome) {
+        editorFolderTree.value = [];
+        showFolderPickerDialog.value = true;
+        return;
+    }
+
+    editorFolderTree.value = [
+        {
+            id: String(myHome.id),
+            name: "home",
+            path: "home",
+            children: buildMoveTree(myHome.children || [], "home")
+        }
+    ];
+
+    showFolderPickerDialog.value = true;
+};
+
+const selectEditorFolder = (node) => {
+    if (!node?.id) return;
+    form.value.folderId = String(node.id);
+    showFolderPickerDialog.value = false;
+};
 
 const isManager = computed(
     () => $authStore.userLevel >= $authStore.UserLevelEnum.manager

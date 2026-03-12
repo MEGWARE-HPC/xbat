@@ -39,10 +39,15 @@
                                 </v-col>
 
                                 <v-col md="6" sm="12">
-                                    <v-number-input
-                                        label="Iterations"
-                                        v-model.number="form.iterations"
-                                        :rules="[vNotEmpty, vInteger]"
+                                    <v-text-field
+                                        label="Folder"
+                                        :model-value="folderPath"
+                                        readonly
+                                        append-inner-icon="$folderOpen"
+                                        @click="$emit('open-folder-picker')"
+                                        @click:append-inner="
+                                            $emit('open-folder-picker')
+                                        "
                                     />
                                 </v-col>
 
@@ -80,37 +85,52 @@
                                 </v-col>
 
                                 <v-col md="6" sm="12">
-                                    <v-number-input
-                                        label="Measurement Interval (seconds)"
-                                        v-model.number="form.interval"
-                                        :rules="[
-                                            vNotEmpty,
-                                            vNumber,
-                                            vInteger,
-                                            (v) =>
-                                                parseInt(v) >= 5 ||
-                                                'Value must be at least 5 seconds'
-                                        ]"
-                                    >
-                                        <template #prepend-inner>
-                                            <v-tooltip location="top">
-                                                <template
-                                                    #activator="{ props }"
-                                                >
-                                                    <v-icon
-                                                        color="primary-light"
-                                                        v-bind="props"
-                                                        class="ml-1"
-                                                        icon="$information"
-                                                    />
+                                    <v-row>
+                                        <v-col cols="12" md="6">
+                                            <v-number-input
+                                                label="Iterations"
+                                                v-model.number="form.iterations"
+                                                :rules="[vNotEmpty, vInteger]"
+                                            />
+                                        </v-col>
+
+                                        <v-col cols="12" md="6">
+                                            <v-number-input
+                                                label="Measurement Interval (seconds)"
+                                                v-model.number="form.interval"
+                                                :rules="[
+                                                    vNotEmpty,
+                                                    vNumber,
+                                                    vInteger,
+                                                    (v) =>
+                                                        parseInt(v) >= 5 ||
+                                                        'Value must be at least 5 seconds'
+                                                ]"
+                                            >
+                                                <template #prepend-inner>
+                                                    <v-tooltip location="top">
+                                                        <template
+                                                            #activator="{
+                                                                props
+                                                            }"
+                                                        >
+                                                            <v-icon
+                                                                color="primary-light"
+                                                                v-bind="props"
+                                                                class="ml-1"
+                                                                icon="$information"
+                                                            />
+                                                        </template>
+                                                        <span>
+                                                            Current minimum
+                                                            interval is 5
+                                                            seconds
+                                                        </span>
+                                                    </v-tooltip>
                                                 </template>
-                                                <span
-                                                    >Current minimum interval is
-                                                    5 seconds</span
-                                                >
-                                            </v-tooltip>
-                                        </template>
-                                    </v-number-input>
+                                            </v-number-input>
+                                        </v-col>
+                                    </v-row>
                                 </v-col>
 
                                 <v-col sm="12">
@@ -429,6 +449,7 @@ const props = defineProps({
     vInteger: { type: Function, required: true },
 
     projects: { type: Array, default: () => [] },
+    folderPath: { type: String, default: "" },
 
     partitions: { type: Object, default: () => ({}) },
     partitionTree: { type: Array, default: () => [] },
@@ -446,7 +467,8 @@ const emit = defineEmits([
     "add-variant",
     "remove-variant",
     "save",
-    "close"
+    "close",
+    "open-folder-picker"
 ]);
 
 const showConfigurationID = computed(() => {
