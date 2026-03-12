@@ -43,12 +43,19 @@
                                         label="Folder"
                                         :model-value="folderPath"
                                         readonly
-                                        append-inner-icon="$folderOpen"
                                         @click="$emit('open-folder-picker')"
-                                        @click:append-inner="
-                                            $emit('open-folder-picker')
-                                        "
-                                    />
+                                    >
+                                        <template #append-inner>
+                                            <v-icon
+                                                icon="$folderOpen"
+                                                color="primary-light"
+                                                class="cursor-pointer"
+                                                @click.stop="
+                                                    $emit('open-folder-picker')
+                                                "
+                                            />
+                                        </template>
+                                    </v-text-field>
                                 </v-col>
 
                                 <v-col md="6" sm="12" v-if="projects?.length">
