@@ -46,7 +46,7 @@
                         @add-variant="addVariant"
                         @remove-variant="removeVariant"
                         @save="save"
-                        @cancel="cancelEdit"
+                        @close="requestCloseEditor"
                     />
                     <FolderBrowser
                         v-else-if="selectedFolderNode"
@@ -121,6 +121,42 @@
                         @click="executeAction(state.action, state.actionTarget)"
                     >
                         {{ state.action }}
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+        <v-dialog v-model="state.showCloseDialog" max-width="520px">
+            <v-card>
+                <v-card-title>Close editor</v-card-title>
+                <v-card-text>
+                    You have unsaved changes. What would you like to do?
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+
+                    <v-btn
+                        color="font-light"
+                        text
+                        @click="state.showCloseDialog = false"
+                    >
+                        Cancel
+                    </v-btn>
+
+                    <v-btn color="danger" text @click="discardAndClose">
+                        Discard & Close
+                    </v-btn>
+
+                    <v-btn
+                        color="primary-light"
+                        text
+                        :disabled="
+                            Object.values(validity)
+                                .map((x) => !!x)
+                                .includes(false)
+                        "
+                        @click="saveAndClose"
+                    >
+                        Save & Close
                     </v-btn>
                 </v-card-actions>
             </v-card>
@@ -238,7 +274,8 @@ const state = reactive({
     action: null,
     actionTarget: null,
     showActionDialog: false,
-    actionTargetName: null
+    actionTargetName: null,
+    showCloseDialog: false
 });
 
 const editorRef = ref(null);
@@ -247,6 +284,21 @@ const formBeforeEdit = ref({});
 const currentEditNotYetSaved = computed(() =>
     (state.currentEdit || "").includes("-")
 );
+
+const hasUnsavedChanges = computed(() => {
+    const id = state.currentEdit;
+    if (!id) return false;
+
+    if (currentEditNotYetSaved.value) {
+        const current = configurationCache.value[id]?.configuration || {};
+        return JSON.stringify(current) !== JSON.stringify(defaultForm);
+    }
+
+    const original = formBeforeEdit.value[id];
+    if (!original) return false;
+
+    return JSON.stringify(form.value) !== JSON.stringify(original);
+});
 
 watch(
     () => state.selectedEdit,
@@ -326,10 +378,39 @@ const resetForm = () => {
     form.value = configurationCache.value[state.currentEdit].configuration;
 };
 
-const cancelEdit = () => {
-    // reset form to state before edit
-    resetForm();
+const closeEditor = () => {
     state.selectedEdit = [];
+};
+
+const discardAndClose = () => {
+    resetForm();
+
+    if (currentEditNotYetSaved.value && state.currentEdit) {
+        delete configurationCache.value[state.currentEdit];
+    }
+
+    state.showCloseDialog = false;
+    closeEditor();
+};
+
+const saveAndClose = async () => {
+    await save();
+    state.showCloseDialog = false;
+    closeEditor();
+};
+
+const requestCloseEditor = () => {
+    if (!state.currentEdit) {
+        closeEditor();
+        return;
+    }
+
+    if (!hasUnsavedChanges.value) {
+        closeEditor();
+        return;
+    }
+
+    state.showCloseDialog = true;
 };
 
 const save = async () => {
