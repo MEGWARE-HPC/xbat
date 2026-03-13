@@ -93,8 +93,8 @@
                                             v.sortOrder === 'custom'
                                                 ? '$sortCustom'
                                                 : v.sortOrder === 'desc'
-                                                ? '$sortNumDesc'
-                                                : '$sortNumAsc'
+                                                  ? '$sortNumDesc'
+                                                  : '$sortNumAsc'
                                         "
                                         :color="
                                             v.sortOrder === 'custom'
@@ -774,7 +774,7 @@ const duplicateVariable = computed(() => {
 });
 </script>
 
-<style scoped lang="scss">
+<style lang="scss" scoped>
 @use "~/assets/css/colors.scss" as *;
 
 .cursor-move {
