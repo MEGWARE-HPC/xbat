@@ -1,12 +1,12 @@
 name: Build and Test xbat daemon
-#google fonts  
+
 on:
   push:
     branches:
-      - ci-testing
+      - master
   pull_request:
     branches:
-      - ci-testing
+      - master
 
 jobs:
   test-el8:

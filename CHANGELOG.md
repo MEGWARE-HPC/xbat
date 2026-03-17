@@ -38,6 +38,7 @@ All notable changes to this project will be documented in this file.
 - support to retain peaks information when switching between levels (#151)
 - group name for peaks within traces (#151)
 - API endpoint for accessing node information via jobId
+- Pipline now runs on self hosted Runners with VM/libvirt-based Ephemeral VM`s
 
 ### Changed
 
