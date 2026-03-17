@@ -169,8 +169,35 @@ jobs:
           echo "Removal successful"
           EOF
 
+
       # -------------------------------------------------------
-      # 8. Extra Debug Logs 
+      # 8. xbat setup install
+      # -------------------------------------------------------
+      - name: Run xbat setup install
+        run: |
+          ssh -i $SSH_KEY -o StrictHostKeyChecking=no root@$VM_IP bash << 'EOF'
+          set -euo pipefail
+          cd /opt/xbat
+          chmod +x setup.sh
+          ./setup.sh install --home-mnt /home/ --yes
+          echo "Setup install OK"
+          EOF
+
+      # -------------------------------------------------------
+      # 9. xbat setup remove
+      # -------------------------------------------------------
+      - name: Run xbat setup remove
+        run: |
+          ssh -i $SSH_KEY -o StrictHostKeyChecking=no root@$VM_IP bash << 'EOF'
+          set -euo pipefail
+          cd /opt/xbat
+          ./setup.sh remove --yes
+          echo "Setup remove OK"
+          EOF
+
+      
+      # -------------------------------------------------------
+      # 10. Extra Debug Logs 
       # -------------------------------------------------------
       - name: Dump debug info on failure
         if: failure()
@@ -185,7 +212,7 @@ jobs:
           EOF
 
       # -------------------------------------------------------
-      # 9. Cleanup on sucess
+      # 11. Cleanup on sucess
       # -------------------------------------------------------
       - name: Destroy VM on success
         if: success()
@@ -197,7 +224,7 @@ jobs:
           echo "Cleanup complete"
 
       # -------------------------------------------------------
-      # 10. keeping vm on failure (only for debugging)
+      # 12. keeping vm on failure (only for debugging)
       # -------------------------------------------------------
       - name: Keep VM for debugging
         if: failure()
