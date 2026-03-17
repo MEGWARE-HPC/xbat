@@ -1,5 +1,5 @@
 name: Build and Test xbat daemon
-#removing amd,rocm on el9 and 10
+#google fonts  
 on:
   push:
     branches:
