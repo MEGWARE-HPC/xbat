@@ -209,6 +209,7 @@ import ConfigurationSidebar from "~/components/configuration/ConfigurationSideba
 import ConfigurationEditor from "~/components/configuration/ConfigurationEditor.vue";
 import FolderBrowser from "~/components/configuration/FolderBrowser.vue";
 import MoveFolderTreeNode from "~/components/configuration/browser/MoveFolderTreeNode.vue";
+import { useConfigurationEditor } from "~/composables/useConfigurationEditor";
 
 const { vNotEmpty, vNumber, vInteger } = useFormValidation();
 const { $authStore, $api, $snackbar, $store } = useNuxtApp();
@@ -250,21 +251,28 @@ const defaultForm = {
 };
 
 const folderSelect = ref([]);
+const selectedFolderId = ref(null);
+const configurationCache = ref({});
+const form = ref(deepClone(defaultForm));
+const editorRef = ref(null);
+const formBeforeEdit = ref({});
+
+const state = reactive({
+    variantTab: 0,
+    currentEdit: "",
+    previousEdit: "",
+    selectedEdit: [],
+    action: null,
+    actionTarget: null,
+    showActionDialog: false,
+    actionTargetName: null,
+    showCloseDialog: false
+});
 
 const refreshAll = async () => {
     await fetchConfigurations();
     await refreshFolders();
     folderSelect.value = [];
-};
-
-const selectedFolderId = ref(null);
-const configurationCache = ref({});
-const form = ref(deepClone(defaultForm));
-
-const setConfigurationCache = () => {
-    configurationCache.value = Object.fromEntries(
-        deepClone(configurations.value).map((x) => [x._id, x])
-    );
 };
 
 const { data: partitions } = await useAsyncData(
@@ -277,6 +285,17 @@ const { data: configurations, refresh } = await useAsyncData(
     `configurations-${$authStore.user.user_name}`,
     async () => (await $api.configurations.get())?.data || []
 );
+
+const { data: folderTree, refresh: refreshFolders } = await useAsyncData(
+    `configuration-folders-tree-page-${$authStore.user.user_name}`,
+    async () => (await $api.configurationFolders.get())?.data || []
+);
+
+const setConfigurationCache = () => {
+    configurationCache.value = Object.fromEntries(
+        deepClone(configurations.value).map((x) => [x._id, x])
+    );
+};
 
 setConfigurationCache();
 
@@ -304,42 +323,9 @@ const fetchConfigurations = async () => {
     setConfigurationCache();
 };
 
-const state = reactive({
-    variantTab: 0,
-    currentEdit: "",
-    previousEdit: "",
-    selectedEdit: [],
-    action: null,
-    actionTarget: null,
-    showActionDialog: false,
-    actionTargetName: null,
-    showCloseDialog: false
-});
-
-const editorRef = ref(null);
-const formBeforeEdit = ref({});
-
-const showFolderPickerDialog = ref(false);
-const editorFolderTree = ref([]);
-
 const currentEditNotYetSaved = computed(() =>
     (state.currentEdit || "").includes("-")
 );
-
-const hasUnsavedChanges = computed(() => {
-    const id = state.currentEdit;
-    if (!id) return false;
-
-    if (currentEditNotYetSaved.value) {
-        const current = configurationCache.value[id]?.configuration || {};
-        return JSON.stringify(current) !== JSON.stringify(defaultForm);
-    }
-
-    const original = formBeforeEdit.value[id];
-    if (!original) return false;
-
-    return JSON.stringify(form.value) !== JSON.stringify(original);
-});
 
 watch(
     () => state.selectedEdit,
@@ -419,41 +405,6 @@ const resetForm = () => {
     form.value = configurationCache.value[state.currentEdit].configuration;
 };
 
-const closeEditor = () => {
-    state.selectedEdit = [];
-};
-
-const discardAndClose = () => {
-    resetForm();
-
-    if (currentEditNotYetSaved.value && state.currentEdit) {
-        delete configurationCache.value[state.currentEdit];
-    }
-
-    state.showCloseDialog = false;
-    closeEditor();
-};
-
-const saveAndClose = async () => {
-    await save();
-    state.showCloseDialog = false;
-    closeEditor();
-};
-
-const requestCloseEditor = () => {
-    if (!state.currentEdit) {
-        closeEditor();
-        return;
-    }
-
-    if (!hasUnsavedChanges.value) {
-        closeEditor();
-        return;
-    }
-
-    state.showCloseDialog = true;
-};
-
 const save = async () => {
     if (!validity.settings || !validity.jobscript) return;
 
@@ -505,6 +456,28 @@ const save = async () => {
     });
 };
 
+const {
+    showFolderPickerDialog,
+    editorFolderTree,
+    editorFolderPath,
+    discardAndClose,
+    saveAndClose,
+    requestCloseEditor,
+    openFolderPicker,
+    selectEditorFolder
+} = useConfigurationEditor({
+    state,
+    form,
+    defaultForm,
+    configurationCache,
+    formBeforeEdit,
+    currentEditNotYetSaved,
+    folderTree,
+    userName: $authStore.user.user_name,
+    save,
+    resetForm
+});
+
 const setAction = (action, target) => {
     state.action = action;
     state.actionTarget = target;
@@ -552,11 +525,6 @@ watch(
             });
         }
     }
-);
-
-const { data: folderTree, refresh: refreshFolders } = await useAsyncData(
-    `configuration-folders-tree-page-${$authStore.user.user_name}`,
-    async () => (await $api.configurationFolders.get())?.data || []
 );
 
 const folderMap = computed(() => {
@@ -728,92 +696,6 @@ const myHomeNode = computed(() => {
     const roots = folderTree.value || [];
     return roots.find((n) => n?.name === $authStore.user.user_name) || null;
 });
-
-const folderPathById = computed(() => {
-    const map = new Map();
-    const roots = folderTree.value || [];
-    const ownHome = roots.find((n) => n?.name === $authStore.user.user_name);
-
-    const walk = (node, parts = []) => {
-        if (!node?.id) return;
-
-        const isHome = ownHome && String(node.id) === String(ownHome.id);
-        const nextParts = isHome ? ["home"] : [...parts, node.name];
-
-        map.set(String(node.id), nextParts.join("/"));
-
-        for (const child of node.children || []) {
-            walk(child, nextParts);
-        }
-    };
-
-    if (ownHome) walk(ownHome, []);
-    return map;
-});
-
-const editorFolderPath = computed(() => {
-    const fid = String(form.value?.folderId || "");
-    if (!fid) return "";
-    return folderPathById.value.get(fid) || "";
-});
-
-const buildMoveTree = (nodes, parentPath = "home") => {
-    const result = [];
-
-    for (const node of nodes || []) {
-        if (!node?.id) continue;
-
-        const currentPath =
-            parentPath === "home"
-                ? `home/${node.name}`
-                : `${parentPath}/${node.name}`;
-
-        result.push({
-            id: String(node.id),
-            name: node.name,
-            path: currentPath,
-            children: buildMoveTree(node.children || [], currentPath)
-        });
-    }
-
-    return result;
-};
-
-const findUserHomeTree = (treeNodes, userName) => {
-    return (
-        (treeNodes || []).find(
-            (n) => n?.name === userName && n?.misc?.owner === userName
-        ) || null
-    );
-};
-
-const openFolderPicker = () => {
-    const fullTree = folderTree.value || [];
-    const myHome = findUserHomeTree(fullTree, $authStore.user.user_name);
-
-    if (!myHome) {
-        editorFolderTree.value = [];
-        showFolderPickerDialog.value = true;
-        return;
-    }
-
-    editorFolderTree.value = [
-        {
-            id: String(myHome.id),
-            name: "home",
-            path: "home",
-            children: buildMoveTree(myHome.children || [], "home")
-        }
-    ];
-
-    showFolderPickerDialog.value = true;
-};
-
-const selectEditorFolder = (node) => {
-    if (!node?.id) return;
-    form.value.folderId = String(node.id);
-    showFolderPickerDialog.value = false;
-};
 
 const isManager = computed(
     () => $authStore.userLevel >= $authStore.UserLevelEnum.manager
