@@ -150,10 +150,66 @@
                             @click.stop
                         />
                     </div>
-                    <div class="fb-col fb-col--name">Name</div>
-                    <div class="fb-col fb-col--owner">Owner</div>
-                    <div class="fb-col fb-col--created">Created</div>
-                    <div class="fb-col fb-col--edited">Modified</div>
+
+                    <div
+                        class="fb-col fb-col--name fb-head-sort"
+                        :class="{ 'is-active': sortBy === 'name' }"
+                        @click="setSort('name')"
+                    >
+                        <span>Name</span>
+                        <v-icon
+                            v-if="sortBy === 'name'"
+                            size="small"
+                            class="fb-head-sort-icon"
+                            :icon="
+                                sortDesc ? '$sortAlphaAsc' : '$sortAlphaDesc'
+                            "
+                        />
+                    </div>
+
+                    <div
+                        class="fb-col fb-col--owner fb-head-sort"
+                        :class="{ 'is-active': sortBy === 'owner' }"
+                        @click="setSort('owner')"
+                    >
+                        <span>Owner</span>
+                        <v-icon
+                            v-if="sortBy === 'owner'"
+                            size="small"
+                            class="fb-head-sort-icon"
+                            :icon="
+                                sortDesc ? '$sortAlphaAsc' : '$sortAlphaDesc'
+                            "
+                        />
+                    </div>
+
+                    <div
+                        class="fb-col fb-col--created fb-head-sort"
+                        :class="{ 'is-active': sortBy === 'created' }"
+                        @click="setSort('created')"
+                    >
+                        <span>Created</span>
+                        <v-icon
+                            v-if="sortBy === 'created'"
+                            size="small"
+                            class="fb-head-sort-icon"
+                            :icon="sortDesc ? '$sortNumAsc' : '$sortNumDesc'"
+                        />
+                    </div>
+
+                    <div
+                        class="fb-col fb-col--edited fb-head-sort"
+                        :class="{ 'is-active': sortBy === 'edited' }"
+                        @click="setSort('edited')"
+                    >
+                        <span>Modified</span>
+                        <v-icon
+                            v-if="sortBy === 'edited'"
+                            size="small"
+                            class="fb-head-sort-icon"
+                            :icon="sortDesc ? '$sortNumAsc' : '$sortNumDesc'"
+                        />
+                    </div>
                 </div>
 
                 <v-list class="fb-list" density="compact">
@@ -192,7 +248,7 @@
 
                     <!-- folders -->
                     <v-list-item
-                        v-for="child in folders"
+                        v-for="child in sortedFolders"
                         :key="'f-' + child.id"
                         class="fb-rowitem"
                         @click="$emit('open-folder', child.id)"
@@ -239,7 +295,7 @@
 
                     <!-- configs -->
                     <v-list-item
-                        v-for="c in configs"
+                        v-for="c in sortedConfigs"
                         :key="'c-' + c.id"
                         class="fb-rowitem"
                         @click="$emit('open-config', c.id)"
@@ -298,8 +354,8 @@
                     <v-list-item
                         v-if="
                             !canGoUp &&
-                            folders.length === 0 &&
-                            configs.length === 0
+                            sortedFolders.length === 0 &&
+                            sortedConfigs.length === 0
                         "
                         class="text-medium-emphasis"
                         title="This folder is empty"
@@ -651,6 +707,107 @@ const parentId = computed(() => props.folder?.__parentId ?? null);
 const canGoUp = computed(() => !!props.folder && !!parentId.value);
 
 const folders = computed(() => (props.folder?.children || []).slice());
+
+const sortBy = ref("name");
+const sortDesc = ref(false);
+
+const setSort = (key) => {
+    if (sortBy.value === key) {
+        sortDesc.value = !sortDesc.value;
+        return;
+    }
+
+    sortBy.value = key;
+    sortDesc.value = false;
+};
+
+const normalizeString = (v) => String(v || "").toLocaleLowerCase();
+
+const parseDateValue = (v) => {
+    if (!v) return 0;
+    const t = new Date(v).getTime();
+    return Number.isNaN(t) ? 0 : t;
+};
+
+const compareValues = (a, b) => {
+    if (a < b) return sortDesc.value ? 1 : -1;
+    if (a > b) return sortDesc.value ? -1 : 1;
+    return 0;
+};
+
+const sortedFolders = computed(() => {
+    const arr = folders.value.slice();
+
+    arr.sort((a, b) => {
+        switch (sortBy.value) {
+            case "owner":
+                return compareValues(
+                    normalizeString(a?.misc?.owner),
+                    normalizeString(b?.misc?.owner)
+                );
+
+            case "created":
+                return compareValues(
+                    parseDateValue(a?.misc?.created),
+                    parseDateValue(b?.misc?.created)
+                );
+
+            case "edited":
+                return compareValues(
+                    parseDateValue(a?.misc?.edited),
+                    parseDateValue(b?.misc?.edited)
+                );
+
+            case "name":
+            default:
+                return compareValues(
+                    normalizeString(a?.name),
+                    normalizeString(b?.name)
+                );
+        }
+    });
+
+    return arr;
+});
+
+const sortedConfigs = computed(() => {
+    const arr = (props.configs || []).slice();
+
+    arr.sort((a, b) => {
+        switch (sortBy.value) {
+            case "owner":
+                return compareValues(
+                    normalizeString(a?.doc?.misc?.owner),
+                    normalizeString(b?.doc?.misc?.owner)
+                );
+
+            case "created":
+                return compareValues(
+                    parseDateValue(a?.doc?.misc?.created),
+                    parseDateValue(b?.doc?.misc?.created)
+                );
+
+            case "edited":
+                return compareValues(
+                    parseDateValue(a?.doc?.misc?.edited),
+                    parseDateValue(b?.doc?.misc?.edited)
+                );
+
+            case "name":
+            default:
+                return compareValues(
+                    normalizeString(
+                        a?.doc?.configuration?.configurationName || a?.id
+                    ),
+                    normalizeString(
+                        b?.doc?.configuration?.configurationName || b?.id
+                    )
+                );
+        }
+    });
+
+    return arr;
+});
 
 const visibleTokens = computed(() => {
     const tokens = [];
@@ -1182,5 +1339,25 @@ const applyDelete = async () => {
 .fb-ico--nav {
     color: $primary-light;
     opacity: 0.7;
+}
+
+.fb-head-sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.fb-head-sort:hover {
+    opacity: 1;
+}
+
+.fb-head-sort.is-active {
+    color: $font-base;
+}
+
+.fb-head-sort-icon {
+    flex: 0 0 auto;
 }
 </style>
