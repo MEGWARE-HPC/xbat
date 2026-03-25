@@ -6,7 +6,7 @@ swagger-ui-bundle==1.1.0
 pymongo==4.13.2
 wheel==0.46.3
 gunicorn==23.0.0
-Authlib==1.6.6
+Authlib==1.6.9
 blueprint==3.4.2
 python-freeipa==1.0.8
 pyyaml==6.0.3
