@@ -15,6 +15,7 @@ dependencies = [
     "scienceplots>=2.2.0",
     "tornado>=6.5.4",
     "typer>=0.20.0",
+    "typing-extensions>=4.15.0",
 ]
 
 [project.scripts]
