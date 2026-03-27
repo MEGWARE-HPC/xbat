@@ -27,6 +27,6 @@ RUN npm install -g pm2
 
 USER nodeuser
 
-EXPOSE 7003
+EXPOSE 8003
 
 CMD ["pm2-runtime", "--interpreter=$(whereis node)", "ecosystem.config.cjs"]

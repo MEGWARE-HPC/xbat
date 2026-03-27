@@ -194,18 +194,6 @@ paths:
       security:
         - oauth2:
             - benchmarks_w
-  /benchmarks/purge:
-    post:
-      operationId: backend.restapi.api.benchmarks.purge
-      tags:
-        - maintenance
-      summary: Purge old benchmarks from QuestDB
-      responses:
-        "204":
-          description: Successfully purged old benchmarks
-      security:
-        - oauth2:
-            - benchmarks_w
   /benchmarks/backup:
     post:
       operationId: backend.restapi.api.benchmarks.backup_mongoDB

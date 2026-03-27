@@ -24,14 +24,22 @@ EXECUTOR_COMPOSE="podman-compose"
 HOME_MNT=""
 HELP=false
 NODB=false
-EXPOSE_QUESTDB=false
+EXPOSE_DATABASES=false
 FRONTEND_NETWORK="0.0.0.0"
-QUESTDB_ADDRESS="xbat-questdb:9000"
-QUESTDB_ADDRESS_SET=false
+CLICKHOUSE_HOST="xbat-clickhouse"
+CLICKHOUSE_HOST_SET=false
+MONGODB_HOST="xbat-mongodb"
+MONGODB_HOST_SET=false
 WORKERS=8
 FRONTEND_PORT=7000
 XBAT_USER="xbat"
 CERT_DIR="/etc/xbat/certs"
+
+# Auxiliary ports (calculated from FRONTEND_PORT)
+MONGODB_PORT=$((FRONTEND_PORT + 1))
+CLICKHOUSE_NATIVE_PORT=$((FRONTEND_PORT + 2))
+CLICKHOUSE_PG_PORT=$((FRONTEND_PORT + 3))
+CLICKHOUSE_HTTP_PORT=$((FRONTEND_PORT + 4))
 
 SCRIPT_SRC_PATH="./scripts"
 CONF_SRC_PATH="./conf"
@@ -42,6 +50,7 @@ CONF_FILE="xbat.conf"
 #########################################
 
 log_info() { echo -e "[INFO] $*"; }
+log_warning() { echo -e "[WARNING] $*" >&2; }
 log_error() { echo -e "[ERROR] $*" >&2; }
 
 check_root() {
@@ -94,13 +103,24 @@ configure_compose() {
         sed -i "s!#- HOME_MNT#!- $HOME_MNT:/external/$HOME_MNT!g" "$COMPOSE_FILE"
     fi
 
-    sed -i "s!#FRONTEND_NETWORK#!$FRONTEND_NETWORK!g" "$COMPOSE_FILE"
     sed -i "s!#XBAT_UID#!$(id -u "$XBAT_USER")!g" "$COMPOSE_FILE"
     sed -i "s!#XBAT_GID#!$(id -g "$XBAT_USER")!g" "$COMPOSE_FILE"
     sed -i "s!#VAR_LOG#!$LOG_BASE_PATH!g" "$COMPOSE_FILE"
     sed -i "s!#VAR_LIB#!$LIB_BASE_PATH!g" "$COMPOSE_FILE"
     sed -i "s!#FRONTEND_PORT#!$FRONTEND_PORT!g" "$COMPOSE_FILE"
     sed -i "s!#CERT_DIR#!$CERT_DIR!g" "$COMPOSE_FILE"
+
+    if [[ "$EXPOSE_DATABASES" == true ]]; then
+        sed -i "s!#- \"#FRONTEND_NETWORK#:#MONGODB_PORT#:#MONGODB_PORT#\"!- \"$FRONTEND_NETWORK:#MONGODB_PORT#:#MONGODB_PORT#\"!" "$COMPOSE_FILE"
+        sed -i "s!#- \"#FRONTEND_NETWORK#:#CLICKHOUSE_PG_PORT#:#CLICKHOUSE_PG_PORT#\"!- \"$FRONTEND_NETWORK:#CLICKHOUSE_PG_PORT#:#CLICKHOUSE_PG_PORT#\"!" "$COMPOSE_FILE"
+        sed -i "s!#- \"#FRONTEND_NETWORK#:#CLICKHOUSE_HTTP_PORT#:#CLICKHOUSE_HTTP_PORT#\"!- \"$FRONTEND_NETWORK:#CLICKHOUSE_HTTP_PORT#:#CLICKHOUSE_HTTP_PORT#\"!" "$COMPOSE_FILE"
+    fi
+
+    sed -i "s!#FRONTEND_NETWORK#!$FRONTEND_NETWORK!g" "$COMPOSE_FILE"
+    sed -i "s!#MONGODB_PORT#!$MONGODB_PORT!g" "$COMPOSE_FILE"
+    sed -i "s!#CLICKHOUSE_NATIVE_PORT#!$CLICKHOUSE_NATIVE_PORT!g" "$COMPOSE_FILE"
+    sed -i "s!#CLICKHOUSE_PG_PORT#!$CLICKHOUSE_PG_PORT!g" "$COMPOSE_FILE"
+    sed -i "s!#CLICKHOUSE_HTTP_PORT#!$CLICKHOUSE_HTTP_PORT!g" "$COMPOSE_FILE"
 
     cp "$COMPOSE_FILE" "$INSTALL_PATH"
 }
@@ -109,7 +129,11 @@ prepare_scripts_and_configs() {
     log_info "Preparing scripts and configurations..."
     cp "${SCRIPT_SRC_PATH}/pipe"*.sh "$INSTALL_PATH"
     cp "${SCRIPT_SRC_PATH}/pgbouncer-setup.sh" "$INSTALL_PATH"
-    cp "${SCRIPT_SRC_PATH}/docker-env.sh" "$INSTALL_PATH"
+    cp "${SCRIPT_SRC_PATH}/conf-to-env.sh" "$INSTALL_PATH"
+    cp "${SCRIPT_SRC_PATH}/validate-config.sh" "$INSTALL_PATH"
+    cp "${SCRIPT_SRC_PATH}/clickhouse-setup.sh" "$INSTALL_PATH"
+    cp "${SCRIPT_SRC_PATH}/create-xbatd-conf.sh" "$INSTALL_PATH"
+    cp -r "${SCRIPT_SRC_PATH}/clickhouse" "$INSTALL_PATH/"
     cp "$CONF_SRC_PATH/pgbouncer.ini.in" "$CONF_DEST_PATH/pgbouncer.ini.in"
     cp --no-clobber "$CONF_SRC_PATH/$CONF_FILE" "$CONF_DEST_PATH/$CONF_FILE"
 
@@ -122,31 +146,19 @@ prepare_databases() {
 
     MONGODB_PATH="$LIB_BASE_PATH/mongodb"
     MONGODB_LOG_PATH="$LOG_BASE_PATH/mongodb"
-    QUESTDB_PATH="$LIB_BASE_PATH/questdb"
-    QUESTDB_CONF_PATH="$QUESTDB_PATH/conf"
-    QUESTDB_LOG_PATH="$LOG_BASE_PATH/questdb"
+
+    CLICKHOUSE_PATH="$LIB_BASE_PATH/clickhouse"
+    CLICKHOUSE_LOG_PATH="$LOG_BASE_PATH/clickhouse"
 
     if [[ "$NODB" == false ]]; then
-        "$EXECUTOR" build -t xbat_mongodb -f ./docker/mongodb.dockerfile .
 
-        sudo -u "$XBAT_USER" mkdir -p "$MONGODB_PATH" "$MONGODB_LOG_PATH" "$QUESTDB_PATH" "$QUESTDB_LOG_PATH" "$QUESTDB_CONF_PATH"
+        sudo -u "$XBAT_USER" mkdir -p "$MONGODB_PATH" "$MONGODB_LOG_PATH" "$CLICKHOUSE_PATH" "$CLICKHOUSE_LOG_PATH"
         sudo -u "$XBAT_USER" touch "$MONGODB_LOG_PATH/mongod.log"
 
-        cp --no-clobber "$CONF_SRC_PATH/mongod.conf" "$CONF_DEST_PATH/mongod.conf"
-        cp --no-clobber "$CONF_SRC_PATH/questdb.conf" "$CONF_DEST_PATH/questdb.conf"
-        cp --no-clobber "$CONF_SRC_PATH/questdb-log.conf" "$CONF_DEST_PATH/questdb-log.conf"
-
-        # TODO find out why this file is missing
-        # temporary fix for missing mime.types file in questdb
-        if [[ ! -f "$QUESTDB_CONF_PATH/mime.types" ]]; then
-            wget -O "$QUESTDB_CONF_PATH/mime.types" https://raw.githubusercontent.com/questdb/questdb/refs/heads/master/core/conf/mime.types
-        fi
-
-        if [[ "$EXPOSE_QUESTDB" == true ]]; then
-            sed -i "s!#- \"#FRONTEND_NETWORK#:8812:8812\"!- \"$FRONTEND_NETWORK:8812:8812\"!" docker-compose.yml
-        fi
+        cp "$CONF_SRC_PATH/mongod.conf" "$CONF_DEST_PATH/mongod.conf"
+        cp --recursive "$CONF_SRC_PATH/clickhouse" "$CONF_DEST_PATH/"
     else
-        # override file disables questdb and mongodb
+        # override file disables clickhouse and mongodb
         cp docker-compose.override.yml "$INSTALL_PATH"
     fi
 
@@ -162,9 +174,15 @@ prepare_databases() {
 }
 
 install_action() {
-    if [[ "$NODB" == true && "$QUESTDB_ADDRESS_SET" == false ]]; then
-        log_error "Please provide --questdb-address when using --no-db."
-        exit 1
+    if [[ "$NODB" == true ]]; then
+        if [[ "$CLICKHOUSE_HOST_SET" == false ]]; then
+            log_error "Please provide --clickhouse-host when using --no-db."
+            exit 1
+        fi
+        if [[ "$MONGODB_HOST_SET" == false ]]; then
+            log_error "Please provide --mongodb-host when using --no-db."
+            exit 1
+        fi
     fi
 
     check_prerequisites
@@ -176,7 +194,24 @@ install_action() {
     rsync -Rr --exclude 'build' . "$BUILD_PATH/"
     pushd "$BUILD_PATH" > /dev/null
 
-    sed -i "s!#QUESTDB_ADDRESS#!$QUESTDB_ADDRESS!" ./conf/nginx.conf.in
+    # Recalculate auxiliary ports in case FRONTEND_PORT was changed
+    MONGODB_PORT=$((FRONTEND_PORT + 1))
+    CLICKHOUSE_NATIVE_PORT=$((FRONTEND_PORT + 2))
+    CLICKHOUSE_PG_PORT=$((FRONTEND_PORT + 3))
+    CLICKHOUSE_HTTP_PORT=$((FRONTEND_PORT + 4))
+
+    if [[ "$FRONTEND_PORT" -ne 7000 ]]; then
+        log_warning "Frontend port set to $FRONTEND_PORT (auxiliary ports: $((FRONTEND_PORT + 1))-$((FRONTEND_PORT + 4)))"
+        log_warning "Make sure to adjust '[restapi]->port' to $FRONTEND_PORT and [clickhouse]->daemon_port to $CLICKHOUSE_NATIVE_PORT in /etc/xbat/xbat.conf"
+    fi
+
+
+    sed -i "s!#CLICKHOUSE_HOST#!$CLICKHOUSE_HOST!" ./conf/nginx.conf.in
+    sed -i "s!#MONGODB_HOST#!$MONGODB_HOST!" ./conf/nginx.conf.in
+    sed -i "s!#MONGODB_PORT#!$MONGODB_PORT!" ./conf/nginx.conf.in
+    sed -i "s!#CLICKHOUSE_NATIVE_PORT#!$CLICKHOUSE_NATIVE_PORT!" ./conf/nginx.conf.in
+    sed -i "s!#CLICKHOUSE_PG_PORT#!$CLICKHOUSE_PG_PORT!" ./conf/nginx.conf.in
+    sed -i "s!#CLICKHOUSE_HTTP_PORT#!$CLICKHOUSE_HTTP_PORT!" ./conf/nginx.conf.in
     sed -i "s!workers = 8!workers = $WORKERS!" ./src/backend/config-prod.py
     sed -i "s!instances: \"8\"!instances: \"$WORKERS\"!" ./src/ui/ecosystem.config.cjs
 
@@ -224,23 +259,120 @@ remove_action() {
     log_info "Removal completed successfully."
 }
 
-# cleanup() {
-#     # log_info "Cleanup complete."
-# }
+validate_action(){
+    if [[ -f "$INSTALL_PATH/validate-config.sh" ]]; then
+        bash "$INSTALL_PATH/validate-config.sh"
+    else
+        log_error "Validation script not found at $INSTALL_PATH/validate-config.sh"
+        exit 1
+    fi
+}
+
+generate_xbatd_conf_action() {
+    if [[ -f "./scripts/create-xbatd-conf.sh" ]]; then
+        bash "./scripts/create-xbatd-conf.sh" "$@"
+    elif [[ -f "$INSTALL_PATH/create-xbatd-conf.sh" ]]; then
+        bash "$INSTALL_PATH/create-xbatd-conf.sh" "$@"
+    else
+        log_error "Script not found at ./scripts/create-xbatd-conf.sh or $INSTALL_PATH/create-xbatd-conf.sh"
+        exit 1
+    fi
+}
+
+migrate_action() {
+    # Default to 'status' if no arguments provided
+    if [[ $# -eq 0 ]]; then
+        set -- "status"
+    fi
+    
+    # Check if this is a status check (explicit or default)
+    if [[ "$1" == "status" ]]; then
+        # Run migration status and capture output
+        local migration_output
+        local migration_exit_code
+        
+        if migration_output=$(/usr/local/share/xbat/clickhouse/migrate.sh "$@" 2>&1); then
+            migration_exit_code=0
+        else
+            migration_exit_code=$?
+        fi
+        
+        # Display the migration output
+        echo "$migration_output"
+        
+        # Check if there are any pending migrations
+        if echo "$migration_output" | grep -q "Pending"; then
+            echo
+            log_info "   ! Pending database migrations detected !"
+            log_info "   Run the following command to upgrade the database:"
+            log_info "   sudo $0 migrate up"
+            echo
+            log_info "   Other migration commands:"
+            log_info "   sudo $0 migrate down      # Rollback last migration"
+            echo
+        elif [[ $migration_exit_code -eq 0 ]]; then
+            log_info "✓ Database is up to date - no pending migrations"
+        fi
+        
+        exit $migration_exit_code
+    elif [[ "$1" == "down" ]]; then
+        # Warn about potential data loss for rollback
+        echo
+        log_warning "Rolling back migrations may result in DATA LOSS!"
+        log_warning "This operation will revert the last applied migration."
+        echo
+        read -rp "Are you sure you want to proceed? Type 'yes' to confirm: " confirm
+        if [[ "$confirm" != "yes" ]]; then
+            log_info "Migration rollback cancelled."
+            exit 0
+        fi
+        # Proceed with rollback
+        /usr/local/share/xbat/clickhouse/migrate.sh "$@"
+    else
+        # For non-status commands, just pass through to migrate script
+        /usr/local/share/xbat/clickhouse/migrate.sh "$@"
+    fi
+}
 
 show_help() {
-    echo "$0 (install|remove)"
-    echo -e "\t[--help] Print this message"
-    echo -e "\t[--executor (docker|podman)] Container executor"
+    echo "$0 (install|remove|validate|migrate|generate-xbatd-conf)"
+    echo
+    echo "Actions:"
+    echo -e "\tinstall              Install XBAT with configuration options below"
+    echo -e "\tremove               Remove XBAT installation"
+    echo -e "\tvalidate             Validate configuration file"
+    echo -e "\tmigrate              Manage database migrations"
+    echo -e "\tgenerate-xbatd-conf  Generate xbatd configuration file"
+    echo
+    echo "Install configuration options:"
+    echo -e "\t[--help|-h] Print this message"
+    echo -e "\t[--executor (docker|podman)] Container executor (default: podman)"
     echo -e "\t[--home-mnt <path>] Mount home directory path"
-    echo -e "\t[--port <port>] Frontend port (default 7000)"
-    echo -e "\t[--frontend-network <ip>] Bind frontend network (default 0.0.0.0)"
+    echo -e "\t[--port <port>] Frontend port (default: 7000)"
+    echo -e "\t                Note: Auxiliary ports count up from frontend port (+1 to +4)"
+    echo -e "\t[--frontend-network <ip>] Bind frontend network (default: 0.0.0.0)"
     echo -e "\t[--no-db] Deploy without databases"
-    echo -e "\t[--questdb-address <address>] QuestDB address (only required when using --no-db)"
-    echo -e "\t[--expose-questdb] Expose QuestDB PGWire port"
-    echo -e "\t[--workers <count>] Number of workers (default 8)"
-    echo -e "\t[--certificate-dir <dir>] Certificates directory (default /etc/xbat/certs)"
-    echo -e "\t[--user <user>] system user to run xbat (default xbat)"
+    echo -e "\t[--clickhouse-host <host>] Clickhouse hostname or IP (required with --no-db)"
+    echo -e "\t[--mongodb-host <host>] MongoDB hostname or IP (required with --no-db)"
+    echo -e "\t[--expose-databases] Expose database ports (for development purposes)"
+    echo -e "\t[--workers <count>] Number of workers (default: 8)"
+    echo -e "\t[--certificate-dir <dir>] Certificates directory (default: /etc/xbat/certs)"
+    echo -e "\t[--user <user>] System user to run xbat (default: xbat)"
+    echo
+    echo "Migration commands:"
+    echo -e "\t$0 migrate [status]     Check for pending database migrations (default)"
+    echo -e "\t$0 migrate up           Apply all pending migrations"
+    echo -e "\t$0 migrate down         Rollback last migration"
+    echo
+    echo "Generate xbatd configuration commands:"
+    echo -e "\t$0 generate-xbatd-conf               Generate config to /etc/xbat/xbatd.conf"
+    echo -e "\t$0 generate-xbatd-conf --stdout      Print config to stdout"
+    echo
+    echo "Examples:"
+    echo -e "\t$0 install --port 8080 --workers 4"
+    echo -e "\t$0 migrate status"
+    echo -e "\t$0 validate"
+    echo -e "\t$0 generate-xbatd-conf --stdout"
 }
 
 #########################################
@@ -248,20 +380,39 @@ show_help() {
 #########################################
 
 POSITIONAL_ARGS=()
+ACTION_FOUND=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
+    install|remove|validate|migrate|generate-xbatd-conf)
+      if [[ "$ACTION_FOUND" == false ]]; then
+        ACTION_FOUND=true
+        POSITIONAL_ARGS+=("$1")
+        ACTION_TYPE="$1"
+        shift
+        # For non-install actions, pass remaining args directly without parsing
+        if [[ "$ACTION_TYPE" != "install" ]]; then
+          POSITIONAL_ARGS+=("$@")
+          break
+        fi
+      else
+        # Action already found, collect as positional arg
+        POSITIONAL_ARGS+=("$1")
+        shift
+      fi
+      ;;
     --executor) EXECUTOR="$2"; shift; shift;;
     --home-mnt) HOME_MNT="$2"; shift; shift;;
     --no-db) NODB=true; shift;;
-    --expose-questdb) EXPOSE_QUESTDB=true; shift;;
+    --expose-databases) EXPOSE_DATABASES=true; shift;;
     --port) FRONTEND_PORT="$2"; shift; shift;;
-    --questdb-address) QUESTDB_ADDRESS="$2"; QUESTDB_ADDRESS_SET=true; shift; shift;;
+    --clickhouse-host) CLICKHOUSE_HOST="$2"; CLICKHOUSE_HOST_SET=true; shift; shift;;
+    --mongodb-host) MONGODB_HOST="$2"; MONGODB_HOST_SET=true; shift; shift;;
     --frontend-network) FRONTEND_NETWORK="$2"; shift; shift;;
     --workers) WORKERS="$2"; shift; shift;;
     --certificate-dir) CERT_DIR="$2"; shift; shift;;
     --user) XBAT_USER="$2"; shift; shift;;
-    --help) HELP=true; shift;;
+    --help|-h) HELP=true; shift;;
     -*|--*) log_error "Unknown option $1"; exit 1;;
     *) POSITIONAL_ARGS+=("$1"); shift;;
   esac
@@ -282,9 +433,14 @@ fi
 check_root
 
 ACTION="$1"
+shift  # Remove the action from the arguments so remaining args can be passed to the action function
 
 case "$ACTION" in
-    install) install_action;;
-    remove) remove_action;;
+    install) install_action "$@";;
+    remove) remove_action "$@";;
+    migrate) migrate_action "$@";;
+    validate) validate_action "$@";;
+    generate-xbatd-conf) generate_xbatd_conf_action "$@";;
     *) log_error "Unknown action: $ACTION"; show_help; exit 1;;
+    
 esac

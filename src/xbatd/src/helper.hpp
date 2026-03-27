@@ -15,7 +15,7 @@
 #include <string>
 #include <vector>
 
-#include "nlohmann/json.hpp"
+#include "external/nlohmann-json/include/nlohmann/json.hpp"
 
 #define THREAD_RUNNING 0
 #define THREAD_TERMINATED 1

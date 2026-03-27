@@ -1,0 +1,36 @@
+<clickhouse>
+    <default_database replace="replace">xbat</default_database>
+    <!-- TODO make configurable-->
+    <listen_host replace="replace">0.0.0.0</listen_host>
+
+    <!-- System log retention policies - partition by day for efficient TTL cleanup -->
+    <trace_log>
+        <partition_by>toYYYYMMDD(event_date)</partition_by>
+        <ttl>event_date + INTERVAL 3 DAY DELETE</ttl>
+    </trace_log>
+
+    <text_log>
+        <partition_by>toYYYYMMDD(event_date)</partition_by>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+    </text_log>
+
+    <asynchronous_metric_log>
+        <partition_by>toYYYYMMDD(event_date)</partition_by>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+    </asynchronous_metric_log>
+
+    <metric_log>
+        <partition_by>toYYYYMMDD(event_date)</partition_by>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+    </metric_log>
+
+    <query_log>
+        <partition_by>toYYYYMMDD(event_date)</partition_by>
+        <ttl>event_date + INTERVAL 30 DAY DELETE</ttl>
+    </query_log>
+
+    <latency_log>
+        <partition_by>toYYYYMMDD(event_date)</partition_by>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+    </latency_log>
+</clickhouse>

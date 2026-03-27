@@ -5,10 +5,11 @@ import logging
 import asyncio
 import numpy as np
 from io import StringIO
+from datetime import datetime
 from flask import request, Response, jsonify
 from pathlib import Path
 from shared import httpErrors
-from shared import questdb as qdb
+from shared import clickhouse as cdb
 from shared.mongodb import MongoDB
 from shared.configuration import get_logger
 from shared.date import iso8601_to_datetime
@@ -17,7 +18,7 @@ from shared.helpers import dict_get_key
 from shared.size import human_size, human_size_mem, human_size_mem_fixed, human_size_fixed
 from backend.restapi.valkey import Valkey
 
-questdb = qdb.QuestDB()
+clickhouse = cdb.ClickHouse()
 mongodb = MongoDB()
 valkey = Valkey()
 
@@ -68,10 +69,16 @@ def get_hightest_level(levels):
 
 def calculate_interval(records):
     if len(records) < 2: return 5.0
-    start = records[0]["timestamp"]
+    start = records[0]["ts"]
+    # Parse timestamps if they're strings (from ClickHouse)
+    if isinstance(start, str):
+        start = datetime.fromisoformat(start)
     for entry in records:
-        if entry["timestamp"] > start:
-            return (entry["timestamp"] - start).total_seconds()
+        ts = entry["ts"]
+        if isinstance(ts, str):
+            ts = datetime.fromisoformat(ts)
+        if ts > start:
+            return (ts - start).total_seconds()
 
     return 5.0
 
@@ -96,9 +103,13 @@ def filter_interval(records, capture_start, capture_end):
         tzinfo=None) if capture_end is not None else None
 
     for entry in records:
-        if capture_start is not None and entry["timestamp"] < capture_start:
+        ts = entry["ts"]
+        if isinstance(ts, str):
+            ts = datetime.fromisoformat(ts)
+
+        if capture_start is not None and ts < capture_start:
             continue
-        if capture_end is not None and entry["timestamp"] > capture_end:
+        if capture_end is not None and ts > capture_end:
             continue
         filtered.append(entry)
 
@@ -129,7 +140,7 @@ def aggregate(records, level, type):
         if not (aggregate_by in aggregates):
             aggregates[aggregate_by] = {}
 
-        ts = entry["timestamp"].isoformat()
+        ts = entry["ts"].isoformat()
 
         if not (ts in aggregates[aggregate_by]):
             aggregates[aggregate_by][ts] = []
@@ -188,22 +199,22 @@ def _create_query(jobId: int,
         # this is required as LIKWID sometimes reports NaN values on unused (inactive) cores which we substitute with 0
         value_calculation = "COALESCE(AVG(CASE WHEN value != 0 THEN value END), 0)"
 
-    filters = [f"jobId='{jobId}'", f"level='{filter_level}'"]
+    filters = [f"job_id='{jobId}'", f"level='{filter_level}'"]
     if level != "job" and node:
         filters.append(f"node='{node}'")
     if capture_start:
-        filters.append(f"timestamp >= '{capture_start.isoformat()}'")
+        filters.append(f"ts >= '{capture_start.isoformat()}'")
     if capture_end:
-        filters.append(f"timestamp <= '{capture_end.isoformat()}'")
+        filters.append(f"ts <= '{capture_end.isoformat()}'")
 
-    columns = [f"{value_calculation} as val", "timestamp"]
-    groups = ["timestamp"]
+    columns = [f"{value_calculation} as val", "ts"]
+    groups = ["ts"]
 
     if level != "job":
         columns.insert(0, level)
         groups.insert(0, level)
 
-    query = f"SELECT {', '.join(columns)} FROM {metric_table} WHERE {' and '.join(filters)} GROUP BY {', '.join(groups)} ORDER BY timestamp"
+    query = f"SELECT {', '.join(columns)} FROM {metric_table} WHERE {' and '.join(filters)} GROUP BY {', '.join(groups)} ORDER BY ts"
 
     return query
 
@@ -214,7 +225,11 @@ def _transform_query_result(result, level):
         key = entry[level] if level != "job" else "job"
         if not key in values:
             values[key] = []
-        values[key].append(entry["val"])
+        # Convert val to float if it's a string (from ClickHouse)
+        val = entry["val"]
+        if isinstance(val, str):
+            val = float(val)
+        values[key].append(val)
     return values
 
 
@@ -237,8 +252,6 @@ async def calculate_metrics(jobId, group, metric, level, node, deciles):
     """
     if not jobId or not (group in METRICS) or not (metric in METRICS[group]):
         raise httpErrors.BadRequest()
-
-    # questdb = await get_questdb()
 
     # retrieve capture interval for job
     job = mongodb.getOne("jobs", {"jobId": jobId})
@@ -268,17 +281,17 @@ async def calculate_metrics(jobId, group, metric, level, node, deciles):
     for metric_table in metric_tables:
 
         parts = [
-            f"SELECT DISTINCT level FROM {metric_table} WHERE jobId='{jobId}'"
+            f"SELECT DISTINCT level FROM {metric_table} WHERE job_id='{jobId}'"
         ]
         if level != "job" and node:
             parts.append(f"AND node='{node}'")
         if capture_start:
-            parts.append(f"AND timestamp >= '{capture_start.isoformat()}'")
+            parts.append(f"AND ts >= '{capture_start.isoformat()}'")
         if capture_end:
-            parts.append(f"AND timestamp <= '{capture_end.isoformat()}'")
+            parts.append(f"AND ts <= '{capture_end.isoformat()}'")
         queries.append(" ".join(parts))
 
-    all_levels = await questdb.execute_queries(queries)
+    all_levels = await clickhouse.execute_queries(queries)
 
     queries = []
     available_metric_tables = []
@@ -309,7 +322,7 @@ async def calculate_metrics(jobId, group, metric, level, node, deciles):
         logger.debug("Unable to find entries for %s", metric)
         return {"traces": [], "statistics": {}}
 
-    all_records = await questdb.execute_queries(queries)
+    all_records = await clickhouse.execute_queries(queries)
 
     unit = metricMeta["unit"] if "unit" in metricMeta else ""
 
@@ -332,7 +345,13 @@ async def calculate_metrics(jobId, group, metric, level, node, deciles):
         interval = calculate_interval(records)
         aggregates = _transform_query_result(records, level)
 
-        timestamps = [x["timestamp"] for x in records]
+        # Parse timestamps if they're strings (from ClickHouse)
+        timestamps = []
+        for x in records:
+            ts = x["ts"]
+            if isinstance(ts, str):
+                ts = datetime.fromisoformat(ts)
+            timestamps.append(ts)
         start = min(timestamps)
         stop = max(timestamps)
 
@@ -826,14 +845,10 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
     available_tables = []
 
     # check which tables are currently present (may change during runtime as additional may be added)
-    res = await questdb.execute_query("tables()")
-
-    # support for older questdb versions
-    table_column = 'table_name' if len(
-        res) and 'table_name' in res[0] else 'name'
+    res = await clickhouse.execute_query("SHOW TABLES")
 
     for table in res:
-        available_tables.append(table[table_column])
+        available_tables.append(table["name"])
 
     result = []
     for jobId in jobIds:
@@ -853,19 +868,17 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
 
             time_filters = []
             if capture_start:
-                time_filters.append(
-                    f"timestamp >= '{capture_start.isoformat()}'")
+                time_filters.append(f"ts >= '{capture_start.isoformat()}'")
             if capture_end:
-                time_filters.append(
-                    f"timestamp <= '{capture_end.isoformat()}'")
+                time_filters.append(f"ts <= '{capture_end.isoformat()}'")
             time_clause = (" AND " +
                            " AND ".join(time_filters)) if time_filters else ""
 
             tableQueries.append(
                 f"SELECT DISTINCT '{table}' as table_name, node, level "
                 f"FROM {table} "
-                f"WHERE jobId='{jobId}'{time_clause}")
-        # instead of using single large query split into multiple smaller queries due to problems with questdb sometimes only returning partial results for very large queries
+                f"WHERE job_id='{jobId}'{time_clause}")
+        # instead of using single large query split into multiple smaller queries due to problems with clickhouse sometimes only returning partial results for very large queries
         queries = []
         for i in range(0, len(tableQueries), MAX_QUERY_COUNT):
             chunk = tableQueries[i:i + MAX_QUERY_COUNT]
@@ -876,7 +889,7 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
 
         logger.debug(f"QUERIES: {queries}")
 
-        jobResult = await questdb.execute_queries(queries)
+        jobResult = await clickhouse.execute_queries(queries)
 
         result.append([x for xs in jobResult for x in xs])
 

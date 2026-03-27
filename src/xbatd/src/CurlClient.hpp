@@ -5,7 +5,7 @@
 
 #include <string>
 
-#include "nlohmann/json.hpp"
+#include "external/nlohmann-json/include/nlohmann/json.hpp"
 
 class CurlClient {
    public:

@@ -110,10 +110,6 @@ class BenchmarkModule extends FetchFactory {
         }
         return response;
     }
-
-    async purge() {
-        return this.call<void>("POST", `${this.RESOURCE}/purge`, undefined);
-    }
 }
 
 export default BenchmarkModule;

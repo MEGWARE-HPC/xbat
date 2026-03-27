@@ -1,6 +1,9 @@
 import json
 import uuid
 import shutil
+import time
+import threading
+import logging
 from pathlib import Path
 from bson.objectid import ObjectId
 from werkzeug.utils import secure_filename
@@ -12,9 +15,13 @@ from shared.helpers import sanitize_mongo, replace_runNr, desanitize_mongo, str_
 from backend.restapi.grpc_client import XbatCtldRpcClient
 from backend.restapi.access_control import check_user_permissions
 from backend.restapi.user_helper import get_user_from_token, create_user_benchmark_filter
-from backend.restapi.backup import save_benchmarks, get_import_runNr, get_new_jobIds, process_collection, replace_jobId_json, process_table, pigz_compress, pigz_decompress
+from backend.utils.backup import save_benchmarks, process_collection, replace_jobId_json, clickhouse_import_csvs, pigz_compress, pigz_decompress, count_csv_files
+from backend.utils.questdb_clickhouse_migration import detect_format, convert_to_clickhouse
+from shared.clickhouse import ClickHouse
+import asyncio
 
 db = MongoDB()
+clickhouse = ClickHouse()
 rpcClient = XbatCtldRpcClient()
 
 EXPORT_PATH = Path("/tmp/xbat/export")
@@ -141,6 +148,20 @@ def patch(runNr):
     return sanitize_mongo(result), 200
 
 
+def _delete_clickhouse_jobs_background(jobIds):
+    """
+    Background task to delete jobs from ClickHouse.
+    
+    :param jobIds: list of job IDs to delete
+    """
+    logger = logging.getLogger(__name__)
+    try:
+        asyncio.run(clickhouse.delete_jobs(jobIds))
+        logger.info(f"Successfully deleted {len(jobIds)} jobs from ClickHouse")
+    except Exception as e:
+        logger.error(f"Failed to delete jobs from ClickHouse: {e}")
+
+
 @check_user_permissions
 def delete(runNr):
     """
@@ -157,10 +178,19 @@ def delete(runNr):
     jobIds = db.getMany("jobs", run_nr_filter, {"jobId": True})
     if jobIds is not None:
         jobIds = [j["jobId"] for j in jobIds]
+    else:
+        jobIds = []
 
     db.deleteMany("jobs", run_nr_filter)
 
     db.deleteMany("outputs", {"jobId": {"$in": jobIds}})
+
+    if len(jobIds):
+        # Run ClickHouse deletion in background thread
+        thread = threading.Thread(target=_delete_clickhouse_jobs_background,
+                                  args=(jobIds, ),
+                                  daemon=True)
+        thread.start()
 
     return {}, 204
 
@@ -261,17 +291,15 @@ async def export_benchmark():
     manager_uuid = str(uuid.uuid1())
     folder_path = EXPORT_PATH / manager_uuid
     folder_path.mkdir(parents=True, exist_ok=True)
-    csv_counts = 0
 
     for runNr in runNrs:
         try:
-            csv_count = await save_benchmarks(runNr, anonymise, folder_path,
-                                              db)
-            csv_counts += csv_count
+            await save_benchmarks(runNr, anonymise, folder_path, db)
         except Exception as e:
             app.logger.error("Benchmark export failed: %s" % e)
             raise httpErrors.InternalServerError("Benchmark runNr %s failed." %
                                                  runNr)
+    csv_counts = count_csv_files(folder_path)
     try:
         compress_status = pigz_compress(EXPORT_PATH, manager_uuid)
     except Exception as e:
@@ -304,96 +332,173 @@ async def import_benchmark():
         )
     if 'file' not in request.files:
         raise httpErrors.BadRequest("No file provided")
+
     file = request.files["file"]
     if file.filename == '' or not file.filename:
         raise httpErrors.BadRequest("No file selected")
+
     if not check_extension(file.filename, 'tgz') and not check_extension(
             file.filename, 'tar.gz') and not check_extension(
                 file.filename, 'gz'):
         raise httpErrors.BadRequest("Invalid file extension")
 
+    reassign_run_nr = request.form.get("reassignRunNr") == "true"
+
+    update_collections = request.form.get("updateColl") == "true"
+
     file_name = secure_filename(file.filename)
     IMPORT_PATH.mkdir(parents=True, exist_ok=True)
     tar_path = IMPORT_PATH / file_name
     manager_uuid = str(uuid.uuid1())
-    reassignRunNr = request.form.get("reassignRunNr")
-    updateColl = request.form.get("updateColl")
-    if isinstance(updateColl, str):
-        updateColl = str_to_bool(updateColl)
 
     try:
         file.save(tar_path)
         extract_folder = IMPORT_PATH / manager_uuid
         recreate_folder(extract_folder)
         pigz_decompress(tar_path, extract_folder)
+
+        # Detect and convert QuestDB format to ClickHouse format if needed
+        format_type = detect_format(extract_folder)
+        app.logger.info(f"Detected import format: {format_type}")
+
+        if format_type == "questdb":
+            app.logger.info("Converting from QuestDB to ClickHouse format...")
+            conversion_start = time.time()
+            new_folder = await convert_to_clickhouse(extract_folder)
+            conversion_duration = time.time() - conversion_start
+            if new_folder:
+                extract_folder = new_folder
+                app.logger.info(
+                    f"Conversion completed successfully in {conversion_duration:.2f} seconds. New folder: {extract_folder}"
+                )
+
     except Exception as e:
         app.logger.error("Error occurred while extracting: %s" % e)
         raise httpErrors.InternalServerError("Error extracting files")
-    runNr_cache = {}
-    for jsonfile_path in Path(extract_folder).rglob("*.json"):
-        folder = jsonfile_path.relative_to(extract_folder).parent
-        if folder not in runNr_cache:
-            benchmarks_path = extract_folder / folder / "benchmarks.json"
-            if benchmarks_path.exists():
-                with open(benchmarks_path, 'r') as benchmark_json:
-                    benchmark_data = json.load(benchmark_json)
-                    if not benchmark_data:
-                        raise httpErrors.InternalServerError(
-                            f"Failed to load {benchmarks_path}")
-                    else:
-                        temp_runNr, maxJobId = await get_import_runNr(
-                            benchmark_data, db, reassignRunNr)
-                        runNr_cache[folder] = temp_runNr
-                        jobId_map = {}
-                        if maxJobId:
-                            jobId_map = get_new_jobIds(benchmark_data, db,
-                                                       maxJobId)
-        new_runNr = runNr_cache[folder]
-        with open(jsonfile_path, "r") as file:
-            try:
-                data = json.load(file)
-                if not data:
-                    continue
-                collection = jsonfile_path.stem
-                data = desanitize_mongo(data)
-                if reassignRunNr == "true":
-                    replace_runNr(data, new_runNr)
-                if maxJobId:
-                    if collection in ["benchmarks", "jobs", "outputs"]:
-                        replace_jobId_json(data, collection, jobId_map)
-                process_collection(collection, data, db, updateColl)
-                if collection == "benchmarks":
-                    await process_table(jsonfile_path.parent, jobId_map)
-            except json.JSONDecodeError as e:
-                raise httpErrors.BadRequest(
-                    "Invalid JSON file causing errors: %s" % e)
-            except Exception as e:
-                raise httpErrors.InternalServerError(
-                    "An unexpected error occurred while processing: %s" % e)
+
+    # Check if any runNrs already exist in the database
+    if not reassign_run_nr:
+        existing_run_nrs = []
+        for runNr_folder in extract_folder.iterdir():
+            if not runNr_folder.is_dir():
+                continue
+            run_nr = int(runNr_folder.stem)
+            if db.getOne("benchmarks", {"runNr": run_nr}) is not None:
+                existing_run_nrs.append(run_nr)
+
+        if existing_run_nrs:
+            raise httpErrors.BadRequest(
+                f"The following runNr(s) already exist: {', '.join(map(str, existing_run_nrs))}. Use 'Reassign RunNr' to assign new runNr(s) on import."
+            )
+
+    # Start timing the import process
+    import_start_time = time.time()
+    # Track all reserved jobIds for cleanup
+    all_reserved_jobIds = []
+
     try:
-        shutil.rmtree(extract_folder)
+        # Process each runNr directory
+        for runNr_folder in extract_folder.iterdir():
+
+            if not runNr_folder.is_dir():
+                continue
+
+            benchmarks_path = runNr_folder / "benchmarks.json"
+            if not benchmarks_path.exists():
+                continue
+
+            # Load benchmarks.json
+            with open(benchmarks_path, 'r') as benchmark_json:
+                benchmark_data = json.load(benchmark_json)
+                if not benchmark_data:
+                    raise httpErrors.InternalServerError(
+                        f"Failed to load {benchmarks_path}")
+
+                # Get runNr from folder name or use existing
+                if reassign_run_nr:
+                    new_runNr = db.getNextRunNr()
+                else:
+                    new_runNr = int(runNr_folder.stem)
+
+            # Build jobId mapping by scanning job folders
+            jobId_map = {}
+            if reassign_run_nr:
+                jobs_folder = runNr_folder / "jobs"
+                if jobs_folder.exists() and jobs_folder.is_dir():
+                    for job_folder in jobs_folder.iterdir():
+                        if not job_folder.is_dir():
+                            continue
+                        old_jobId = int(job_folder.stem)
+                        new_jobId = db.getNextAvailableJobId()
+                        jobId_map[old_jobId] = new_jobId
+                        all_reserved_jobIds.append(new_jobId)
+
+            # Process all JSON files in this runNr folder
+            for jsonfile_path in runNr_folder.glob("*.json"):
+                with open(jsonfile_path, "r") as file:
+                    try:
+                        data = json.load(file)
+                        if not data:
+                            continue
+                        collection = jsonfile_path.stem
+                        data = desanitize_mongo(data)
+                        if reassign_run_nr:
+                            replace_runNr(data, new_runNr)
+                            if collection in ["benchmarks", "jobs", "outputs"]:
+                                replace_jobId_json(data, collection, jobId_map)
+                        process_collection(
+                            collection,
+                            data,
+                            db,
+                            update_collections=update_collections,
+                            is_reassigned_run_nr=reassign_run_nr)
+                    except json.JSONDecodeError as e:
+                        raise httpErrors.BadRequest(
+                            "Invalid JSON file causing errors: %s" % e)
+                    except Exception as e:
+                        app.logger.error("Error processing JSON file: %s", e)
+                        raise httpErrors.InternalServerError(
+                            "An unexpected error occurred while processing JSON file"
+                        )
+
+            # Process CSV files for ClickHouse
+            jobs_folder = runNr_folder / "jobs"
+            if jobs_folder.exists() and jobs_folder.is_dir():
+                for job_folder in jobs_folder.iterdir():
+                    if not job_folder.is_dir():
+                        continue
+                    old_jobId = int(job_folder.stem)
+                    new_jobId = jobId_map.get(old_jobId, old_jobId)
+
+                    try:
+                        csv_paths = list(job_folder.glob("*.csv"))
+                        if csv_paths:
+                            await clickhouse_import_csvs(
+                                csv_paths, old_jobId, new_jobId)
+                    except Exception as e:
+                        raise httpErrors.InternalServerError(
+                            "An unexpected error occurred while processing CSV files: %s"
+                            % e)
+
+        # Log total import duration
+        import_duration = time.time() - import_start_time
+        app.logger.info(
+            f"Total import duration: {import_duration:.2f} seconds")
+        # After successful import, release the reserved jobIds
+        if all_reserved_jobIds:
+            db.releaseReservedJobIds(all_reserved_jobIds)
+
     except Exception as e:
-        raise RuntimeError("Error during deletion of extracted folder: " +
-                           str(e))
-
-    return {}, 204
-
-
-def purge():
-    """
-    Purge benchmarks from QuestDB.
-    
-    :return: empty response
-    """
-
-    user = get_user_from_token()
-    if user is None or user["user_type"] != "admin":
-        raise httpErrors.Forbidden(
-            "Only administrators are allowed to perform this action")
-
-    response = rpcClient.purge_questdb()
-
-    if not response:
-        raise httpErrors.InternalServerError("Failed to purge benchmarks")
+        # On error, release the reserved jobIds
+        if all_reserved_jobIds:
+            db.releaseReservedJobIds(all_reserved_jobIds)
+        raise e
+    finally:
+        try:
+            print("Cleaning up extracted files...")
+            shutil.rmtree(extract_folder)
+        except Exception as e:
+            app.logger.error("Error during deletion of extracted folder: %s",
+                             e)
 
     return {}, 204
