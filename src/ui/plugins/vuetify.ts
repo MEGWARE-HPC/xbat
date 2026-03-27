@@ -98,9 +98,6 @@ import {
     mdiBackupRestore
 } from "@mdi/js";
 
-// TODO remove when out of lab stage
-import { VTreeview } from "vuetify/labs/VTreeview";
-
 /*
  * Opacity is not supported in vue themes.
  * According to material design specifications the fonts should have the following values:
@@ -113,7 +110,6 @@ export default defineNuxtPlugin((app) => {
     const vuetify = createVuetify({
         ssr: true,
         components: {
-            VTreeview,
             VFileUpload
         },
         theme: {
