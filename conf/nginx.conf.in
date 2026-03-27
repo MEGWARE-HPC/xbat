@@ -131,7 +131,7 @@ http {
 
         # /import route with higher read timeout and increased client body size
         location ~ /benchmarks/import {
-            client_max_body_size 2G;
+            client_max_body_size 5G;
             proxy_pass http://docker-xbat-backend;
             proxy_redirect http://docker-xbat-backend/ $scheme://$http_host/;
             proxy_read_timeout 300s;
