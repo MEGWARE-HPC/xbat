@@ -358,6 +358,65 @@ watch(
     }
 );
 
+const normalizeName = (v) => String(v || "").trim();
+
+const sibConfigName = ({ name, folderId, excludeId = "" }) => {
+    const targetName = normalizeName(name);
+    const targetFolderId = String(folderId || "");
+
+    return Object.entries(configurationCache.value || {}).some(([id, doc]) => {
+        if (String(id) === String(excludeId)) return false;
+
+        const cfg = doc?.configuration || {};
+        return (
+            String(cfg.folderId || "") === targetFolderId &&
+            normalizeName(cfg.configurationName) === targetName
+        );
+    });
+};
+
+const getNextNewConfig = (folderId) => {
+    const base = "new configuration";
+
+    if (!sibConfigName({ name: base, folderId })) {
+        return base;
+    }
+
+    let index = 2;
+    let candidate = `${base} (${index})`;
+
+    while (
+        sibConfigName({
+            name: candidate,
+            folderId
+        })
+    ) {
+        index += 1;
+        candidate = `${base} (${index})`;
+    }
+
+    return candidate;
+};
+
+const getNextCopyConfig = (baseName, folderId) => {
+    const base = normalizeName(baseName) || "new configuration";
+
+    let candidate = `${base} (copy)`;
+    let index = 2;
+
+    while (
+        sibConfigName({
+            name: candidate,
+            folderId
+        })
+    ) {
+        candidate = `${base} (copy ${index})`;
+        index += 1;
+    }
+
+    return candidate;
+};
+
 const addConfig = ({ presetId = "", folderId = "" } = {}) => {
     // generate random uuid as a temporary _id -> will be replaced after insertion to database
     const _id = uuidv4();
@@ -374,14 +433,20 @@ const addConfig = ({ presetId = "", folderId = "" } = {}) => {
         newConfig.folderId ||
         (myHomeNode.value?.id ? String(myHomeNode.value.id) : "");
 
+    const nextName =
+        presetId && presetId in configurationCache.value
+            ? getNextCopyConfig(
+                  configurationCache.value[presetId].configuration
+                      .configurationName,
+                  targetFolderId
+              )
+            : getNextNewConfig(targetFolderId);
+
     configurationCache.value[_id] = {
         configuration: {
             ...newConfig,
             folderId: targetFolderId,
-            configurationName:
-                presetId && presetId in configurationCache.value
-                    ? `${configurationCache.value[presetId].configuration.configurationName} (copy)`
-                    : "new configuration"
+            configurationName: nextName
         }
     };
 
@@ -412,6 +477,32 @@ const save = async () => {
 
     if ($store.demo) {
         $snackbar.show($store.demoMessage);
+        return;
+    }
+
+    const targetFolderId = String(
+        form.value.folderId || myHomeNode.value?.id || ""
+    );
+    const targetName = normalizeName(form.value.configurationName);
+
+    form.value.folderId = targetFolderId;
+    form.value.configurationName = targetName;
+
+    if (!targetName) {
+        $snackbar.show("Configuration name is required");
+        return;
+    }
+
+    if (
+        sibConfigName({
+            name: targetName,
+            folderId: targetFolderId,
+            excludeId: state.currentEdit
+        })
+    ) {
+        $snackbar.show(
+            "A configuration with the same name already exists in this folder"
+        );
         return;
     }
 
