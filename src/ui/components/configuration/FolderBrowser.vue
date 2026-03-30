@@ -930,11 +930,42 @@ const openCreateFolder = () => {
     CreateFolderDlg.value = true;
 };
 
+const normalizeName = (v) => String(v || "").trim();
+
+const sibFolderName = (name, excludeId = "") => {
+    const target = normalizeName(name);
+
+    return (props.folder?.children || []).some(
+        (child) =>
+            String(child?.id || "") !== String(excludeId) &&
+            normalizeName(child?.name) === target
+    );
+};
+
+const sibConfigName = (name, excludeId = "") => {
+    const target = normalizeName(name);
+
+    return (props.configs || []).some(
+        (item) =>
+            String(item?.id || "") !== String(excludeId) &&
+            normalizeName(
+                item?.doc?.configuration?.configurationName || item?.id
+            ) === target
+    );
+};
+
 const createFolder = async () => {
     if ($store?.demo) return $snackbar.show($store.demoMessage);
 
-    const name = (inputFolderName.value || "").trim();
+    const name = normalizeName(inputFolderName.value);
     if (!name) return;
+
+    if (sibFolderName(name)) {
+        $snackbar.show(
+            "A folder with the same name already exists in this location"
+        );
+        return;
+    }
 
     const parent = folderId.value.startsWith("__")
         ? null
@@ -1010,12 +1041,19 @@ const openRename = async () => {
 const applyRename = async () => {
     if ($store?.demo) return $snackbar.show($store.demoMessage);
 
-    const name = (inputRename.value || "").trim();
+    const name = normalizeName(inputRename.value);
     if (!name) return;
 
     // rename folder
     if (selectedFolderIds.value.length === 1) {
         const fid = selectedFolderIds.value[0];
+
+        if (sibFolderName(name, fid)) {
+            $snackbar.show(
+                "A folder with the same name already exists in this location"
+            );
+            return;
+        }
 
         const full = await $api.configurationFolders.getOne(String(fid));
         const updated = {
@@ -1038,6 +1076,14 @@ const applyRename = async () => {
     // rename config
     if (selectedConfigIds.value.length === 1) {
         const cid = selectedConfigIds.value[0];
+
+        if (sibConfigName(name, cid)) {
+            $snackbar.show(
+                "A configuration with the same name already exists in this folder"
+            );
+            return;
+        }
+
         const doc = configById.value.get(String(cid));
         if (!doc) return;
 
