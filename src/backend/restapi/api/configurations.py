@@ -39,6 +39,56 @@ def transform_objectId(c):
     return c
 
 
+def check_config_name(config):
+    cfg = config.setdefault("configuration", {})
+    name = str(cfg.get("configurationName") or "").strip()
+
+    if not name:
+        raise httpErrors.BadRequest("Configuration name is required")
+
+    cfg["configurationName"] = name
+    return name
+
+
+def check_config_folder(config, owner):
+    cfg = config.setdefault("configuration", {})
+    fid = ensure_objectId(cfg.get("folderId"))
+
+    if fid:
+        folder = db.getOne(
+            CONFIGURATION_FOLDERS_COLLECTION,
+            {"_id": fid},
+            {"misc.owner": 1},
+        )
+        folder_owner = (folder.get("misc")
+                        or {}).get("owner") if folder else None
+
+        if folder_owner != owner:
+            fid = ensure_objectId(owner_folder(owner))
+    else:
+        fid = ensure_objectId(owner_folder(owner))
+
+    cfg["folderId"] = fid
+    return fid
+
+
+def unique_config_name(folder_id, name, exclude_id=None):
+    query = {
+        "configuration.folderId": ensure_objectId(folder_id),
+        "configuration.configurationName": name,
+    }
+
+    if exclude_id is not None:
+        query["_id"] = {"$ne": ensure_objectId(exclude_id)}
+
+    duplicate = db.getOne(COLLECTION_NAME, query, {"_id": 1})
+
+    if duplicate is not None:
+        raise httpErrors.BadRequest(
+            "A configuration with this name already exists in the selected folder"
+        )
+
+
 def get_user_configurations(_id=None):
     """
     Retrieves configurations based on user's permissions and project
@@ -245,17 +295,10 @@ def post():
     config = transform_objectId(config)
 
     owner = user["user_name"]
-    fid = ensure_objectId((config.get("configuration") or {}).get("folderId"))
+    folder_id = check_config_folder(config, owner)
+    name = check_config_name(config)
 
-    if fid:
-        folder = db.getOne(CONFIGURATION_FOLDERS_COLLECTION, {"_id": fid},
-                           {"misc.owner": 1})
-        folder_owner = (folder.get("misc")
-                        or {}).get("owner") if folder else None
-        if folder_owner != owner:
-            (config["configuration"] or {})["folderId"] = owner_folder(owner)
-    else:
-        (config["configuration"] or {})["folderId"] = owner_folder(owner)
+    unique_config_name(folder_id, name)
 
     result = db.insertOne(COLLECTION_NAME, config)
 
@@ -296,23 +339,17 @@ def put(_id):
             "manager", "admin"):
         raise httpErrors.Forbidden()
 
+    config["misc"] = config.get("misc") or {}
     config["misc"]["owner"] = existing_owner
-
+    config["misc"]["created"] = (existing.get("misc") or {}).get("created")
     config["misc"]["edited"] = get_current_datetime()
+
     config = transform_objectId(config)
 
-    fid = ensure_objectId((config.get("configuration") or {}).get("folderId"))
-    if fid:
-        folder = db.getOne(CONFIGURATION_FOLDERS_COLLECTION, {"_id": fid},
-                           {"misc.owner": 1})
-        folder_owner = (folder.get("misc")
-                        or {}).get("owner") if folder else None
-        if folder_owner != existing_owner:
-            (config["configuration"]
-             or {})["folderId"] = owner_folder(existing_owner)
-    else:
-        (config["configuration"]
-         or {})["folderId"] = owner_folder(existing_owner)
+    folder_id = check_config_folder(config, existing_owner)
+    name = check_config_name(config)
+
+    unique_config_name(folder_id, name, exclude_id=cid)
 
     if "_id" in config:
         del config["_id"]
