@@ -11,24 +11,61 @@ db = MongoDB()
 COLLECTION_NAME = "configuration_folders"
 
 
+def ensure_objectId(v):
+    if isinstance(v, ObjectId):
+        return v
+    if v is None or v == "":
+        return None
+    try:
+        return ObjectId(v)
+    except Exception:
+        return None
+
+
 def transform_objectId(v):
     """
     Convert sharedProjects strings to ObjectId if they exist
     """
     folder = v.get("folder", {})
 
-    parent = folder.get("parentFolderId")
-    if parent is not None and not isinstance(parent, ObjectId):
-        folder["parentFolderId"] = ObjectId(parent)
+    folder["parentFolderId"] = ensure_objectId(folder.get("parentFolderId"))
 
-    shared = folder.get("sharedProjects", [])
-    if shared:
-        folder["sharedProjects"] = [
-            ObjectId(p) if not isinstance(p, ObjectId) else p for p in shared
-        ]
+    shared = []
+    for p in folder.get("sharedProjects", []) or []:
+        oid = ensure_objectId(p)
+        if oid:
+            shared.append(oid)
+    folder["sharedProjects"] = shared
 
     v["folder"] = folder
     return v
+
+
+def check_folder_name(doc):
+    folder = doc.setdefault("folder", {})
+    name = str(folder.get("folderName") or "").strip()
+
+    if not name:
+        raise httpErrors.BadRequest("Folder name is required")
+
+    folder["folderName"] = name
+    return name
+
+
+def unique_folder_name(parent_folder_id, name, exclude_id=None):
+    query = {
+        "folder.parentFolderId": ensure_objectId(parent_folder_id),
+        "folder.folderName": name,
+    }
+
+    if exclude_id is not None:
+        query["_id"] = {"$ne": ensure_objectId(exclude_id)}
+
+    duplicate = db.getOne(COLLECTION_NAME, query, {"_id": 1})
+
+    if duplicate is not None:
+        raise httpErrors.BadRequest(
+            "A folder with this name already exists in the selected directory")
 
 
 def sanitize_folder_document(doc):
@@ -200,6 +237,8 @@ def post():
     if folder is None:
         raise httpErrors.BadRequest("No folder data provided")
 
+    folder["folder"] = folder.get("folder") or {}
+
     if "parentFolderId" not in folder["folder"]:
         folder["folder"]["parentFolderId"] = None
 
@@ -211,6 +250,11 @@ def post():
     }
 
     folder = transform_objectId(folder)
+
+    parent_id = folder["folder"].get("parentFolderId")
+    name = check_folder_name(folder)
+
+    unique_folder_name(parent_id, name)
 
     result = db.insertOne(COLLECTION_NAME, folder)
 
@@ -224,18 +268,45 @@ def put(_id):
     """
     Replace an entire folder document
     """
+    user = get_user_from_token()
+    if user is None:
+        raise httpErrors.Unauthorized()
+
     folder = request.json
 
     if folder is None:
         raise httpErrors.BadRequest("No folder data provided")
 
+    fid = ensure_objectId(_id)
+    if not fid:
+        raise httpErrors.BadRequest("Invalid folder id")
+
+    existing = db.getOne(COLLECTION_NAME, {"_id": fid})
+    if existing is None:
+        raise httpErrors.NotFound()
+
+    existing_owner = (existing.get("misc") or {}).get("owner")
+    if (user["user_name"] != existing_owner
+            and user["user_type"] not in ("manager", "admin")):
+        raise httpErrors.Forbidden()
+
+    folder["folder"] = folder.get("folder") or {}
+    folder["misc"] = folder.get("misc") or {}
+    folder["misc"]["owner"] = existing_owner
+    folder["misc"]["created"] = (existing.get("misc") or {}).get("created")
     folder["misc"]["edited"] = get_current_datetime()
+
     folder = transform_objectId(folder)
+
+    parent_id = folder["folder"].get("parentFolderId")
+    name = check_folder_name(folder)
+
+    unique_folder_name(parent_id, name, exclude_id=fid)
 
     if "_id" in folder:
         del folder["_id"]
 
-    identifier = {"_id": ObjectId(_id)}
+    identifier = {"_id": fid}
 
     result = db.replaceOne(COLLECTION_NAME, identifier, folder)
 
