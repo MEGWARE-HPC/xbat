@@ -568,7 +568,10 @@ async def export_csv(jobId,
                 if result is None or not result["traces"]:
                     continue
 
-                csv_content = generate_csv(result)
+                # Include header only for the first metric
+                include_header = len(all_csv_content) == 0
+                csv_content = generate_csv(result,
+                                           include_header=include_header)
                 all_csv_content.append(csv_content)
 
         if not all_csv_content:
@@ -594,7 +597,7 @@ async def export_csv(jobId,
         headers={"Content-disposition": f"attachment; filename={filename}"})
 
 
-def generate_csv(result):
+def generate_csv(result, include_header=True):
     output = StringIO()
     try:
         value_key = 'rawValues' if 'rawValues' in result["traces"][
@@ -605,7 +608,8 @@ def generate_csv(result):
             f'interval {i}' for i in range(len(result["traces"][0][value_key]))
         ]
         writer = csv.DictWriter(output, fieldnames=fieldnames)
-        writer.writeheader()
+        if include_header:
+            writer.writeheader()
         for item in result["traces"]:
             row_data = {
                 'jobId': item['jobId'],
@@ -915,10 +919,9 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
                     available_min_level = min(
                         [LEVEL_MAPPING[x] for x in available_levels])
                     available[group][metricName] = {
-                        **metricInfo, "metrics": {
-                            k: v
-                            for k, v in metricInfo["metrics"].items()
-                        },
+                        **metricInfo, "metrics":
+                        {k: v
+                         for k, v in metricInfo["metrics"].items()},
                         "level_min":
                         dict_get_key(LEVEL_MAPPING, available_min_level)
                     }
