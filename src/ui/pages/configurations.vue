@@ -1,585 +1,93 @@
 <template>
     <div>
         <v-container fluid>
-            <v-main style="--v-layout-bottom: 0; --v-layout-top: 0px">
-                <div
-                    class="selection-info mx-auto font-italic"
-                    v-if="!state.currentEdit"
-                >
-                    select configuration to edit
-                    <v-icon class="tab-icon" icon="$arrowRight"></v-icon>
-                </div>
-                <div v-else>
-                    <v-expansion-panels
-                        :modelValue="settingsExpandedCookie ? 'settings' : null"
-                        @update:modelValue="settingsExpandedCookie = !!$event"
-                        eager
-                    >
-                        <v-expansion-panel value="settings">
-                            <v-expansion-panel-title>
-                                <div class="expansion-title">Settings</div>
-                                <v-icon
-                                    color="error"
-                                    v-show="!validity.settings"
-                                    size="x-small"
-                                    title="Invalid inputs detected"
-                                    icon="$alertCircle"
-                                ></v-icon>
-                            </v-expansion-panel-title>
-                            <v-expansion-panel-text>
-                                <v-form
-                                    class="mt-3"
-                                    v-model="validity.settings"
-                                    ref="settings_form"
-                                >
-                                    <v-row>
-                                        <v-col md="6" sm="12"
-                                            ><v-text-field
-                                                label="Configuration Name"
-                                                v-model="form.configurationName"
-                                                :rules="[vNotEmpty]"
-                                            ></v-text-field
-                                        ></v-col>
-                                        <v-col md="6" sm="12"
-                                            ><v-number-input
-                                                label="Iterations"
-                                                v-model.number="form.iterations"
-                                                :rules="[vNotEmpty, vInteger]"
-                                            ></v-number-input
-                                        ></v-col>
-                                        <v-col
-                                            md="6"
-                                            sm="12"
-                                            v-if="
-                                                $authStore.user.projects.length
-                                            "
-                                        >
-                                            <v-autocomplete
-                                                :items="
-                                                    $authStore.user.projects
-                                                "
-                                                v-model="form.sharedProjects"
-                                                chips
-                                                closable-chips
-                                                multiple
-                                                item-title="name"
-                                                item-value="_id"
-                                                label="Share with Project"
-                                            >
-                                                <template #prepend-inner>
-                                                    <v-tooltip
-                                                        location="bottom"
-                                                    >
-                                                        <template
-                                                            v-slot:activator="{
-                                                                props
-                                                            }"
-                                                        >
-                                                            <v-icon
-                                                                color="primary-light"
-                                                                v-bind="props"
-                                                                class="ml-1"
-                                                                icon="$information"
-                                                            >
-                                                            </v-icon>
-                                                        </template>
-                                                        <span
-                                                            >Shared
-                                                            configurations are
-                                                            accessible to all
-                                                            project
-                                                            members</span
-                                                        >
-                                                    </v-tooltip>
-                                                </template>
-                                            </v-autocomplete>
-                                        </v-col>
-                                        <v-col md="6" sm="12">
-                                            <v-number-input
-                                                label="Measurement Interval (seconds)"
-                                                v-model.number="form.interval"
-                                                :rules="[
-                                                    vNotEmpty,
-                                                    vNumber,
-                                                    vInteger,
-                                                    (v) =>
-                                                        parseInt(v) >= 5 ||
-                                                        'Value must be at least 5 seconds'
-                                                ]"
-                                            >
-                                                <template #prepend-inner>
-                                                    <v-tooltip location="top">
-                                                        <template
-                                                            v-slot:activator="{
-                                                                props
-                                                            }"
-                                                        >
-                                                            <v-icon
-                                                                color="primary-light"
-                                                                v-bind="props"
-                                                                class="ml-1"
-                                                                icon="$information"
-                                                            >
-                                                            </v-icon>
-                                                        </template>
-                                                        <span
-                                                            >Current minimum
-                                                            interval is 5
-                                                            seconds</span
-                                                        >
-                                                    </v-tooltip>
-                                                </template>
-                                            </v-number-input>
-                                        </v-col>
-                                        <v-col sm="12">
-                                            <v-row>
-                                                <v-col sm="12" md="6">
-                                                    <v-switch
-                                                        label="Enable Monitoring"
-                                                        v-model="
-                                                            form.enableMonitoring
-                                                        "
-                                                    ></v-switch>
-                                                </v-col>
-                                                <v-col sm="12" md="6">
-                                                    <v-switch
-                                                        label="Enable Monitoring of Hardware Performance Counters"
-                                                        v-model="
-                                                            form.enableLikwid
-                                                        "
-                                                        :disabled="
-                                                            !form.enableMonitoring
-                                                        "
-                                                    ></v-switch>
-                                                </v-col>
-                                            </v-row>
-                                        </v-col>
-
-                                        <v-col md="12">
-                                            <!-- show only mongodb _id, not temporary uuid -->
-                                            <div
-                                                class="text-medium-emphasis text-caption"
-                                            >
-                                                Configuration ID:
-                                                {{
-                                                    state.currentEdit &&
-                                                    currentEditNotYetSaved
-                                                        ? "save to view ID"
-                                                        : state.currentEdit
-                                                }}
-                                            </div>
-                                        </v-col>
-                                    </v-row>
-                                </v-form>
-                            </v-expansion-panel-text>
-                        </v-expansion-panel>
-                    </v-expansion-panels>
-                    <v-card class="mt-5">
-                        <v-card-title>
-                            Job Script
-                            <v-icon
-                                color="error"
-                                v-show="!validity.jobscript"
-                                size="x-small"
-                                title="Invalid inputs detected in one or multiple variants"
-                                icon="$alertCircle"
-                            ></v-icon>
-                        </v-card-title>
-                        <v-card-text>
-                            <v-form
-                                v-model="validity.jobscript"
-                                ref="jobscript_form"
-                            >
-                                <div class="d-flex justify-end">
-                                    <v-dialog width="800">
-                                        <template v-slot:activator="{ props }">
-                                            <v-btn
-                                                v-bind="props"
-                                                prepend-icon="$currency"
-                                                size="small"
-                                                variant="text"
-                                                >Job Variables
-                                                {{
-                                                    `(${variableCount})`
-                                                }}</v-btn
-                                            >
-                                        </template>
-                                        <v-card>
-                                            <v-card-title
-                                                >Job Variables</v-card-title
-                                            >
-                                            <v-card-text>
-                                                <p
-                                                    class="text-medium-emphasis text-caption font-italic"
-                                                    style="margin-top: -10px"
-                                                >
-                                                    Access variables in your
-                                                    jobscript with $VARIABLE.
-                                                    Defining multiple values for
-                                                    a variable will create a job
-                                                    for each value. Variables
-                                                    will be shared across all
-                                                    variants and are not
-                                                    specific to the current
-                                                    variant!
-                                                </p>
-                                                <JobVariables
-                                                    v-model="form.variables"
-                                                ></JobVariables>
-                                            </v-card-text>
-                                        </v-card>
-                                    </v-dialog>
-                                    <v-dialog
-                                        :close-on-content-click="false"
-                                        width="800"
-                                    >
-                                        <template v-slot:activator="{ props }">
-                                            <v-btn
-                                                v-bind="props"
-                                                prepend-icon="$server"
-                                                size="small"
-                                                variant="text"
-                                                >Partitions & Nodes</v-btn
-                                            >
-                                        </template>
-                                        <v-card>
-                                            <v-card-title
-                                                >Partitions &
-                                                Nodes</v-card-title
-                                            >
-                                            <v-card-text>
-                                                <v-treeview
-                                                    color="primary-light"
-                                                    :items="partitionTree"
-                                                    item-value="title"
-                                                    open-on-click
-                                                ></v-treeview>
-                                            </v-card-text>
-                                        </v-card>
-                                    </v-dialog>
-                                    <v-btn
-                                        href="https://xbat.dev/docs/user/get-started/job-configuration"
-                                        variant="text"
-                                        target="_blank"
-                                        prepend-icon="$documentation"
-                                        title="Visit Documentation for more details"
-                                        size="small"
-                                        >Docs</v-btn
-                                    >
-                                    <v-btn
-                                        href="https://slurm.schedmd.com/sbatch.html#SECTION_OPTIONS"
-                                        variant="text"
-                                        target="_blank"
-                                        prepend-icon="$openInNew"
-                                        title="Visit Slurm Documentation"
-                                        size="small"
-                                        >Slurm Documentation</v-btn
-                                    >
-                                </div>
-                                <div
-                                    class="d-flex justify-space-between align-center"
-                                >
-                                    <v-tabs
-                                        v-model="state.variantTab"
-                                        class="variant-tabs"
-                                        center-active
-                                        force
-                                        show-arrows
-                                        color="primary-light"
-                                    >
-                                        <v-tab
-                                            v-for="[
-                                                i,
-                                                v
-                                            ] in form.jobscript.entries()"
-                                            :value="i"
-                                            :key="i"
-                                            :color="
-                                                form.jobscript[i].variantName
-                                                    ? 'primary-light'
-                                                    : 'danger'
-                                            "
-                                        >
-                                            <v-dialog max-width="400">
-                                                <template
-                                                    v-slot:activator="{
-                                                        props: activatorProps
-                                                    }"
-                                                >
-                                                    <v-btn
-                                                        size="x-small"
-                                                        title="Remove Variant"
-                                                        color="danger"
-                                                        variant="plain"
-                                                        v-show="
-                                                            state.variantTab ===
-                                                                i &&
-                                                            form.jobscript
-                                                                .length > 1
-                                                        "
-                                                        icon="$close"
-                                                        v-bind="activatorProps"
-                                                    >
-                                                    </v-btn>
-                                                </template>
-
-                                                <template
-                                                    v-slot:default="{
-                                                        isActive
-                                                    }"
-                                                >
-                                                    <v-card
-                                                        title="Delete Variant"
-                                                    >
-                                                        <v-card-text
-                                                            >Do you really want
-                                                            to delete variant
-                                                            "<span
-                                                                class="font-italic"
-                                                                >{{
-                                                                    form
-                                                                        .jobscript[
-                                                                        i
-                                                                    ]
-                                                                        .variantName
-                                                                }}</span
-                                                            >"?</v-card-text
-                                                        >
-                                                        <template
-                                                            v-slot:actions
-                                                        >
-                                                            <v-spacer></v-spacer>
-                                                            <v-btn
-                                                                text="Cancel"
-                                                                @click="
-                                                                    isActive.value = false
-                                                                "
-                                                            ></v-btn>
-                                                            <v-btn
-                                                                color="danger"
-                                                                @click="
-                                                                    removeVariant(
-                                                                        i
-                                                                    );
-                                                                    isActive.value = false;
-                                                                "
-                                                                >Delete</v-btn
-                                                            >
-                                                        </template>
-                                                    </v-card>
-                                                </template>
-                                            </v-dialog>
-                                            {{ form.jobscript[i].variantName }}
-                                            <InlineEdit
-                                                title="Rename Variant"
-                                                :modelValue="
-                                                    form.jobscript[i]
-                                                        .variantName
-                                                "
-                                                @update:modelValue="
-                                                    form.jobscript[
-                                                        i
-                                                    ].variantName = $event
-                                                "
-                                            >
-                                                <template #activator>
-                                                    <v-btn
-                                                        size="x-small"
-                                                        title="Rename Variant"
-                                                        v-if="
-                                                            state.variantTab ==
-                                                            i
-                                                        "
-                                                        icon="$edit"
-                                                        variant="plain"
-                                                    >
-                                                    </v-btn>
-                                                </template>
-                                            </InlineEdit>
-                                        </v-tab>
-                                    </v-tabs>
-                                    <v-btn
-                                        @click="addVariant"
-                                        variant="outlined"
-                                        size="small"
-                                        color="primary-light"
-                                        prepend-icon="$plus"
-                                        >Add Variant
-                                    </v-btn>
-                                </div>
-                                <v-window v-model="state.variantTab">
-                                    <v-window-item
-                                        v-for="[
-                                            i,
-                                            v
-                                        ] of form.jobscript.entries()"
-                                        :value="i"
-                                        :key="i"
-                                    >
-                                        <div>
-                                            <Editor
-                                                v-model="form.jobscript[i]"
-                                                auto-resize
-                                                constrained-jobscript
-                                                @update:validity="
-                                                    validity.jobscript = $event
-                                                "
-                                                :partitions="partitions"
-                                            >
-                                            </Editor>
-                                        </div>
-                                    </v-window-item>
-                                </v-window>
-                            </v-form>
-                        </v-card-text>
-                    </v-card>
-
-                    <div
-                        v-if="
-                            $authStore.userLevel >=
-                            $authStore.UserLevelEnum.user
+            <div class="page-layout">
+                <div class="left">
+                    <ConfigurationSidebar
+                        :configuration-cache="configurationCache"
+                        :selected-id="state.currentEdit"
+                        :user="$authStore.user"
+                        :user-level="$authStore.userLevel"
+                        :UserLevelEnum="$authStore.UserLevelEnum"
+                        @select="(id) => (state.selectedEdit = [id])"
+                        @select-folder="
+                            (fid) => {
+                                selectedFolderId = fid;
+                                state.selectedEdit = [];
+                            }
                         "
-                    >
-                        <div class="d-flex gap-20 mt-5">
-                            <v-btn
-                                color="primary"
-                                @click="save()"
-                                :disabled="
-                                    Object.values(validity)
-                                        .map((x) => !!x)
-                                        .includes(false)
-                                "
-                            >
-                                Save
-                            </v-btn>
-                            <v-btn @click="cancelEdit"> Cancel </v-btn>
-                        </div>
-                    </div>
+                        @duplicate="addConfig"
+                        @delete="(id) => setAction('delete', id)"
+                    />
                 </div>
-            </v-main>
-            <v-navigation-drawer
-                permanent
-                location="right"
-                class="sidebar"
-                width="300"
-            >
-                <template #prepend
-                    ><div class="header">CONFIGURATIONS</div></template
-                >
-                <template #append> </template>
-                <div class="list">
-                    <v-list
-                        density="compact"
-                        v-model:selected="state.selectedEdit"
-                        mandatory
-                    >
-                        <template
-                            v-for="[id, v] of Object.entries(
-                                configurationCache
-                            )"
-                            :value="id"
-                        >
-                            <v-hover>
-                                <template
-                                    v-slot:default="{ isHovering, props }"
-                                >
-                                    <v-list-item
-                                        v-bind="props"
-                                        @click="state.selectedEdit = [id]"
-                                        :value="id"
-                                        style="line-height: 36px"
-                                    >
-                                        <template #prepend>
-                                            <div
-                                                class="mr-2"
-                                                v-if="
-                                                    v.configuration
-                                                        .sharedProjects?.length
-                                                "
-                                            >
-                                                <v-icon
-                                                    size="small"
-                                                    color="primary-light"
-                                                    title="This configuration is shared with other users"
-                                                    icon="$share"
-                                                ></v-icon>
-                                            </div>
-                                        </template>
-                                        <span class="configuration-name">
-                                            {{
-                                                "configurationName" in
-                                                v.configuration
-                                                    ? v.configuration
-                                                          .configurationName
-                                                    : id
-                                            }}
-                                        </span>
-                                        <template #append>
-                                            <v-btn-group
-                                                devided
-                                                variant="text"
-                                                density="compact"
-                                                v-if="
-                                                    isHovering &&
-                                                    $authStore.userLevel >=
-                                                        $authStore.UserLevelEnum
-                                                            .user
-                                                "
-                                            >
-                                                <v-btn
-                                                    title="Duplicate Configuration"
-                                                    size="small"
-                                                    @click.stop="addConfig(id)"
-                                                    icon="$duplicate"
-                                                >
-                                                </v-btn>
-                                                <v-btn
-                                                    title="Delete Configuration"
-                                                    size="small"
-                                                    @click.stop="
-                                                        setAction('delete', id)
-                                                    "
-                                                    v-if="
-                                                        (v?.misc?.owner &&
-                                                            $authStore.user
-                                                                .user_name ===
-                                                                v.misc.owner) ||
-                                                        $authStore.userLevel >
-                                                            $authStore
-                                                                .UserLevelEnum
-                                                                .user
-                                                    "
-                                                    icon="$trashCan"
-                                                >
-                                                </v-btn>
-                                            </v-btn-group>
-                                        </template>
-                                    </v-list-item>
-                                </template>
-                            </v-hover>
-                        </template>
-                    </v-list>
-                </div>
-                <v-list-item
-                    ><div
-                        v-if="
-                            $authStore.userLevel >
-                            $authStore.UserLevelEnum.guest
+                <div class="right">
+                    <ConfigurationEditor
+                        v-if="state.currentEdit"
+                        ref="editorRef"
+                        :form="form"
+                        :validity="validity"
+                        :current-edit="state.currentEdit"
+                        :current-edit-not-yet-saved="currentEditNotYetSaved"
+                        :settings-expanded="settingsExpandedCookie"
+                        @update:settingsExpanded="
+                            settingsExpandedCookie = $event
                         "
-                        class="d-flex justify-center"
+                        :vNotEmpty="vNotEmpty"
+                        :vNumber="vNumber"
+                        :vInteger="vInteger"
+                        :projects="$authStore.user.projects"
+                        :folder-path="editorFolderPath"
+                        :partitions="partitions"
+                        :partition-tree="partitionTree"
+                        :variable-count="variableCount"
+                        :variant-tab="state.variantTab"
+                        @update:variantTab="state.variantTab = $event"
+                        :user-level="$authStore.userLevel"
+                        :UserLevelEnum="$authStore.UserLevelEnum"
+                        @add-variant="addVariant"
+                        @remove-variant="removeVariant"
+                        @save="save"
+                        @close="requestCloseEditor"
+                        @open-folder-picker="openFolderPicker"
+                    />
+                    <FolderBrowser
+                        v-else-if="selectedFolderNode"
+                        :folder="selectedFolderNode"
+                        :configs="selectedFolderConfigs"
+                        :user-level="$authStore.userLevel"
+                        :UserLevelEnum="$authStore.UserLevelEnum"
+                        :my-root-id="
+                            myHomeNode?.id ? String(myHomeNode.id) : ''
+                        "
+                        :user-name="$authStore.user.user_name"
+                        :projects="$authStore.user.projects"
+                        v-model:selected="folderSelect"
+                        @duplicate="addConfig"
+                        @refresh="refreshAll"
+                        @create-config="addConfig"
+                        @open-folder="
+                            (fid) => {
+                                selectedFolderId = fid;
+                                folderSelect = [];
+                            }
+                        "
+                        @open-config="
+                            (cid) => {
+                                selectedFolderId = null;
+                                state.selectedEdit = [cid];
+                                folderSelect = [];
+                            }
+                        "
+                    />
+                    <v-main
+                        v-else
+                        class="empty"
+                        style="--v-layout-bottom: 0; --v-layout-top: 0px"
                     >
-                        <v-btn
-                            @click="addConfig()"
-                            title="Add Configuration"
-                            elevation="0"
-                            variant="tonal"
-                            prepend-icon="$newFile"
-                        >
-                            New configuration
-                        </v-btn>
-                    </div></v-list-item
-                >
-            </v-navigation-drawer>
+                        Select a configuration to edit, or a folder to browse.
+                    </v-main>
+                </div>
+            </div>
         </v-container>
         <v-dialog v-model="state.showActionDialog" max-width="600px">
             <v-card>
@@ -619,6 +127,76 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+        <v-dialog v-model="showFolderPickerDialog" max-width="720">
+            <v-card>
+                <v-card-title>Select Folder</v-card-title>
+                <v-card-text>
+                    <div class="move-tree">
+                        <MoveFolderTreeNode
+                            v-for="node in editorFolderTree"
+                            :key="node.id || node.path"
+                            :node="node"
+                            :selected-id="String(form.folderId || '')"
+                            @select="selectEditorFolder"
+                        />
+                    </div>
+
+                    <div class="move-selected mt-4">
+                        <span class="text-medium-emphasis"
+                            >Selected folder:</span
+                        >
+                        <span class="ml-2">
+                            {{ editorFolderPath || "—" }}
+                        </span>
+                    </div>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn
+                        color="font-light"
+                        @click="showFolderPickerDialog = false"
+                    >
+                        Close
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+        <v-dialog v-model="state.showCloseDialog" max-width="520px">
+            <v-card>
+                <v-card-title>Close editor</v-card-title>
+                <v-card-text>
+                    You have unsaved changes. What would you like to do?
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+
+                    <v-btn
+                        color="font-light"
+                        text
+                        @click="state.showCloseDialog = false"
+                    >
+                        Cancel
+                    </v-btn>
+
+                    <v-btn color="danger" text @click="discardAndClose">
+                        Discard & Close
+                    </v-btn>
+
+                    <v-btn
+                        color="primary-light"
+                        text
+                        :disabled="
+                            Object.values(validity)
+                                .map((x) => !!x)
+                                .includes(false)
+                        "
+                        @click="saveAndClose"
+                    >
+                        Save & Close
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </div>
 </template>
 
@@ -626,6 +204,15 @@
 import { ref, computed, watch, reactive, nextTick } from "vue";
 import { deepClone } from "~/utils/misc";
 import { v4 as uuidv4 } from "uuid";
+
+import ConfigurationSidebar from "~/components/configuration/ConfigurationSidebar.vue";
+import ConfigurationEditor from "~/components/configuration/ConfigurationEditor.vue";
+import FolderBrowser from "~/components/configuration/FolderBrowser.vue";
+import MoveFolderTreeNode from "~/components/configuration/browser/MoveFolderTreeNode.vue";
+
+import { useConfigurationEditor } from "~/composables/useConfigurationEditor";
+import { useConfigurationFolder } from "~/composables/useConfigurationFolder";
+
 const { vNotEmpty, vNumber, vInteger } = useFormValidation();
 const { $authStore, $api, $snackbar, $store } = useNuxtApp();
 
@@ -661,18 +248,33 @@ const defaultForm = {
     enableMonitoring: true,
     interval: 5,
     configurationName: "new configuration",
+    folderId: "",
     sharedProjects: []
 };
 
+const folderSelect = ref([]);
+const selectedFolderId = ref(null);
 const configurationCache = ref({});
-const form = ref({});
+const form = ref(deepClone(defaultForm));
+const editorRef = ref(null);
+const formBeforeEdit = ref({});
 
-form.value = deepClone(defaultForm);
+const state = reactive({
+    variantTab: 0,
+    currentEdit: "",
+    previousEdit: "",
+    selectedEdit: [],
+    action: null,
+    actionTarget: null,
+    showActionDialog: false,
+    actionTargetName: null,
+    showCloseDialog: false
+});
 
-const setConfigurationCache = () => {
-    configurationCache.value = Object.fromEntries(
-        deepClone(configurations.value).map((x) => [x._id, x])
-    );
+const refreshAll = async () => {
+    await fetchConfigurations();
+    await refreshFolders();
+    folderSelect.value = [];
 };
 
 const { data: partitions } = await useAsyncData(
@@ -686,15 +288,25 @@ const { data: configurations, refresh } = await useAsyncData(
     async () => (await $api.configurations.get())?.data || []
 );
 
+const { data: folderTree, refresh: refreshFolders } = await useAsyncData(
+    `configuration-folders-tree-page-${$authStore.user.user_name}`,
+    async () => (await $api.configurationFolders.get())?.data || []
+);
+
+const setConfigurationCache = () => {
+    configurationCache.value = Object.fromEntries(
+        deepClone(configurations.value).map((x) => [x._id, x])
+    );
+};
+
 setConfigurationCache();
 
 const partitionTree = computed(() => {
-    let items = [];
-
-    for (let [key, value] of Object.entries(partitions.value)) {
+    const items = [];
+    for (let [key, value] of Object.entries(partitions.value || {})) {
         items.push({
             title: key,
-            children: value.map((x) => Object.assign({ title: x }))
+            children: value.map((x) => ({ title: x }))
         });
     }
     return items;
@@ -712,22 +324,6 @@ const fetchConfigurations = async () => {
     // TODO known issue - this causes unsaved changes to be overwritten
     setConfigurationCache();
 };
-
-const state = reactive({
-    variantTab: 0,
-    currentEdit: "",
-    previousEdit: "",
-    selectedEdit: [],
-    action: null,
-    actionTarget: null,
-    showActionDialog: false,
-    actionTargetName: null
-});
-
-const settings_form = ref(null);
-const jobscript_form = ref(null);
-
-const formBeforeEdit = ref({});
 
 const currentEditNotYetSaved = computed(() =>
     (state.currentEdit || "").includes("-")
@@ -757,38 +353,108 @@ watch(
         }
         state.previousEdit = id;
         nextTick(() => {
-            settings_form.value.validate();
-            jobscript_form.value.validate();
+            editorRef.value?.validateForms?.();
         });
     }
 );
 
-const addConfig = (presetId = "") => {
+const normalizeName = (v) => String(v || "").trim();
+
+const sibConfigName = ({ name, folderId, excludeId = "" }) => {
+    const targetName = normalizeName(name);
+    const targetFolderId = String(folderId || "");
+
+    return Object.entries(configurationCache.value || {}).some(([id, doc]) => {
+        if (String(id) === String(excludeId)) return false;
+
+        const cfg = doc?.configuration || {};
+        return (
+            String(cfg.folderId || "") === targetFolderId &&
+            normalizeName(cfg.configurationName) === targetName
+        );
+    });
+};
+
+const getNextNewConfig = (folderId) => {
+    const base = "new configuration";
+
+    if (!sibConfigName({ name: base, folderId })) {
+        return base;
+    }
+
+    let index = 2;
+    let candidate = `${base} (${index})`;
+
+    while (
+        sibConfigName({
+            name: candidate,
+            folderId
+        })
+    ) {
+        index += 1;
+        candidate = `${base} (${index})`;
+    }
+
+    return candidate;
+};
+
+const getNextCopyConfig = (baseName, folderId) => {
+    const base = normalizeName(baseName) || "new configuration";
+
+    let candidate = `${base} (copy)`;
+    let index = 2;
+
+    while (
+        sibConfigName({
+            name: candidate,
+            folderId
+        })
+    ) {
+        candidate = `${base} (copy ${index})`;
+        index += 1;
+    }
+
+    return candidate;
+};
+
+const addConfig = ({ presetId = "", folderId = "" } = {}) => {
     // generate random uuid as a temporary _id -> will be replaced after insertion to database
     const _id = uuidv4();
 
-    let newConfig = deepClone(
+    const newConfig = deepClone(
         presetId
             ? configurationCache.value[presetId].configuration
             : defaultForm
     );
 
     // TODO add "(copy)" n times when creating n copies
+    const targetFolderId =
+        folderId ||
+        newConfig.folderId ||
+        (myHomeNode.value?.id ? String(myHomeNode.value.id) : "");
+
+    const nextName =
+        presetId && presetId in configurationCache.value
+            ? getNextCopyConfig(
+                  configurationCache.value[presetId].configuration
+                      .configurationName,
+                  targetFolderId
+              )
+            : getNextNewConfig(targetFolderId);
+
     configurationCache.value[_id] = {
         configuration: {
             ...newConfig,
-            configurationName:
-                presetId && presetId in configurationCache.value
-                    ? `${configurationCache.value[presetId].configuration.configurationName} (copy)`
-                    : "new configuration"
+            folderId: targetFolderId,
+            configurationName: nextName
         }
     };
 
-    state.selectedEdit = [Object.keys(configurationCache.value).at(-1)];
+    state.selectedEdit = [_id];
 };
 
 const addVariant = () => {
-    let copy = deepClone(form.value.jobscript[state.variantTab]);
+    const copy = deepClone(form.value.jobscript[state.variantTab]);
     copy.variantName = `${copy.variantName} (copy)`;
     form.value.jobscript.push(copy);
     state.variantTab = form.value.jobscript.length - 1;
@@ -806,12 +472,6 @@ const resetForm = () => {
     form.value = configurationCache.value[state.currentEdit].configuration;
 };
 
-const cancelEdit = () => {
-    // reset form to state before edit
-    resetForm();
-    state.selectedEdit = [];
-};
-
 const save = async () => {
     if (!validity.settings || !validity.jobscript) return;
 
@@ -820,23 +480,49 @@ const save = async () => {
         return;
     }
 
+    const targetFolderId = String(
+        form.value.folderId || myHomeNode.value?.id || ""
+    );
+    const targetName = normalizeName(form.value.configurationName);
+
+    form.value.folderId = targetFolderId;
+    form.value.configurationName = targetName;
+
+    if (!targetName) {
+        $snackbar.show("Configuration name is required");
+        return;
+    }
+
+    if (
+        sibConfigName({
+            name: targetName,
+            folderId: targetFolderId,
+            excludeId: state.currentEdit
+        })
+    ) {
+        $snackbar.show(
+            "A configuration with the same name already exists in this folder"
+        );
+        return;
+    }
+
     let response = {};
 
     // post
     if (!configurations.value.map((x) => x._id).includes(state.currentEdit)) {
-        let payload = configurationCache.value[state.currentEdit].configuration;
+        const payload =
+            configurationCache.value[state.currentEdit].configuration;
         // filter empty variables (only empty key)
         payload.variables = payload.variables.filter((x) => x.key.length);
         response = await $api.configurations.post({
-            configuration:
-                configurationCache.value[state.currentEdit].configuration
+            configuration: payload
         });
         $snackbar.show("Created Configuration");
     }
     // put
     else {
-        const configId = state.selectedEdit;
-        let payload = configurations.value.filter((x) => x._id == configId)[0];
+        const configId = state.currentEdit;
+        const payload = configurations.value.find((x) => x._id === configId);
         payload.configuration = form.value;
         if (payload.configuration.variables === undefined)
             payload.configuration.variables = [];
@@ -849,14 +535,52 @@ const save = async () => {
 
     await fetchConfigurations();
 
-    if (currentEditNotYetSaved.value) state.selectedEdit = [response._id];
+    if (currentEditNotYetSaved.value) {
+        state.selectedEdit = [response._id];
+    }
     nextTick(() => {
-        if (state.currentEdit in configurations.value)
+        const saved = configurations.value.find(
+            (x) => x._id === state.currentEdit
+        );
+        if (saved)
             formBeforeEdit.value[state.currentEdit] = deepClone(
-                configurations.value[state.currentEdit].configuration
+                saved.configuration
             );
     });
 };
+
+const {
+    showFolderPickerDialog,
+    editorFolderTree,
+    editorFolderPath,
+    discardAndClose,
+    saveAndClose,
+    requestCloseEditor,
+    openFolderPicker,
+    selectEditorFolder
+} = useConfigurationEditor({
+    state,
+    form,
+    defaultForm,
+    configurationCache,
+    formBeforeEdit,
+    currentEditNotYetSaved,
+    folderTree,
+    userName: $authStore.user.user_name,
+    save,
+    resetForm
+});
+
+const { selectedFolderNode, selectedFolderConfigs, myHomeNode, isManager } =
+    useConfigurationFolder({
+        folderTree,
+        configurationCache,
+        selectedFolderId,
+        userName: $authStore.user.user_name,
+        userProjects: $authStore.user?.projects || [],
+        userLevel: $authStore.userLevel,
+        managerLevel: $authStore.UserLevelEnum.manager
+    });
 
 const setAction = (action, target) => {
     state.action = action;
@@ -899,47 +623,38 @@ const removeVariant = (i) => {
 watch(
     () => state.variantTab,
     (v) => {
-        if (v === undefined)
+        if (v === undefined) {
             nextTick(() => {
                 state.variantTab = form.value.jobscript.length - 1;
             });
+        }
     }
 );
+
+watchEffect(() => {
+    if (state.currentEdit) return;
+
+    if (selectedFolderId.value) return;
+
+    if (myHomeNode.value?.id) {
+        selectedFolderId.value = String(myHomeNode.value.id);
+    }
+});
 </script>
 
 <style lang="scss" scoped>
 @use "~/assets/css/colors.scss" as *;
+.empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 
-.selection-info {
+    height: 100%;
+    width: 100%;
+
+    font-size: 1rem;
     color: $font-light;
-    width: fit-content;
-    font-size: 0.925rem;
-}
-
-.variant-tabs {
-    margin-bottom: 10px;
-    max-width: 100%;
-}
-
-.sidebar {
-    .header {
-        margin-top: 25px;
-        text-align: center;
-        color: $font-light;
-    }
-
-    .list {
-        overflow-y: auto;
-        max-height: 80vh;
-    }
-    .configuration-name {
-        white-space: normal;
-        word-break: break-all;
-    }
-}
-
-.expansion-title {
-    font-size: 1.25rem;
-    font-weight: 500;
+    font-style: italic;
 }
 </style>
