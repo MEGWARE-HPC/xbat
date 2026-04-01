@@ -1,5 +1,5 @@
 name: VM Test
-
+# testing new registered runners
 on:
   workflow_call:
     inputs:
