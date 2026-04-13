@@ -51,7 +51,7 @@ jobs:
             --vcpus 2 \
             --cpu host \
             --disk $OVERLAY,format=qcow2,bus=virtio \
-            --cdrom $CLOUDINIT_ISO \
+            --disk $CLOUDINIT_ISO,device=cdrom,readonly=on \
             --import \
             --network network=default,model=virtio \
             --os-variant almalinux${{ inputs.distro }} \
