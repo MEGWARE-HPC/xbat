@@ -22,9 +22,9 @@ jobs:
 
     env:
       VM_NAME: ci-el${{ inputs.distro }}-${{ github.run_id }}
-      BASE_IMAGE: /data/libvirt/images/almalinux${{ inputs.distro }}-base.qcow2
-      OVERLAY: /data/libvirt/images/ci-el${{ inputs.distro }}-${{ github.run_id }}.qcow2
-      CLOUDINIT_ISO: /data/libvirt/cloudinit/seed.iso
+      BASE_IMAGE: /data/libvirt/images/base/almalinux${{ inputs.distro }}-base.qcow2
+      OVERLAY: /data/libvirt/images/ci/ci-el${{ inputs.distro }}-${{ github.run_id }}.qcow2
+      CLOUDINIT_ISO: /data/libvirt/cloudinit/ci/seed.iso
       SSH_KEY: /root/.ssh/id_rsa_test
       REPO_URL: https://github.com/MEGWARE-HPC/xbat.git
 
