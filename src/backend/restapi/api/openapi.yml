@@ -632,6 +632,7 @@ paths:
           schema:
             type: string
             enum:
+              - overwrite
               - rename
               - skip
             default: rename

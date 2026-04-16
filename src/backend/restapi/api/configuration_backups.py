@@ -382,7 +382,7 @@ def get_restore_scope():
     if the_scope not in ("self", "owner", "all"):
         raise httpErrors.BadRequest("Invalid scope")
 
-    if conflict_strategy not in ("rename", "skip"):
+    if conflict_strategy not in ("overwrite", "rename", "skip"):
         raise httpErrors.BadRequest("Invalid conflictStrategy")
 
     is_privileged = user["user_type"] in PRIVILEGED_TYPES
@@ -631,7 +631,8 @@ def restore_folders(payload, restore_info, summary):
             parent_export_id = item["parentExportId"]
 
             # wait if parent exists in backup but is not created/mapped yet
-            if parent_export_id and parent_export_id in folder_export_ids and parent_export_id not in folder_mapping:
+            if (parent_export_id and parent_export_id in folder_export_ids
+                    and parent_export_id not in folder_mapping):
                 remaining.append(item)
                 continue
 
@@ -647,6 +648,35 @@ def restore_folders(payload, restore_info, summary):
                     "conflict_strategy"] == "skip":
                 folder_mapping[item["exportId"]] = str(existing["_id"])
                 summary["foldersMerged"] += 1
+                progressed = True
+                continue
+
+            if existing is not None and restore_info[
+                    "conflict_strategy"] == "overwrite":
+                updated_folder = db.updateOne(
+                    FOLDER_COLLECTION,
+                    {"_id": existing["_id"]},
+                    {
+                        "$set": {
+                            "folder.sharedProjects":
+                            (item["sharedProjects"]
+                             if restore_info["keep_shared_projects"] else []),
+                            "misc.owner":
+                            target_owner,
+                            "misc.created":
+                            item["created"] or current_timestamp,
+                            "misc.edited":
+                            item["edited"] or current_timestamp,
+                        }
+                    },
+                )
+
+                if updated_folder is None:
+                    raise httpErrors.InternalServerError(
+                        "Failed to overwrite folder")
+
+                folder_mapping[item["exportId"]] = str(existing["_id"])
+                summary["foldersOverwritten"] += 1
                 progressed = True
                 continue
 
@@ -666,8 +696,8 @@ def restore_folders(payload, restore_info, summary):
                     "parentFolderId":
                     ensure_objectId(parent_live_id),
                     "sharedProjects":
-                    item["sharedProjects"]
-                    if restore_info["keep_shared_projects"] else [],
+                    (item["sharedProjects"]
+                     if restore_info["keep_shared_projects"] else []),
                 },
                 "misc": {
                     "owner": target_owner,
@@ -732,6 +762,28 @@ def restore_configs(payload, restore_info, folder_mapping, summary):
             continue
 
         if existing is not None and restore_info[
+                "conflict_strategy"] == "overwrite":
+            update_result = db.replaceOne(
+                CONFIG_COLLECTION,
+                {"_id": existing["_id"]},
+                {
+                    "configuration": cfg,
+                    "misc": {
+                        "owner": target_owner,
+                        "created": item["created"] or current_timestamp,
+                        "edited": item["edited"] or current_timestamp,
+                    },
+                },
+            )
+
+            if not update_result or not update_result.acknowledged:
+                raise httpErrors.InternalServerError(
+                    "Failed to overwrite configuration")
+
+            summary["configurationsOverwritten"] += 1
+            continue
+
+        if existing is not None and restore_info[
                 "conflict_strategy"] == "rename":
             final_name = next_unique_config_name(target_owner,
                                                  target_folder_id,
@@ -784,9 +836,11 @@ def restore_backup():
         "foldersCreated": 0,
         "foldersMerged": 0,
         "foldersRenamed": 0,
+        "foldersOverwritten": 0,
         "configurationsCreated": 0,
         "configurationsSkipped": 0,
         "configurationsRenamed": 0,
+        "configurationsOverwritten": 0,
     }
 
     folder_mapping = restore_folders(payload, restore_info, summary)

@@ -10,13 +10,15 @@ export type RestoreBackupResponse = {
         restoreMode: "self" | "owner" | "all";
         targetOwner: string | null;
         preserveOriginalOwner: boolean;
-        conflictStrategy: "rename" | "skip";
+        conflictStrategy: "overwrite" | "rename" | "skip";
         foldersCreated: number;
         foldersMerged: number;
         foldersRenamed: number;
+        foldersOverwritten: number;
         configurationsCreated: number;
         configurationsSkipped: number;
         configurationsRenamed: number;
+        configurationsOverwritten: number;
     };
 };
 
@@ -55,7 +57,7 @@ class ConfigurationBackupModule extends FetchFactory {
         options: {
             scope?: "self" | "owner" | "all";
             owner?: string;
-            conflictStrategy?: "rename" | "skip";
+            conflictStrategy?: "overwrite" | "rename" | "skip";
         } = {}
     ) {
         const form = new FormData();
