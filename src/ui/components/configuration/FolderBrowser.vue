@@ -572,14 +572,24 @@
             <v-card>
                 <v-card-title>Restore Backup</v-card-title>
                 <v-card-text>
-                    <v-file-input
+                    <v-file-upload
                         v-model="restoreFile"
-                        label="Backup file"
-                        accept=".json,application/json"
-                        prepend-icon="$upload"
+                        divider-text="or choose locally"
+                        browse-text="Local Filesystem"
+                        filter-by-type=".json,application/json"
+                        icon="$cloudUpload"
+                        title="Drag and Drop Here"
                         show-size
                         clearable
-                    />
+                    >
+                        <template #item="{ item, props }">
+                            <v-file-upload-item
+                                v-bind="props"
+                                :file="item"
+                                file-icon="$jsonRestore"
+                            />
+                        </template>
+                    </v-file-upload>
 
                     <v-select
                         class="mt-2"
