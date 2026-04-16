@@ -104,7 +104,9 @@ import {
     mdiFolderPlusOutline,
     mdiArrowLeftTop,
     mdiFolderNetwork,
-    mdiFolderMoveOutline
+    mdiFolderMoveOutline,
+    mdiDownloadBoxOutline,
+    mdiCloudUploadOutline
 } from "@mdi/js";
 
 /*
@@ -253,7 +255,9 @@ export default defineNuxtPlugin((app) => {
                 folderOpen: mdiFolderOpen,
                 newFolder: mdiFolderPlusOutline,
                 folderNetwork: mdiFolderNetwork,
-                folderMove: mdiFolderMoveOutline
+                folderMove: mdiFolderMoveOutline,
+                configBackup: mdiDownloadBoxOutline,
+                configRestore: mdiCloudUploadOutline
             },
             sets: {
                 mdi
