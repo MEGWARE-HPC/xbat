@@ -44,6 +44,22 @@
                             New Folder
                         </v-btn>
 
+                        <v-btn
+                            color="primary-light"
+                            prepend-icon="$configBackup"
+                            @click="openExportBackup()"
+                        >
+                            Export
+                        </v-btn>
+
+                        <v-btn
+                            color="primary-light"
+                            prepend-icon="$configRestore"
+                            @click="openRestoreBackup()"
+                        >
+                            Restore
+                        </v-btn>
+
                         <template v-if="hasSelect">
                             <template v-if="mixedSelect">
                                 <v-btn
@@ -472,7 +488,8 @@
                         "
                         class="text-warning text-caption mt-2"
                     >
-                        The selected configuration(s) are already in this folder.
+                        The selected configuration(s) are already in this
+                        folder.
                     </div>
                 </v-card-text>
                 <v-card-actions>
@@ -511,6 +528,189 @@
                         >Cancel</v-btn
                     >
                     <v-btn color="danger" @click="applyDelete">Delete</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <v-dialog v-model="ExportBackupDlg" max-width="640">
+            <v-card>
+                <v-card-title>Export Backup</v-card-title>
+                <v-card-text>
+                    <v-select
+                        v-model="exportScope"
+                        :items="backupScopeItems"
+                        item-title="title"
+                        item-value="value"
+                        label="Export scope"
+                    />
+
+                    <v-text-field
+                        v-if="exportScope === 'owner'"
+                        v-model="exportOwner"
+                        label="Target username"
+                        autofocus
+                    />
+
+                    <div class="text-medium-emphasis text-caption mt-2">
+                        Export creates a JSON backup containing configurations
+                        and folders.
+                    </div>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn color="font-light" @click="ExportBackupDlg = false">
+                        Cancel
+                    </v-btn>
+                    <v-btn color="primary-light" @click="applyExportBackup">
+                        Export
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <v-dialog v-model="RestoreBackupDlg" max-width="720">
+            <v-card>
+                <v-card-title>Restore Backup</v-card-title>
+                <v-card-text>
+                    <v-file-input
+                        v-model="restoreFile"
+                        label="Backup file"
+                        accept=".json,application/json"
+                        prepend-icon="$upload"
+                        show-size
+                        clearable
+                    />
+
+                    <v-select
+                        class="mt-2"
+                        v-model="restoreScope"
+                        :items="backupScopeItems"
+                        item-title="title"
+                        item-value="value"
+                        label="Restore scope"
+                    />
+
+                    <v-text-field
+                        v-if="restoreScope === 'owner'"
+                        v-model="restoreOwner"
+                        label="Target username"
+                    />
+
+                    <v-select
+                        class="mt-2"
+                        v-model="restoreConflictStrategy"
+                        :items="conflictStrategyItems"
+                        item-title="title"
+                        item-value="value"
+                        label="Conflict strategy"
+                    />
+
+                    <div class="text-medium-emphasis text-caption mt-2">
+                        <div>
+                            <strong>overwrite</strong>: overwrite duplicate
+                            configurations and update duplicate folders
+                        </div>
+                        <div>
+                            <strong>rename</strong>: restore duplicates with a
+                            new name
+                        </div>
+                        <div>
+                            <strong>skip</strong>: skip duplicate configurations
+                            and reuse duplicate folders
+                        </div>
+                    </div>
+
+                    <div class="text-medium-emphasis text-caption mt-2">
+                        When restoring into <strong>self</strong> or
+                        <strong>owner</strong>, shared project assignments are
+                        cleared by the backend. <strong>all</strong> preserves
+                        original owners.
+                    </div>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn color="font-light" @click="RestoreBackupDlg = false">
+                        Cancel
+                    </v-btn>
+                    <v-btn color="primary-light" @click="applyRestoreBackup">
+                        Restore
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <v-dialog v-model="RestoreResultDlg" max-width="720">
+            <v-card>
+                <v-card-title>Restore Summary</v-card-title>
+                <v-card-text v-if="restoreSummary">
+                    <div class="mb-3">
+                        <div>
+                            <strong>Mode:</strong>
+                            {{ restoreSummary.restoreMode }}
+                        </div>
+                        <div>
+                            <strong>Conflict strategy:</strong>
+                            {{ restoreSummary.conflictStrategy }}
+                        </div>
+                        <div v-if="restoreSummary.targetOwner">
+                            <strong>Target owner:</strong>
+                            {{ restoreSummary.targetOwner }}
+                        </div>
+                    </div>
+
+                    <v-list density="compact">
+                        <v-list-item
+                            title="Folders created"
+                            :subtitle="String(restoreSummary.foldersCreated)"
+                        />
+                        <v-list-item
+                            title="Folders merged"
+                            :subtitle="String(restoreSummary.foldersMerged)"
+                        />
+                        <v-list-item
+                            title="Folders renamed"
+                            :subtitle="String(restoreSummary.foldersRenamed)"
+                        />
+                        <v-list-item
+                            title="Folders overwritten"
+                            :subtitle="
+                                String(restoreSummary.foldersOverwritten)
+                            "
+                        />
+                        <v-list-item
+                            title="Configurations created"
+                            :subtitle="
+                                String(restoreSummary.configurationsCreated)
+                            "
+                        />
+                        <v-list-item
+                            title="Configurations skipped"
+                            :subtitle="
+                                String(restoreSummary.configurationsSkipped)
+                            "
+                        />
+                        <v-list-item
+                            title="Configurations renamed"
+                            :subtitle="
+                                String(restoreSummary.configurationsRenamed)
+                            "
+                        />
+                        <v-list-item
+                            title="Configurations overwritten"
+                            :subtitle="
+                                String(restoreSummary.configurationsOverwritten)
+                            "
+                        />
+                    </v-list>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn
+                        color="primary-light"
+                        @click="RestoreResultDlg = false"
+                    >
+                        Close
+                    </v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
@@ -679,6 +879,28 @@ const canDelete = computed(() => hasSelect.value);
 const canCreate = computed(
     () => props.userLevel > (props.UserLevelEnum?.guest ?? 0)
 );
+
+const isPrivileged = computed(
+    () => props.userLevel >= props.UserLevelEnum.manager
+);
+
+const backupScopeItems = computed(() => {
+    if (!isPrivileged.value) {
+        return [{ title: "My configurations", value: "self" }];
+    }
+
+    return [
+        { title: "My configurations", value: "self" },
+        { title: "Specific user", value: "owner" },
+        { title: "All users (preserve owners)", value: "all" }
+    ];
+});
+
+const conflictStrategyItems = [
+    { title: "Overwrite", value: "overwrite" },
+    { title: "Rename", value: "rename" },
+    { title: "Skip", value: "skip" }
+];
 
 const isMyRoot = computed(() => {
     const fid = String(props.folder?.id ?? "");
@@ -892,6 +1114,18 @@ const RenameDlg = ref(false);
 const MoveDlg = ref(false);
 const ShareDlg = ref(false);
 const DeleteDlg = ref(false);
+const ExportBackupDlg = ref(false);
+const RestoreBackupDlg = ref(false);
+const RestoreResultDlg = ref(false);
+
+const exportScope = ref("self");
+const exportOwner = ref("");
+
+const restoreFile = ref(null);
+const restoreScope = ref("self");
+const restoreOwner = ref("");
+const restoreConflictStrategy = ref("rename");
+const restoreSummary = ref(null);
 
 const inputFolderName = ref("");
 const inputRename = ref("");
@@ -901,12 +1135,29 @@ const moveDestId = ref(""); // string folder id
 const moveFolderTree = ref([]);
 const moveFolderPath = ref("");
 
+const selectedRestoreFile = computed(() => {
+    if (Array.isArray(restoreFile.value)) {
+        return restoreFile.value[0] || null;
+    }
+    return restoreFile.value || null;
+});
+
+const normalizeOwner = (v) => String(v || "").trim();
+
+const getErrorMessage = (error, fallback) => {
+    if (error instanceof Error && error.message) return error.message;
+    return fallback;
+};
+
 const clearDialogs = () => {
     CreateFolderDlg.value = false;
     RenameDlg.value = false;
     MoveDlg.value = false;
     ShareDlg.value = false;
     DeleteDlg.value = false;
+    ExportBackupDlg.value = false;
+    RestoreBackupDlg.value = false;
+    RestoreResultDlg.value = false;
 };
 
 const createCfgFolderId = computed(() => {
@@ -986,6 +1237,82 @@ const createFolder = async () => {
 };
 
 const downloadSelected = () => {};
+
+const openExportBackup = () => {
+    exportScope.value = "self";
+    exportOwner.value = "";
+    ExportBackupDlg.value = true;
+};
+
+const applyExportBackup = async () => {
+    if ($store?.demo) return $snackbar.show($store.demoMessage);
+
+    const scope = String(exportScope.value || "self");
+    const owner = normalizeOwner(exportOwner.value);
+
+    if (scope === "owner" && !owner) {
+        $snackbar.show("Please enter a username");
+        return;
+    }
+
+    try {
+        await $api.configurationBackups.download(scope, owner);
+        ExportBackupDlg.value = false;
+        $snackbar.show("Backup exported");
+    } catch (error) {
+        $snackbar.show(getErrorMessage(error, "Failed to export backup"));
+    }
+};
+
+const openRestoreBackup = () => {
+    restoreFile.value = null;
+    restoreScope.value = "self";
+    restoreOwner.value = "";
+    restoreConflictStrategy.value = "rename";
+    RestoreBackupDlg.value = true;
+};
+
+const applyRestoreBackup = async () => {
+    if ($store?.demo) return $snackbar.show($store.demoMessage);
+
+    const file = selectedRestoreFile.value;
+    const scope = String(restoreScope.value || "self");
+    const owner = normalizeOwner(restoreOwner.value);
+    const conflictStrategy = String(restoreConflictStrategy.value || "rename");
+
+    if (!file) {
+        $snackbar.show("Please select a backup file");
+        return;
+    }
+
+    if (scope === "owner" && !owner) {
+        $snackbar.show("Please enter a username");
+        return;
+    }
+
+    try {
+        const result = await $api.configurationBackups.restore(file, {
+            scope,
+            owner,
+            conflictStrategy
+        });
+
+        if (!result?.data) {
+            throw new Error("Restore completed without summary");
+        }
+
+        restoreSummary.value = result.data;
+        RestoreBackupDlg.value = false;
+        RestoreResultDlg.value = true;
+
+        setSelected([]);
+        emit("refresh");
+
+        $snackbar.show("Backup restored");
+    } catch (error) {
+        $snackbar.show(getErrorMessage(error, "Failed to restore backup"));
+    }
+};
 
 const openShare = () => {
     shareProjectIds.value = [];
