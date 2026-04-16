@@ -4,7 +4,7 @@ import "vuetify/styles";
 import { createVuetify } from "vuetify";
 import { aliases, mdi } from "vuetify/iconsets/mdi-svg";
 // TODO wait for stable update and resolution of icon aliases
-import { VFileUpload } from "vuetify/labs/VFileUpload";
+import { VFileUpload, VFileUploadItem } from "vuetify/labs/VFileUpload";
 
 import {
     mdiChevronUp,
@@ -106,7 +106,8 @@ import {
     mdiFolderNetwork,
     mdiFolderMoveOutline,
     mdiDownloadBoxOutline,
-    mdiCloudUploadOutline
+    mdiCloudUploadOutline,
+    mdiCloudBraces
 } from "@mdi/js";
 
 /*
@@ -121,7 +122,8 @@ export default defineNuxtPlugin((app) => {
     const vuetify = createVuetify({
         ssr: true,
         components: {
-            VFileUpload
+            VFileUpload,
+            VFileUploadItem
         },
         theme: {
             themes: {
@@ -257,7 +259,8 @@ export default defineNuxtPlugin((app) => {
                 folderNetwork: mdiFolderNetwork,
                 folderMove: mdiFolderMoveOutline,
                 configBackup: mdiDownloadBoxOutline,
-                configRestore: mdiCloudUploadOutline
+                configRestore: mdiCloudUploadOutline,
+                jsonRestore: mdiCloudBraces
             },
             sets: {
                 mdi
