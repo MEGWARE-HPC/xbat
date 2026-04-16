@@ -5,7 +5,7 @@ import json
 
 from shared import httpErrors
 from shared.mongodb import MongoDB
-from shared.date import get_current_datetime
+from shared.date import get_current_datetime, get_current_filename_datetime_str
 from shared.helpers import sanitize_mongo, convert_jobscript_to_v0160
 from backend.restapi.user_helper import get_user_from_token
 from backend.restapi.api.configuration_folders import owner_folder
@@ -339,7 +339,7 @@ def export_backup():
 
     scope_name = scope_info["mode"]
     owner_name = scope_info["owner"] or "all"
-    timestamp = str(get_current_datetime()).replace(":", "-").replace(" ", "_")
+    timestamp = get_current_filename_datetime_str()
 
     filename = (
         f"configuration-backup-{scope_name}-{owner_name}-{timestamp}.json")
@@ -347,7 +347,10 @@ def export_backup():
     return Response(
         body,
         mimetype="application/json",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Access-Control-Expose-Headers": "Content-Disposition",
+        },
     )
 
 
