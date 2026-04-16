@@ -53,18 +53,21 @@ class FetchFactory {
     ): Promise<T | void> {
         const isFormData = data instanceof FormData;
         let headers: Record<string, string> = fetchOptions.headers || {};
+
         if (!isFormData) {
             headers = {
                 "Content-Type": "application/json",
                 ...fetchOptions.headers
             };
         }
+
         let body: BodyInit | undefined;
         if (isFormData) {
             body = data;
         } else if (data) {
             body = JSON.stringify(data);
         }
+
         return (
             this.fetch<T>(url, {
                 method,
@@ -74,7 +77,9 @@ class FetchFactory {
                 ...fetchOptions
             })
                 // error handling done via custom fetch onResponseError
-                .catch((error) => {})
+                .catch((error) => {
+                    throw error;
+                })
         );
     }
 }
