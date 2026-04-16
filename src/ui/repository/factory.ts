@@ -82,6 +82,41 @@ class FetchFactory {
                 })
         );
     }
+
+    async callRaw<T>(
+        method: HttpMethod,
+        url: string,
+        data?: object | FormData,
+        fetchOptions: {
+            responseType?: "json" | "blob" | "text";
+            headers?: Record<string, string>;
+        } = {}
+    ) {
+        const isFormData = data instanceof FormData;
+        let headers: Record<string, string> = fetchOptions.headers || {};
+
+        if (!isFormData) {
+            headers = {
+                "Content-Type": "application/json",
+                ...fetchOptions.headers
+            };
+        }
+
+        let body: BodyInit | undefined;
+        if (isFormData) {
+            body = data;
+        } else if (data) {
+            body = JSON.stringify(data);
+        }
+
+        return this.fetch.raw<T>(url, {
+            method,
+            body,
+            headers,
+            responseType: fetchOptions.responseType || "json",
+            ...fetchOptions
+        });
+    }
 }
 
 export default FetchFactory;

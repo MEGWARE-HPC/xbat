@@ -23,29 +23,66 @@ export type RestoreBackupResponse = {
 };
 
 class ConfigurationBackupModule extends FetchFactory {
-    private EXPORT_RESOURCE = "/configuration_backups/export";
+    private EXPORT_RESOURCE = "/configuration_backups/backup";
     private RESTORE_RESOURCE = "/configuration_backups/restore";
+
+    private getFilenameFromDisposition(disposition: string | null) {
+        if (!disposition) return "configuration-backup.json";
+
+        // RFC 5987: filename*=UTF-8''...
+        const filenameStarMatch = disposition.match(
+            /filename\*\s*=\s*UTF-8''([^;]+)/i
+        );
+        if (filenameStarMatch?.[1]) {
+            try {
+                return decodeURIComponent(filenameStarMatch[1]);
+            } catch {
+                return filenameStarMatch[1];
+            }
+        }
+
+        // Basic: filename="..."
+        const filenameMatch = disposition.match(/filename\s*=\s*"([^"]+)"/i);
+        if (filenameMatch?.[1]) {
+            return filenameMatch[1];
+        }
+
+        // Basic: filename=...
+        const unquotedMatch = disposition.match(/filename\s*=\s*([^;]+)/i);
+        if (unquotedMatch?.[1]) {
+            return unquotedMatch[1].trim();
+        }
+
+        return "configuration-backup.json";
+    }
 
     async download(scope: "self" | "owner" | "all" = "self", owner = "") {
         const query = new URLSearchParams();
         query.set("scope", scope);
         if (owner) query.set("owner", owner);
 
-        const blob = await this.call<Blob>(
+        const response = await this.callRaw<Blob>(
             "GET",
             `${this.EXPORT_RESOURCE}?${query.toString()}`,
             undefined,
             { responseType: "blob" }
         );
 
+        const blob = response?._data;
         if (!blob) {
             throw new Error("Failed to export backup");
         }
 
+        const disposition =
+            response.headers.get("content-disposition") ||
+            response.headers.get("Content-Disposition");
+
+        const filename = this.getFilenameFromDisposition(disposition);
+
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "configuration-backup.json";
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         a.remove();
