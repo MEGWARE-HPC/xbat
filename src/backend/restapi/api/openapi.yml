@@ -572,6 +572,35 @@ paths:
       security:
         - oauth2:
             - configurations_w
+  /configuration_backups/export:
+    get:
+      operationId: backend.restapi.api.configuration_backups.export_backup
+      tags:
+        - configuration
+      summary: Export configurations and folders as a backup file
+      parameters:
+        - in: query
+          name: scope
+          required: false
+          schema:
+            type: string
+            enum: [self, owner, all]
+            default: self
+        - in: query
+          name: owner
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successfully exported backup
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - configurations_r
   /projects:
     get:
       operationId: backend.restapi.api.projects.get_all
