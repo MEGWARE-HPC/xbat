@@ -572,7 +572,7 @@ paths:
       security:
         - oauth2:
             - configurations_w
-  /configuration_backups/export:
+  /configuration_backups/backup:
     get:
       operationId: backend.restapi.api.configuration_backups.export_backup
       tags:
@@ -584,7 +584,10 @@ paths:
           required: false
           schema:
             type: string
-            enum: [self, owner, all]
+            enum:
+              - self
+              - owner
+              - all
             default: self
         - in: query
           name: owner
@@ -601,6 +604,59 @@ paths:
       security:
         - oauth2:
             - configurations_r
+  /configuration_backups/restore:
+    post:
+      operationId: backend.restapi.api.configuration_backups.restore_backup
+      tags:
+        - configuration
+      summary: Restore configurations and folders from a backup file
+      parameters:
+        - in: query
+          name: scope
+          required: false
+          schema:
+            type: string
+            enum:
+              - self
+              - owner
+              - all
+            default: self
+        - in: query
+          name: owner
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: conflictStrategy
+          required: false
+          schema:
+            type: string
+            enum:
+              - rename
+              - skip
+            default: rename
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Successfully restored backup
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - configurations_w
   /projects:
     get:
       operationId: backend.restapi.api.projects.get_all
