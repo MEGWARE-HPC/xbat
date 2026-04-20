@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - a folder system for configurations, provide an improved folder browser experience, also add sorting functionality (#54)
+- backup/restore support for configurations (#166)
 
 ### Changed
 
