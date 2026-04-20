@@ -3,6 +3,7 @@ import type { NitroFetchRequest, $Fetch } from "nitropack";
 import BenchmarkModule from "~/repository/modules/benchmarks";
 import ConfigurationModule from "~/repository/modules/configurations";
 import ConfigurationFolderModule from "~/repository/modules/configurationFolders";
+import ConfigurationBackupModule from "~/repository/modules/configurationBackups";
 import SlurmModule from "~/repository/modules/slurm";
 import ProjectModule from "~/repository/modules/projects";
 import UserModule from "~/repository/modules/users";
@@ -18,6 +19,7 @@ interface ApiInstance {
     slurm: SlurmModule;
     configurations: ConfigurationModule;
     configurationFolders: ConfigurationFolderModule;
+    configurationBackups: ConfigurationBackupModule;
     projects: ProjectModule;
     users: UserModule;
     settings: SettingsModule;
@@ -91,6 +93,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         slurm: new SlurmModule(apiFetcher),
         configurations: new ConfigurationModule(apiFetcher),
         configurationFolders: new ConfigurationFolderModule(apiFetcher),
+        configurationBackups: new ConfigurationBackupModule(apiFetcher),
         projects: new ProjectModule(apiFetcher),
         users: new UserModule(apiFetcher),
         settings: new SettingsModule(apiFetcher),
