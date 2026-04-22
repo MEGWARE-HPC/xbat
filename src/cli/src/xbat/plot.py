@@ -154,7 +154,7 @@ def roofline_model(
         job_handles = []
         min_performance = np.inf
         for i, (job, v) in enumerate(jobs.items()):
-            performance = v["performance"]
+            performance = v["performance"] * 10e9 # Convert GFLOPs to FLOPs
             min_performance = min(min_performance, performance)
             marker = markers[i % len(markers)]
             handle = ax.scatter(
