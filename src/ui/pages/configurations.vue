@@ -5,6 +5,7 @@
                 <div class="left">
                     <ConfigurationSidebar
                         :configuration-cache="configurationCache"
+                        :folder-tree="folderTree"
                         :selected-id="state.currentEdit"
                         :user="$authStore.user"
                         :user-level="$authStore.userLevel"
@@ -604,7 +605,7 @@ const executeAction = async (action, target) => {
         delete configurationCache.value[state.currentEdit];
         if (!currentEditNotYetSaved.value) {
             await $api.configurations.delete(target);
-            fetchConfigurations();
+            await fetchConfigurations();
         }
         if (target == state.currentEdit) state.selectedEdit = [];
     }

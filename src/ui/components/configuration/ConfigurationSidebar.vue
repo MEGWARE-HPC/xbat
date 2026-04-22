@@ -224,6 +224,7 @@ import ConfigListItem from "./browser/ConfigListItem.vue";
 
 const props = defineProps({
     configurationCache: { type: Object, required: true },
+    folderTree: { type: Array, default: () => [] },
     selectedId: { type: String, default: null },
     user: { type: Object, required: true },
     userLevel: { type: Number, required: true },
@@ -231,13 +232,6 @@ const props = defineProps({
 });
 
 defineEmits(["select", "select-folder", "create", "duplicate", "delete"]);
-
-const { $api } = useNuxtApp();
-
-const { data: folderTree } = await useAsyncData(
-    `configuration-folders-tree-${props.user.user_name}`,
-    async () => (await $api.configurationFolders.get())?.data || []
-);
 
 const myMaxDepth = computed(() => (isManager.value ? 3 : 2));
 
@@ -259,12 +253,12 @@ const myConfigTitle = computed(() =>
 );
 
 const myHomeNode = computed(() => {
-    const roots = folderTree.value || [];
+    const roots = props.folderTree || [];
     return roots.find((n) => n?.name === props.user.user_name) || null;
 });
 
 const myFolderRoots = computed(() => {
-    const roots = folderTree.value || [];
+    const roots = props.folderTree || [];
     if (isManager.value) return roots;
 
     const home = myHomeNode.value;
