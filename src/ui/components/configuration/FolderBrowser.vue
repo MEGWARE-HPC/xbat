@@ -16,117 +16,233 @@
                         />
                         <span class="fb-title-text">{{ headerTitle }}</span>
                     </div>
-                </div>
 
-                <!-- Actions -->
-                <div class="fb-actions" v-if="canCreate">
-                    <div class="fb-action-group">
-                        <v-btn
-                            color="primary-light"
-                            prepend-icon="$newFile"
-                            @click="
-                                $emit('create-config', {
-                                    folderId: createCfgFolderId
-                                })
-                            "
+                    <div class="fb-header-actions" v-if="canCreate">
+                        <v-btn-group
+                            divided
+                            variant="text"
+                            density="comfortable"
+                            class="fb-toolbar"
                         >
-                            New Config
-                        </v-btn>
+                            <v-tooltip location="bottom">
+                                <template #activator="{ props: tipProps }">
+                                    <span
+                                        class="fb-toolbar-item"
+                                        v-bind="tipProps"
+                                    >
+                                        <v-btn
+                                            icon="$newFile"
+                                            color="primary-light"
+                                            @click="
+                                                $emit('create-config', {
+                                                    folderId: createCfgFolderId
+                                                })
+                                            "
+                                        />
+                                    </span>
+                                </template>
+                                <span>New Configuration</span>
+                            </v-tooltip>
 
-                        <v-btn
-                            color="primary-light"
-                            prepend-icon="$newFolder"
-                            @click="openCreateFolder()"
-                            :disabled="
-                                isSharedView || folderId.startsWith('__')
-                            "
-                        >
-                            New Folder
-                        </v-btn>
+                            <v-tooltip location="bottom">
+                                <template #activator="{ props: tipProps }">
+                                    <span
+                                        class="fb-toolbar-item"
+                                        v-bind="tipProps"
+                                    >
+                                        <v-btn
+                                            icon="$newFolder"
+                                            color="primary-light"
+                                            :disabled="
+                                                isSharedView ||
+                                                folderId.startsWith('__')
+                                            "
+                                            @click="openCreateFolder()"
+                                        />
+                                    </span>
+                                </template>
+                                <span>New Folder</span>
+                            </v-tooltip>
 
-                        <v-btn
-                            color="primary-light"
-                            prepend-icon="$configBackup"
-                            @click="openExportBackup()"
-                        >
-                            Export
-                        </v-btn>
+                            <v-tooltip location="bottom">
+                                <template #activator="{ props: tipProps }">
+                                    <span
+                                        class="fb-toolbar-item"
+                                        v-bind="tipProps"
+                                    >
+                                        <v-btn
+                                            icon="$configBackup"
+                                            color="primary-light"
+                                            @click="openExportBackup()"
+                                        />
+                                    </span>
+                                </template>
+                                <span>Export Backup</span>
+                            </v-tooltip>
 
-                        <v-btn
-                            color="primary-light"
-                            prepend-icon="$configRestore"
-                            @click="openRestoreBackup()"
-                        >
-                            Restore
-                        </v-btn>
+                            <v-tooltip location="bottom">
+                                <template #activator="{ props: tipProps }">
+                                    <span
+                                        class="fb-toolbar-item"
+                                        v-bind="tipProps"
+                                    >
+                                        <v-btn
+                                            icon="$configRestore"
+                                            color="primary-light"
+                                            @click="openRestoreBackup()"
+                                        />
+                                    </span>
+                                </template>
+                                <span>Restore Backup</span>
+                            </v-tooltip>
 
-                        <template v-if="hasSelect">
-                            <template v-if="mixedSelect">
-                                <v-btn
-                                    color="primary-light"
-                                    prepend-icon="$trashCan"
-                                    @click="openDelete()"
-                                >
-                                    Delete
-                                </v-btn>
+                            <template v-if="hasSelect">
+                                <template v-if="mixedSelect">
+                                    <v-tooltip location="bottom">
+                                        <template
+                                            #activator="{ props: tipProps }"
+                                        >
+                                            <span
+                                                class="fb-toolbar-item"
+                                                v-bind="tipProps"
+                                            >
+                                                <v-btn
+                                                    icon="$trashCan"
+                                                    color="primary-light"
+                                                    @click="openDelete()"
+                                                />
+                                            </span>
+                                        </template>
+                                        <span>Delete</span>
+                                    </v-tooltip>
+                                </template>
+
+                                <template v-else>
+                                    <v-tooltip
+                                        v-if="canDownload"
+                                        location="bottom"
+                                    >
+                                        <template
+                                            #activator="{ props: tipProps }"
+                                        >
+                                            <span
+                                                class="fb-toolbar-item"
+                                                v-bind="tipProps"
+                                            >
+                                                <v-btn
+                                                    icon="$download"
+                                                    color="primary-light"
+                                                    @click="downloadSelected()"
+                                                />
+                                            </span>
+                                        </template>
+                                        <span>Download</span>
+                                    </v-tooltip>
+
+                                    <v-tooltip
+                                        v-if="canDuplicate"
+                                        location="bottom"
+                                    >
+                                        <template
+                                            #activator="{ props: tipProps }"
+                                        >
+                                            <span
+                                                class="fb-toolbar-item"
+                                                v-bind="tipProps"
+                                            >
+                                                <v-btn
+                                                    icon="$duplicate"
+                                                    color="primary-light"
+                                                    @click="duplicateConfig()"
+                                                />
+                                            </span>
+                                        </template>
+                                        <span>Duplicate</span>
+                                    </v-tooltip>
+
+                                    <v-tooltip
+                                        v-if="canRename"
+                                        location="bottom"
+                                    >
+                                        <template
+                                            #activator="{ props: tipProps }"
+                                        >
+                                            <span
+                                                class="fb-toolbar-item"
+                                                v-bind="tipProps"
+                                            >
+                                                <v-btn
+                                                    icon="$edit"
+                                                    color="primary-light"
+                                                    @click="openRename()"
+                                                />
+                                            </span>
+                                        </template>
+                                        <span>Rename</span>
+                                    </v-tooltip>
+
+                                    <v-tooltip
+                                        v-if="canShare"
+                                        location="bottom"
+                                    >
+                                        <template
+                                            #activator="{ props: tipProps }"
+                                        >
+                                            <span
+                                                class="fb-toolbar-item"
+                                                v-bind="tipProps"
+                                            >
+                                                <v-btn
+                                                    icon="$share"
+                                                    color="primary-light"
+                                                    @click="openShare()"
+                                                />
+                                            </span>
+                                        </template>
+                                        <span>Share</span>
+                                    </v-tooltip>
+
+                                    <v-tooltip v-if="canMove" location="bottom">
+                                        <template
+                                            #activator="{ props: tipProps }"
+                                        >
+                                            <span
+                                                class="fb-toolbar-item"
+                                                v-bind="tipProps"
+                                            >
+                                                <v-btn
+                                                    icon="$folderMove"
+                                                    color="primary-light"
+                                                    @click="openMove()"
+                                                />
+                                            </span>
+                                        </template>
+                                        <span>Move to</span>
+                                    </v-tooltip>
+
+                                    <v-tooltip
+                                        v-if="canDelete"
+                                        location="bottom"
+                                    >
+                                        <template
+                                            #activator="{ props: tipProps }"
+                                        >
+                                            <span
+                                                class="fb-toolbar-item"
+                                                v-bind="tipProps"
+                                            >
+                                                <v-btn
+                                                    icon="$trashCan"
+                                                    color="primary-light"
+                                                    @click="openDelete()"
+                                                />
+                                            </span>
+                                        </template>
+                                        <span>Delete</span>
+                                    </v-tooltip>
+                                </template>
                             </template>
-
-                            <template v-else>
-                                <v-btn
-                                    v-if="canDownload"
-                                    color="primary-light"
-                                    prepend-icon="$download"
-                                    @click="downloadSelected()"
-                                >
-                                    Download
-                                </v-btn>
-
-                                <v-btn
-                                    v-if="canDuplicate"
-                                    color="primary-light"
-                                    prepend-icon="$duplicate"
-                                    @click="duplicateConfig()"
-                                >
-                                    Duplicate
-                                </v-btn>
-
-                                <v-btn
-                                    v-if="canRename"
-                                    color="primary-light"
-                                    prepend-icon="$edit"
-                                    @click="openRename()"
-                                >
-                                    Rename
-                                </v-btn>
-
-                                <v-btn
-                                    v-if="canShare"
-                                    color="primary-light"
-                                    prepend-icon="$share"
-                                    @click="openShare()"
-                                >
-                                    Share
-                                </v-btn>
-
-                                <v-btn
-                                    v-if="canMove"
-                                    color="primary-light"
-                                    prepend-icon="$folderMove"
-                                    @click="openMove()"
-                                >
-                                    Move to
-                                </v-btn>
-
-                                <v-btn
-                                    v-if="canDelete"
-                                    color="primary-light"
-                                    prepend-icon="$trashCan"
-                                    @click="openDelete()"
-                                >
-                                    Delete
-                                </v-btn>
-                            </template>
-                        </template>
+                        </v-btn-group>
                     </div>
                 </div>
 
@@ -1571,7 +1687,17 @@ const applyDelete = async () => {
 .fb-header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    gap: 16px;
     margin-bottom: 10px;
+}
+
+.fb-header-actions {
+    margin-left: auto;
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
 }
 
 .fb-title {
@@ -1579,6 +1705,7 @@ const applyDelete = async () => {
     align-items: center;
     font-size: 1.05rem;
     font-weight: 600;
+    min-width: 0;
 }
 
 .fb-title-text {
@@ -1587,24 +1714,15 @@ const applyDelete = async () => {
     text-overflow: ellipsis;
 }
 
-.fb-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 12px 0 15px;
-    flex-wrap: wrap;
+.fb-toolbar-item {
+    display: inline-flex;
 }
 
-.fb-action-group {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-    align-items: center;
-}
-
-.fb-action-group :deep(.v-btn) {
-    min-width: 145px;
-    justify-content: center;
+.fb-toolbar :deep(.v-btn) {
+    min-width: 34px;
+    width: 34px;
+    height: 34px;
+    padding: 0;
 }
 
 .fb-list {
