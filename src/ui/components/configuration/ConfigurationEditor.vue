@@ -6,6 +6,17 @@
         </div>
 
         <div v-else>
+            <div class="editor-back-row">
+                <v-btn
+                    variant="text"
+                    color="primary-light"
+                    prepend-icon="$arrowLeft"
+                    class="editor-back-btn"
+                    @click="$emit('close')"
+                >
+                    Back to Folder Browser
+                </v-btn>
+            </div>
             <v-expansion-panels
                 :modelValue="settingsExpanded ? 'settings' : null"
                 @update:modelValue="$emit('update:settingsExpanded', !!$event)"
@@ -192,8 +203,9 @@
                         icon="$close"
                         variant="text"
                         density="comfortable"
-                        color="font-light"
-                        title="Close editor"
+                        color="primary-light"
+                        size="small"
+                        title="Close Editor"
                         @click="$emit('close')"
                     />
                 </v-card-title>
@@ -526,5 +538,18 @@ const variantTabModel = computed({
     display: flex;
     align-items: center;
     justify-content: space-between;
+}
+
+.editor-back-row {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: -28px;
+    margin-bottom: 4px;
+}
+
+.editor-back-btn {
+    min-width: 0 !important;
+    text-transform: none;
 }
 </style>
