@@ -47,7 +47,7 @@ import {
     mdiShareVariantOutline,
     mdiContentDuplicate,
     mdiTrashCanOutline,
-    mdiFileDocumentPlusOutline,
+    mdiFileDocumentPlus,
     mdiCompare,
     mdiChevronDown,
     mdiChevronRight,
@@ -101,13 +101,14 @@ import {
     mdiBackupRestore,
     mdiFolder,
     mdiFolderOpen,
-    mdiFolderPlusOutline,
+    mdiFolderPlus,
     mdiArrowLeftTop,
     mdiFolderNetwork,
-    mdiFolderMoveOutline,
-    mdiDownloadBoxOutline,
-    mdiCloudUploadOutline,
-    mdiCloudBraces
+    mdiFolderMove,
+    mdiDownloadBox,
+    mdiCloudBraces,
+    mdiShareVariant,
+    mdiTrashCan
 } from "@mdi/js";
 
 /*
@@ -210,9 +211,11 @@ export default defineNuxtPlugin((app) => {
                 currency: mdiCurrencyUsd,
                 server: mdiServer,
                 share: mdiShareVariantOutline,
+                shareVariant: mdiShareVariant,
                 duplicate: mdiContentDuplicate,
                 trashCan: mdiTrashCanOutline,
-                newFile: mdiFileDocumentPlusOutline,
+                trashCanDv: mdiTrashCan,
+                newFile: mdiFileDocumentPlus,
                 compare: mdiCompare,
                 revokeshared: mdiAccountMultipleRemoveOutline,
                 cancel: mdiCancel,
@@ -255,11 +258,10 @@ export default defineNuxtPlugin((app) => {
                 backupRestore: mdiBackupRestore,
                 folder: mdiFolder,
                 folderOpen: mdiFolderOpen,
-                newFolder: mdiFolderPlusOutline,
+                newFolder: mdiFolderPlus,
                 folderNetwork: mdiFolderNetwork,
-                folderMove: mdiFolderMoveOutline,
-                configBackup: mdiDownloadBoxOutline,
-                configRestore: mdiCloudUploadOutline,
+                folderMove: mdiFolderMove,
+                configBackup: mdiDownloadBox,
                 jsonRestore: mdiCloudBraces
             },
             sets: {
