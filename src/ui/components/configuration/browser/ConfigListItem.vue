@@ -37,17 +37,20 @@
                         variant="text"
                         density="compact"
                         v-if="isHovering && userLevel >= UserLevelEnum.user"
+                        class="sb-action-group"
                     >
                         <v-btn
+                            class="sb-action-btn"
                             title="Duplicate Configuration"
-                            size="small"
+                            size="x-small"
                             icon="$duplicate"
                             @click.stop="$emit('duplicate', id)"
                         />
                         <v-btn
                             v-if="canDelete"
+                            class="sb-action-btn"
                             title="Delete Configuration"
-                            size="small"
+                            size="x-small"
                             icon="$trashCan"
                             @click.stop="$emit('delete', id)"
                         />
@@ -108,5 +111,21 @@ const canDelete = computed(() => {
 .sb-icon {
     margin-inline-start: 22px;
     margin-inline-end: 6px;
+}
+
+:deep(.sb-action-group) {
+    height: 24px;
+    align-items: center;
+}
+
+:deep(.sb-action-group .v-btn) {
+    min-width: 24px !important;
+    height: 24px !important;
+    width: 24px !important;
+    padding: 0 !important;
+}
+
+:deep(.v-list-item__append) {
+    align-self: center;
 }
 </style>
