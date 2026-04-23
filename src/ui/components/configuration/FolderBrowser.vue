@@ -757,71 +757,168 @@
             </v-card>
         </v-dialog>
 
-        <v-dialog v-model="RestoreResultDlg" max-width="720">
-            <v-card>
-                <v-card-title>Restore Summary</v-card-title>
+        <v-dialog v-model="RestoreResultDlg" max-width="760">
+            <v-card class="restore-result-card">
+                <v-card-title class="restore-result-title">
+                    <div class="restore-result-title-wrap">
+                        <v-icon
+                            icon="$cloudUpload"
+                            class="restore-result-title-icon"
+                        />
+                        <div class="restore-result-title-texts">
+                            <div class="restore-result-title-main">
+                                Restore Summary
+                            </div>
+                            <div class="restore-result-title-sub">
+                                Backup restore completed successfully
+                            </div>
+                        </div>
+                    </div>
+                </v-card-title>
+
                 <v-card-text v-if="restoreSummary">
-                    <div class="mb-3">
-                        <div>
-                            <strong>Mode:</strong>
-                            {{ restoreSummary.restoreMode }}
+                    <div class="restore-meta-card">
+                        <div class="restore-meta-card-title">
+                            Restore Details
                         </div>
-                        <div>
-                            <strong>Conflict strategy:</strong>
-                            {{ restoreSummary.conflictStrategy }}
-                        </div>
-                        <div v-if="restoreSummary.targetOwner">
-                            <strong>Target owner:</strong>
-                            {{ restoreSummary.targetOwner }}
+
+                        <div class="restore-meta-grid">
+                            <div class="restore-meta-row">
+                                <span class="restore-meta-label"
+                                    >Restore To</span
+                                >
+                                <span class="restore-meta-value">
+                                    {{
+                                        restoreModeLabel(
+                                            restoreSummary.restoreMode
+                                        )
+                                    }}
+                                </span>
+                            </div>
+
+                            <div class="restore-meta-row">
+                                <span class="restore-meta-label"
+                                    >Duplicate Handling</span
+                                >
+                                <span class="restore-meta-value">
+                                    {{ restoreSummary.conflictStrategy }}
+                                </span>
+                            </div>
+
+                            <div
+                                v-if="restoreSummary.targetOwner"
+                                class="restore-meta-row"
+                            >
+                                <span class="restore-meta-label"
+                                    >Destination</span
+                                >
+                                <span class="restore-meta-value">
+                                    {{ restoreSummary.targetOwner }}
+                                </span>
+                            </div>
                         </div>
                     </div>
 
-                    <v-list density="compact">
-                        <v-list-item
-                            title="Folders created"
-                            :subtitle="String(restoreSummary.foldersCreated)"
-                        />
-                        <v-list-item
-                            title="Folders merged"
-                            :subtitle="String(restoreSummary.foldersMerged)"
-                        />
-                        <v-list-item
-                            title="Folders renamed"
-                            :subtitle="String(restoreSummary.foldersRenamed)"
-                        />
-                        <v-list-item
-                            title="Folders overwritten"
-                            :subtitle="
-                                String(restoreSummary.foldersOverwritten)
-                            "
-                        />
-                        <v-list-item
-                            title="Configurations created"
-                            :subtitle="
-                                String(restoreSummary.configurationsCreated)
-                            "
-                        />
-                        <v-list-item
-                            title="Configurations skipped"
-                            :subtitle="
-                                String(restoreSummary.configurationsSkipped)
-                            "
-                        />
-                        <v-list-item
-                            title="Configurations renamed"
-                            :subtitle="
-                                String(restoreSummary.configurationsRenamed)
-                            "
-                        />
-                        <v-list-item
-                            title="Configurations overwritten"
-                            :subtitle="
-                                String(restoreSummary.configurationsOverwritten)
-                            "
-                        />
-                    </v-list>
+                    <div class="restore-stat-grid">
+                        <div class="restore-stat-card">
+                            <div class="restore-stat-card-title">
+                                Folder Results
+                            </div>
+
+                            <div class="restore-summary-list">
+                                <div class="restore-summary-row">
+                                    <span class="restore-summary-label"
+                                        >Created</span
+                                    >
+                                    <span class="restore-summary-value">
+                                        {{ restoreSummary.foldersCreated }}
+                                    </span>
+                                </div>
+
+                                <div class="restore-summary-row">
+                                    <span class="restore-summary-label"
+                                        >Matched Existing</span
+                                    >
+                                    <span class="restore-summary-value">
+                                        {{ restoreSummary.foldersMerged }}
+                                    </span>
+                                </div>
+
+                                <div class="restore-summary-row">
+                                    <span class="restore-summary-label"
+                                        >Renamed</span
+                                    >
+                                    <span class="restore-summary-value">
+                                        {{ restoreSummary.foldersRenamed }}
+                                    </span>
+                                </div>
+
+                                <div class="restore-summary-row">
+                                    <span class="restore-summary-label">
+                                        Overwritten
+                                    </span>
+                                    <span class="restore-summary-value">
+                                        {{ restoreSummary.foldersOverwritten }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="restore-stat-card">
+                            <div class="restore-stat-card-title">
+                                Configuration Results
+                            </div>
+
+                            <div class="restore-summary-list">
+                                <div class="restore-summary-row">
+                                    <span class="restore-summary-label"
+                                        >Created</span
+                                    >
+                                    <span class="restore-summary-value">
+                                        {{
+                                            restoreSummary.configurationsCreated
+                                        }}
+                                    </span>
+                                </div>
+
+                                <div class="restore-summary-row">
+                                    <span class="restore-summary-label"
+                                        >Skipped</span
+                                    >
+                                    <span class="restore-summary-value">
+                                        {{
+                                            restoreSummary.configurationsSkipped
+                                        }}
+                                    </span>
+                                </div>
+
+                                <div class="restore-summary-row">
+                                    <span class="restore-summary-label"
+                                        >Renamed</span
+                                    >
+                                    <span class="restore-summary-value">
+                                        {{
+                                            restoreSummary.configurationsRenamed
+                                        }}
+                                    </span>
+                                </div>
+
+                                <div class="restore-summary-row">
+                                    <span class="restore-summary-label">
+                                        Overwritten
+                                    </span>
+                                    <span class="restore-summary-value">
+                                        {{
+                                            restoreSummary.configurationsOverwritten
+                                        }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </v-card-text>
-                <v-card-actions>
+
+                <v-card-actions class="restore-result-actions">
                     <v-spacer />
                     <v-btn
                         color="primary-light"
@@ -1225,6 +1322,19 @@ const formatDate = (v) => {
         hour: "2-digit",
         minute: "2-digit"
     }).format(d);
+};
+
+const restoreModeLabel = (mode) => {
+    switch (String(mode || "").toLowerCase()) {
+        case "self":
+            return "My Configurations";
+        case "owner":
+            return "Specific User";
+        case "all":
+            return "All Users";
+        default:
+            return String(mode || "—");
+    }
 };
 
 const CreateFolderDlg = ref(false);
@@ -1897,5 +2007,160 @@ const applyDelete = async () => {
 
 .fb-head-sort-icon {
     flex: 0 0 auto;
+}
+
+.restore-result-card {
+    overflow: hidden;
+}
+
+.restore-result-title {
+    padding-bottom: 10px;
+}
+
+.restore-result-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.restore-result-title-icon {
+    color: $primary-light;
+    opacity: 0.9;
+}
+
+.restore-result-title-texts {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.restore-result-title-main {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: $font-base;
+    line-height: 1.2;
+}
+
+.restore-result-title-sub {
+    font-size: 0.82rem;
+    color: $font-light;
+    margin-top: 2px;
+}
+
+.restore-meta-card {
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(var(--v-theme-surface-light), 0.55);
+    border: 1px solid rgba(var(--v-theme-font-base), 0.06);
+    margin-bottom: 14px;
+}
+
+.restore-meta-card-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: $font-base;
+    margin-bottom: 10px;
+}
+
+.restore-meta-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.restore-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.restore-meta-label {
+    color: $font-base;
+    font-size: 0.88rem;
+}
+
+.restore-meta-value {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgba(var(--v-theme-primary-light), 0.12);
+    color: $primary-light;
+    font-size: 0.84rem;
+    font-weight: 600;
+    line-height: 1;
+    text-transform: capitalize;
+    white-space: nowrap;
+}
+
+.restore-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.restore-stat-card {
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(var(--v-theme-surface-light), 0.6);
+    border: 1px solid rgba(var(--v-theme-font-base), 0.06);
+}
+
+.restore-stat-card-title {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: $font-base;
+    margin-bottom: 10px;
+}
+
+.restore-summary-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.restore-summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(var(--v-theme-background), 0.45);
+    border: 1px solid rgba(var(--v-theme-font-base), 0.05);
+}
+
+.restore-summary-label {
+    color: $font-base;
+    font-size: 0.9rem;
+}
+
+.restore-summary-value {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: $highlight;
+    color: $primary-light;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    line-height: 1;
+    flex: 0 0 auto;
+}
+
+.restore-result-actions {
+    padding-top: 6px;
+}
+
+@media (max-width: 760px) {
+    .restore-stat-grid {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
