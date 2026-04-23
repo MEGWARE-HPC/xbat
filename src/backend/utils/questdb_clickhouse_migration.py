@@ -203,7 +203,7 @@ def _convert_csv_file(csv_path: Path,
 
     # ClickHouse column order
     clickhouse_order = [
-        'jobId', 'node', 'level', 'device', 'core', 'numa', 'socket', 'thread',
+        'jobId', 'node', 'level', 'device', 'thread', 'core', 'numa', 'socket',
         'value', 'timestamp'
     ]
 
