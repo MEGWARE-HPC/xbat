@@ -132,27 +132,6 @@
 
                                 <template v-else>
                                     <v-tooltip
-                                        v-if="canDownload"
-                                        location="bottom"
-                                    >
-                                        <template
-                                            #activator="{ props: tipProps }"
-                                        >
-                                            <span
-                                                class="fb-toolbar-item"
-                                                v-bind="tipProps"
-                                            >
-                                                <v-btn
-                                                    icon="$download"
-                                                    color="primary-light"
-                                                    @click="downloadSelected()"
-                                                />
-                                            </span>
-                                        </template>
-                                        <span>Download</span>
-                                    </v-tooltip>
-
-                                    <v-tooltip
                                         v-if="canDuplicate"
                                         location="bottom"
                                     >
@@ -1375,6 +1354,7 @@ const createFolder = async () => {
     emit("refresh");
 };
 
+// TODO: Provide a download feature for specific configurations (v2.1.0)
 const downloadSelected = () => {};
 
 const openExportBackup = () => {
@@ -1732,16 +1712,12 @@ const applyDelete = async () => {
     align-items: center;
     padding: 2px 5px;
     border-radius: 12px;
-    border: 1px solid rgba(var(--v-theme-font-base), 0.14);
-    background: linear-gradient(
-        180deg,
-        rgba(var(--v-theme-surface), 0.98) 0%,
-        rgba(var(--v-theme-surface), 0.9) 100%
-    );
+    border: 1px solid rgba(var(--v-theme-font-base), 0.12);
+    background: rgba(var(--v-theme-surface-light), 0.35);
     box-shadow:
-        0 2px 8px rgba(0, 0, 0, 0.08),
-        inset 0 1px 0 rgba(255, 255, 255, 0.24),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+        0 2px 8px rgba(0, 0, 0, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.02);
     backdrop-filter: blur(8px);
 }
 
@@ -1749,12 +1725,7 @@ const applyDelete = async () => {
     width: 1px;
     height: 22px;
     margin: 0 6px;
-    background: linear-gradient(
-        180deg,
-        rgba(var(--v-theme-font-base), 0.06) 0%,
-        rgba(var(--v-theme-font-base), 0.16) 50%,
-        rgba(var(--v-theme-font-base), 0.06) 100%
-    );
+    background: rgba(var(--v-theme-font-base), 0.12);
     flex: 0 0 auto;
 }
 
@@ -1772,6 +1743,7 @@ const applyDelete = async () => {
     height: 34px;
     padding: 0;
     border-radius: 9px;
+    color: $primary-light;
     transition:
         background 0.15s ease,
         box-shadow 0.15s ease,
@@ -1779,8 +1751,11 @@ const applyDelete = async () => {
 }
 
 .fb-toolbar :deep(.v-btn:hover) {
-    background: rgba(var(--v-theme-primary-light), 0.08);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    background: $surface-light;
+    box-shadow:
+        0 3px 10px rgba(0, 0, 0, 0.07),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.025);
 }
 
 .fb-toolbar :deep(.v-btn:active) {
