@@ -27,6 +27,7 @@ export const useGraph = () => {
     const { createLayout, createTrace, calculateTimestamps } = useGraphBase();
 
     const generateGraph = (graphId: string): Graph => {
+        const tGraph = performance.now();
         const { $graphStore } = useNuxtApp();
         const storeGraph = $graphStore.useStoreGraph(graphId, "default");
 
@@ -168,10 +169,12 @@ export const useGraph = () => {
         });
 
         // TODO fix ts
-        return {
+        const result = {
             traces: all.traces,
             layout: layout
         };
+        console.debug(`[xbat:perf] generateGraph(${graphId}) — ${all.traces.length} traces: ${(performance.now() - tGraph).toFixed(2)}ms`);
+        return result;
     };
 
     const assembleGraph = ({
@@ -189,6 +192,7 @@ export const useGraph = () => {
         unifiedBaseUnit: string;
         unifiedUnitIndex: number;
     }) => {
+        const tAssemble = performance.now();
         const { $graphStore } = useNuxtApp();
 
         const query = storeGraph.query.value;
@@ -255,7 +259,10 @@ export const useGraph = () => {
                 1000,
                 parsedUnit.index - unifiedUnitIndex
             );
-            const values = metric.values.map((v) => v * conversionFactor);
+            // Avoid allocating a new array when no conversion is needed
+            const values = conversionFactor === 1
+                ? metric.values
+                : metric.values.map((v) => v * conversionFactor);
             xMax = Math.max(values.length, xMax);
 
             let visible: string | boolean = settings.visible.length
@@ -286,7 +293,8 @@ export const useGraph = () => {
                         }
                     }
                 }
-                const isZero = ArrayUtils.sum(values) == 0;
+                // Early-exit zero check: sum() iterates every element; some() stops at first non-zero
+                const isZero = !values.some((v) => v !== 0);
 
                 if (
                     (isZero && preferences.hideInactive == "disabled") ||
@@ -545,13 +553,15 @@ export const useGraph = () => {
             }
         }
 
-        return {
+        const assembleResult = {
             traces,
             dataCount,
             unit,
             baseUnit: parsedUnit.base,
             unitIndex: parsedUnit.index
         };
+        console.debug(`[xbat:perf] assembleGraph(job=${jobId}) \u2014 ${traces.length} traces: ${(performance.now() - tAssemble).toFixed(2)}ms`);
+        return assembleResult;
     };
 
     return { generateGraph };

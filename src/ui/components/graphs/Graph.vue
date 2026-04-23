@@ -100,7 +100,7 @@
                 ></v-btn>
             </v-card-title>
             <v-card-text>
-                <ReactiveGraph
+                <ReactiveGraphECharts
                     :style="`height: ${props.height}px;`"
                     :graphId="props.graphId"
                     ref="graphRef"
@@ -113,7 +113,7 @@
                     v-if="
                         Object.keys(metrics.value || {}).length || !props.noData
                     "
-                ></ReactiveGraph>
+                ></ReactiveGraphECharts>
                 <!-- graph already displays annotation stating the same issues but graph is never rendered when there are no metics - use this as fallback -->
                 <div
                     v-else

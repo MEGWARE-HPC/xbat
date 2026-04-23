@@ -1,8 +1,60 @@
-import Plotly from "plotly.js-basic-dist-min";
+// ---------------------------------------------------------------------------
+// Layout — ECharts-oriented; structurally compatible with Plotly.Layout for
+// the legacy ReactiveGraph renderer (spike/spikexxx fields kept for that path)
+// ---------------------------------------------------------------------------
+export interface GraphLayout {
+    showlegend?: boolean;
+    paper_bgcolor?: string;
+    plot_bgcolor?: string;
+    font?: { family?: string; size?: number; color?: string };
+    autosize?: boolean;
+    hovermode?: string;
+    hoverdistance?: number;
+    legend?: { valign?: string; bgcolor?: string };
+    margin?: { l?: number; r?: number; b?: number; t?: number; pad?: number };
+    annotations?: Array<{
+        text?: string;
+        xref?: string;
+        yref?: string;
+        showarrow?: boolean;
+        font?: { size?: number };
+    }>;
+    xaxis?: {
+        showgrid?: boolean;
+        zeroline?: boolean;
+        rangemode?: string;
+        range?: number[];
+        nticks?: number;
+        autorange?: boolean | "reversed";
+        autotick?: boolean;
+        title?: { text?: string };
+        type?: string;
+        rangeslider?: Record<string, unknown> | object;
+        // Plotly crosshair/spike — ignored by ECharts, used by ReactiveGraph
+        spikesnap?: string;
+        spikethickness?: number;
+        spikecolor?: string;
+        spikemode?: string;
+        spikedash?: string;
+    };
+    yaxis?: {
+        showline?: boolean;
+        rangemode?: string;
+        range?: number[];
+        autorange?: boolean | "reversed";
+        title?: { text?: string };
+        type?: string;
+        spikesnap?: string;
+        spikethickness?: number;
+        spikecolor?: string;
+        spikemode?: string;
+        spikedash?: string;
+    };
+}
 
 export interface Graph {
     traces: Trace[];
-    layout: Partial<Plotly.Layout>;
+    layout: GraphLayout;
 }
 
 export interface GraphFont {
@@ -96,6 +148,15 @@ export interface Trace {
     displayName: string;
     stackgroup?: string;
     fill?: string;
+    // Fields populated by createTrace / createRooflineTrace
+    x?: string[] | number[];
+    y?: number[];
+    mode?: string;
+    type?: string;
+    hoverinfo?: string;
+    legendgroup?: string;
+    line?: { width?: number; color?: string };
+    marker?: { color?: string; size?: number; symbol?: string };
 }
 
 export interface Statistics {

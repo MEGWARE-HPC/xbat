@@ -296,8 +296,8 @@ watch(
 
                 await Plotly.react(
                     graphRef.value,
-                    g.traces.filter((t) => t.visible != "hidden"),
-                    g.layout as Partial<Plotly.Layout>,
+                    g.traces.filter((t) => t.visible != "hidden") as unknown as Plotly.Data[],
+                    g.layout as unknown as Partial<Plotly.Layout>,
                     plotlySettings as Partial<Plotly.Config>
                 );
 
@@ -324,7 +324,7 @@ watch(
         // activating Plotlys pan/zoom triggers relayout
         if ("dragmode" in newLayout || "autosize" in newLayout) return;
 
-        const xaxis = graphRef.value.layout.xaxis;
+        const xaxis = (graphRef.value.layout as any).xaxis;
 
         // graph already using autorange
         if (xaxis.autorange && newLayout["xaxis.autorange"] && xaxis.autorange)

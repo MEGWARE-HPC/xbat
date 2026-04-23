@@ -1,9 +1,12 @@
 import { deepClone } from "~/utils/misc";
 import { toDDHHMMSS } from "~/utils/date";
-import Plotly from "plotly.js-basic-dist-min";
+import type { GraphLayout } from "~/types/graph";
 
 export const LEGEND_WIDTH = 180;
 
+// Timestamp arrays depend only on (points, interval) — cache them across all callers.
+// With N traces sharing the same interval, this reduces N string-array builds to 1.
+const _timestampCache = new Map<string, string[]>();
 export const groupLabels: { [key: string]: string } = {
     cache: "Cache",
     cpu: "CPU",
@@ -14,7 +17,9 @@ export const groupLabels: { [key: string]: string } = {
     gpu: "GPU"
 };
 
-const graphMarginsWithRangeslider: Plotly.Margin = {
+type GraphMargin = { l: number; r: number; b: number; t: number; pad: number };
+
+const graphMarginsWithRangeslider: GraphMargin = {
     l: 60,
     r: LEGEND_WIDTH,
     b: 10,
@@ -22,7 +27,7 @@ const graphMarginsWithRangeslider: Plotly.Margin = {
     pad: 0
 };
 
-const graphMargins: Plotly.Margin = {
+const graphMargins: GraphMargin = {
     l: 60,
     r: LEGEND_WIDTH,
     b: 60,
@@ -30,15 +35,16 @@ const graphMargins: Plotly.Margin = {
     pad: 0
 };
 
-const spike: Partial<Plotly.LayoutAxis> = {
-    spikesnap: "cursor",
+// Plotly crosshair defaults (ignored by ECharts renderer, used by ReactiveGraph)
+const spike = {
+    spikesnap: "cursor" as const,
     spikethickness: -2,
     spikecolor: "gray",
-    spikemode: "across",
+    spikemode: "across" as const,
     spikedash: "3px"
 };
 
-const defaultLayout: Partial<Plotly.Layout> = {
+const defaultLayout: GraphLayout = {
     xaxis: {
         showgrid: true,
         zeroline: false,
@@ -102,13 +108,17 @@ export const useGraphBase = () => {
         };
     };
 
-    const calculateTimestamps = (points: number, interval: number) => {
-        let timestamps = [];
+    const calculateTimestamps = (points: number, interval: number): string[] => {
+        const key = `${points}:${interval}`;
+        const cached = _timestampCache.get(key);
+        if (cached) return cached;
+        const timestamps: string[] = [];
         let seconds = 0;
         for (let i = 0; i < points; i++) {
             timestamps.push(toDDHHMMSS(seconds));
             seconds += interval;
         }
+        _timestampCache.set(key, timestamps);
         return timestamps;
     };
 
@@ -127,14 +137,14 @@ export const useGraphBase = () => {
         dataCount: number;
         yTitle?: string;
         xTitle?: string;
-        autorange?: Plotly.LayoutAxis["autorange"];
+        autorange?: boolean | "reversed";
         rangeslider?: boolean;
-        xType?: Plotly.LayoutAxis["type"];
-        yType?: Plotly.LayoutAxis["type"];
-        xAutotick?: Plotly.LayoutAxis["autotick"];
+        xType?: string;
+        yType?: string;
+        xAutotick?: boolean;
         noData?: boolean;
         showLegend?: boolean;
-    }): Partial<Plotly.Layout> => {
+    }): GraphLayout => {
         let layout = deepClone(defaultLayout);
         // always retrieve current colors as they may change when switching themes
         const layoutColors = process.client ? getColors() : {};

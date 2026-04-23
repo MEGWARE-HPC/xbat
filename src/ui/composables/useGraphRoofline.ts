@@ -216,6 +216,7 @@ export const useGraphRoofline = () => {
     };
 
     const generateRooflineGraph = (graphId: string): Graph => {
+        const tGraph = performance.now();
         const { $graphStore } = useNuxtApp();
         const storeGraph = $graphStore.useStoreGraph(graphId, "roofline");
 
@@ -272,8 +273,12 @@ export const useGraphRoofline = () => {
             traceCount
         );
 
+        const allTraces = [...markers, ...traces];
+        console.debug(
+            `[xbat:perf] generateRooflineGraph(${graphId}) \u2014 ${allTraces.length} traces: ${(performance.now() - tGraph).toFixed(2)}ms`
+        );
         return {
-            traces: [...markers, ...traces],
+            traces: allTraces,
             layout: defaultLayout
         };
     };

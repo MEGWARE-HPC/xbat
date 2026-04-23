@@ -177,10 +177,11 @@ const exportImg = async (
     download(name, await getImageBase64(properties), "base64");
 };
 
-// Convert storeGraph.graph (Plotly-format) to ECharts option
+// Convert graph data to ECharts option
 const buildOption = (g: Graph): ECOption => {
-    const layout = g.layout as any;
-    const traces = g.traces.filter((t: any) => t.visible !== "hidden");
+    const t0 = performance.now();
+    const layout = g.layout;
+    const traces = g.traces.filter((t) => t.visible !== "hidden");
 
     const hasRangeslider = !!layout?.xaxis?.rangeslider;
     const showLegend = layout?.showlegend !== false;
@@ -190,7 +191,7 @@ const buildOption = (g: Graph): ECOption => {
     const bgColor = layout?.paper_bgcolor ?? "transparent";
     const fontColor = layout?.font?.color ?? "";
     const fontFamily = layout?.font?.family ?? "Source Code Pro";
-    const noDataAnnotation = layout?.annotations?.length > 0;
+    const noDataAnnotation = (layout?.annotations?.length ?? 0) > 0;
 
     // x-axis values from first trace with data
     const xData: string[] =
@@ -215,14 +216,14 @@ const buildOption = (g: Graph): ECOption => {
         gridRight: right,
         gridBottom: bottom,
     });
-    const hoverSeriesData: HoverSeriesItem[] = traces.map((trace: any) => ({
+    const hoverSeriesData: HoverSeriesItem[] = traces.map((trace) => ({
         name: trace.displayName ?? trace.name,
         color: trace.line?.color || trace.marker?.color || "#aaa",
         unit: trace.unit ?? "",
         y: trace.y ?? []
     }));
     setSeriesData(hoverSeriesData);
-    const series: LineSeriesOption[] = traces.map((trace: any) => ({
+    const series: LineSeriesOption[] = traces.map((trace) => ({
         name: trace.displayName ?? trace.name,
         type: "line",
         data: trace.y,
@@ -234,6 +235,8 @@ const buildOption = (g: Graph): ECOption => {
         // Disable emphasis so colors never change on hover
         emphasis: { disabled: true },
         symbol: "none",
+        // Skip per-series event listener registration — hover is handled via ZRender
+        silent: true,
         sampling: "lttb",
         areaStyle:
             trace.fill && trace.fill !== ""
@@ -243,7 +246,7 @@ const buildOption = (g: Graph): ECOption => {
 
     // Initial legend selections: hide traces that are "legendonly"
     const legendSelected: Record<string, boolean> = {};
-    traces.forEach((trace: any) => {
+    traces.forEach((trace) => {
         if (trace.visible === "legendonly") {
             legendSelected[trace.displayName ?? trace.name] = false;
         }
@@ -251,7 +254,7 @@ const buildOption = (g: Graph): ECOption => {
 
     // Populate custom scrollable legend as a side-effect
     if (showLegend) {
-        legendItems.value = traces.map((trace: any) => ({
+        legendItems.value = traces.map((trace) => ({
             name: trace.displayName ?? trace.name,
             color: trace.line?.color || trace.marker?.color || "#aaa",
             selected: trace.visible !== "legendonly"
@@ -275,7 +278,9 @@ const buildOption = (g: Graph): ECOption => {
           ]
         : [];
 
-    return {
+    const option: ECOption = {
+        // Disable animations — eliminates ECharts animation setup cost across all 336+ series
+        animation: false,
         backgroundColor: bgColor,
         textStyle: { color: fontColor, fontFamily, fontSize: 12 },
         graphic: noDataGraphic,
@@ -366,6 +371,9 @@ const buildOption = (g: Graph): ECOption => {
               ],
         series
     };
+
+    console.debug(`[xbat:perf] buildOption — ${g.traces.length} traces, ${(performance.now() - t0).toFixed(2)}ms`);
+    return option;
 };
 
 const activateBoxZoom = () => {
@@ -439,19 +447,27 @@ watch(
                     return;
                 }
 
+                const tWatch = performance.now();
+
                 if (!chart) {
                     chart = echarts.init(chartRef.value);
                     registerHandlers();
                 }
 
+                const tBuild = performance.now();
                 const option = buildOption(g as unknown as Graph);
+                console.debug(`[xbat:perf] buildOption (watcher): ${(performance.now() - tBuild).toFixed(2)}ms`);
+
+                const tSet = performance.now();
                 // Use replaceMerge for series so removed traces are cleaned up
                 chart.setOption(option, { replaceMerge: ["series"] });
+                console.debug(`[xbat:perf] setOption: ${(performance.now() - tSet).toFixed(2)}ms`);
 
                 // Activate box zoom after the next render frame so ECharts has fully processed setOption
                 requestAnimationFrame(() => activateBoxZoom());
 
                 currentGraph.value = g as unknown as Graph;
+                console.debug(`[xbat:perf] total render cycle: ${(performance.now() - tWatch).toFixed(2)}ms`);
                 emit("rendered");
             });
         });
