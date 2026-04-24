@@ -579,6 +579,13 @@ class PrecisionType(str, Enum):
     DP = "DP"
 
 
+class ResultType(str, Enum):
+    Max = "max"
+    Median = "median"
+    Average = "average"
+    Total = "total"
+
+
 @plotting_app.command(help="Plot roofline model.", name="roofline")
 @handle_errors
 def plot_roofline_model(
@@ -596,6 +603,10 @@ def plot_roofline_model(
         PrecisionType,
         typer.Option("--precision", "-p", help="Floating point precision."),
     ] = PrecisionType.DP,
+    result_type: Annotated[
+        ResultType,
+        typer.Option("--type", "-t", help="Perfromance result type."),
+    ] = ResultType.Total,
     output_path: Annotated[
         Path | None,
         typer.Option("--output-path", "-o", help="Output path of the figure."),
@@ -611,6 +622,7 @@ def plot_roofline_model(
     plot.roofline_model(
         path=input_path,
         precision=precision.lower(),
+        result_type=result_type,
         output_path=output_path,
         show=output_path is None,
         ax=None,

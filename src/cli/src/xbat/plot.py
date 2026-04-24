@@ -77,6 +77,7 @@ def metric(
 def roofline_model(
     path: Path,
     precision: str = "dp",
+    result_type: str = "total",
     output_path: Path | str | None = None,
     show: bool = False,
     ax: Axes | None = None,
@@ -87,7 +88,9 @@ def roofline_model(
     data = json.loads(path.read_text())
     node_benchmarks = data["node_benchmarks"]
     assert precision in ["sp", "dp"]
-    result_type = "peak"
+    if result_type == "max": # Max is a better alias for peak, since it's measured and not theoretical performance
+        result_type = "peak"
+    assert result_type in ["peak", "median", "average", "total"]
     jobs = {k: v["results"][precision][result_type] for k, v in data["jobs"].items()}
     roofline_model: dict[str, float] = dict()
     if len(node_benchmarks) > 1:
@@ -154,7 +157,7 @@ def roofline_model(
         job_handles = []
         min_performance = np.inf
         for i, (job, v) in enumerate(jobs.items()):
-            performance = v["performance"] * 10e9 # Convert GFLOPs to FLOPs
+            performance = v["performance"] * 1e9  # Convert GFLOPs to FLOPs
             min_performance = min(min_performance, performance)
             marker = markers[i % len(markers)]
             handle = ax.scatter(
