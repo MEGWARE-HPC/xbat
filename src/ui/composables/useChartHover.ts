@@ -72,10 +72,12 @@ export function useChartHover(options: {
 
         // When there are more items than we can show, drop traces with value === 0
         // (they add no information density when the chart is crowded)
-        const filtered =
+        let filtered =
             items.length > MAX_TOTAL
                 ? items.filter((s) => (s.value as number) !== 0)
                 : items;
+
+        if (!filtered.length) filtered = items; // if all values are zero, show them anyway
 
         // Sort by highest value descending when crowded; preserve legend order when ≤ SORT_THRESHOLD
         const sorted =
@@ -88,14 +90,30 @@ export function useChartHover(options: {
         const shown = sorted.slice(0, MAX_TOTAL);
         const hiddenCount = sorted.length - shown.length;
 
+        // Dynamic column width based on the longest trace name.
+        // ~8px per character for 12px sans-serif; clamped to [80, 220]px.
+        const maxNameLen =
+            shown.length > 0
+                ? Math.max(...shown.map((p) => p.name.length))
+                : 10;
+        const nameWidth = Math.min(
+            Math.max(80, Math.round(maxNameLen * 8)),
+            220
+        );
+        // Fixed overhead: color swatch (10) + flex gap (4) + padding-left on value (8) + value chars (~54) = ~76px
+        const COL_WIDTH = nameWidth + 76;
+        // Cap total tooltip width; reduce column count before adding horizontal scroll
+        const MAX_TOOLTIP_WIDTH = 760;
+
         // Distribute into columns: fill down, then across
         const colCount = Math.min(
             MAX_COLS,
-            Math.max(1, Math.ceil(shown.length / ROWS_PER_COL))
+            Math.max(1, Math.ceil(shown.length / ROWS_PER_COL)),
+            Math.max(1, Math.floor(MAX_TOOLTIP_WIDTH / COL_WIDTH))
         );
         const rowCount = Math.ceil(shown.length / colCount);
 
-        let html = `<div data-cols="${colCount}" style="font-style:italic;margin-bottom:5px;">${header}</div>`;
+        let html = `<div data-cols="${colCount}" data-col-width="${COL_WIDTH}" style="font-style:italic;margin-bottom:5px;">${header}</div>`;
 
         if (shown.length > 0) {
             html += `<div style="display:grid;grid-template-columns:repeat(${colCount},auto);grid-auto-flow:column;grid-template-rows:repeat(${rowCount},auto);gap:0 14px;">`;
@@ -103,7 +121,7 @@ export function useChartHover(options: {
                 const valStr = String(roundTo(p.value as number));
                 html += `<div style="display:flex;align-items:center;gap:4px;white-space:nowrap;">`;
                 html += `<span style="flex-shrink:0;width:10px;height:2px;background:${p.color};border-radius:2px;display:inline-block;"></span>`;
-                html += `<span style="overflow:hidden;text-overflow:ellipsis;max-width:120px;">${p.name}</span>`;
+                html += `<span style="overflow:hidden;text-overflow:ellipsis;max-width:${nameWidth}px;">${p.name}</span>`;
                 html += `<span style="padding-left:8px;font-weight:500;">${valStr}</span>`;
                 html += `</div>`;
             }
@@ -179,14 +197,11 @@ export function useChartHover(options: {
             const html = buildTooltipHTML(xIdx);
             // Read colCount from the data attribute embedded in the first child
             customTooltipRef.value.innerHTML = html;
-            const colCount = parseInt(
-                (customTooltipRef.value.firstElementChild as HTMLElement | null)
-                    ?.dataset?.cols ?? "1",
-                10
-            );
-            // ~160px per column + 12px padding each side; avoids horizontal scroll
-            const COL_WIDTH = 160;
-            customTooltipRef.value.style.width = `${colCount * COL_WIDTH + 24}px`;
+            const headerEl = customTooltipRef.value
+                .firstElementChild as HTMLElement | null;
+            const colCount = parseInt(headerEl?.dataset?.cols ?? "1", 10);
+            const colWidth = parseInt(headerEl?.dataset?.colWidth ?? "180", 10);
+            customTooltipRef.value.style.width = `${colCount * colWidth + 24}px`;
             customTooltipRef.value.style.background =
                 displayConfig.bgColor || "#1e1e1e";
             customTooltipRef.value.style.color =
@@ -197,7 +212,7 @@ export function useChartHover(options: {
             const cx = rect.left + offsetX;
             const cy = rect.top + offsetY;
             const tipW =
-                customTooltipRef.value.offsetWidth || colCount * COL_WIDTH + 24;
+                customTooltipRef.value.offsetWidth || colCount * colWidth + 24;
             const tipH = customTooltipRef.value.offsetHeight || 200;
             const left =
                 cx + tipW + 20 > window.innerWidth ? cx - tipW - 15 : cx + 15;

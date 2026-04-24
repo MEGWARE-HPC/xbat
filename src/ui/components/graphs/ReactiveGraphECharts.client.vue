@@ -47,28 +47,27 @@
 </template>
 
 <script setup lang="ts">
-import { download, deepEqual } from "~/utils/misc";
 import { Mutex } from "async-mutex";
-import * as echarts from "echarts/core";
+import type { LineSeriesOption } from "echarts/charts";
 import { LineChart } from "echarts/charts";
+import type {
+    DataZoomComponentOption,
+    GridComponentOption,
+    LegendComponentOption,
+    TooltipComponentOption
+} from "echarts/components";
 import {
-    GridComponent,
-    TooltipComponent,
-    LegendComponent,
     DataZoomComponent,
     GraphicComponent,
-    ToolboxComponent
+    GridComponent,
+    LegendComponent,
+    ToolboxComponent,
+    TooltipComponent
 } from "echarts/components";
+import type { ComposeOption, EChartsType } from "echarts/core";
+import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
-import type { EChartsType } from "echarts/core";
-import type { ComposeOption } from "echarts/core";
-import type { LineSeriesOption } from "echarts/charts";
-import type {
-    GridComponentOption,
-    TooltipComponentOption,
-    LegendComponentOption,
-    DataZoomComponentOption
-} from "echarts/components";
+import { deepEqual, download } from "~/utils/misc";
 
 echarts.use([
     LineChart,
@@ -90,9 +89,9 @@ type ECOption = ComposeOption<
 >;
 
 import { LEGEND_WIDTH } from "@/components/graphs/useGraphBase";
-import type { Graph } from "~/types/graph";
-import { useChartHover } from "~/composables/useChartHover";
 import type { HoverSeriesItem } from "~/composables/useChartHover";
+import { useChartHover } from "~/composables/useChartHover";
+import type { Graph } from "~/types/graph";
 
 const { $graphStore } = useNuxtApp();
 const wrapperRef = ref<HTMLElement | null>(null);
@@ -123,9 +122,6 @@ const currentZoomEnd = ref(100);
 const mutex = new Mutex();
 const currentGraph = ref<Graph | null>(null);
 
-// ------------------------------------------------------------------ //
-//  Custom hover (composable)                                            //
-// ------------------------------------------------------------------ //
 const {
     crosshairVRef,
     crosshairHRef,
@@ -134,24 +130,31 @@ const {
     setDisplayConfig,
     scheduleHover,
     cancelHover,
-    hideHover,
+    hideHover
 } = useChartHover({
     getChart: () => chart,
     chartRef,
     currentXData,
-    getLegendItems: () => legendItems.value,
+    getLegendItems: () => legendItems.value
 });
 
 interface LegendItem {
     name: string;
     color: string;
     selected: boolean;
+    /** ECharts series id for targeted single-series updates */
+    uid: string;
+    /** Raw y data — stored so toggle-on can restore without a full setOption */
+    yData: (number | null)[];
 }
 const legendItems = ref<LegendItem[]>([]);
 
 const toggleLegendItem = (item: LegendItem) => {
     item.selected = !item.selected;
-    chart?.dispatchAction({ type: "legendToggleSelect", name: item.name });
+    // Targeted update by id: avoids re-processing all series on every legend click.
+    chart?.setOption({
+        series: [{ id: item.uid, data: item.selected ? item.yData : [] }]
+    });
 };
 
 const graphMounted = computed(() => !!chartRef.value && !!chart);
@@ -214,7 +217,7 @@ const buildOption = (g: Graph): ECOption => {
         bgColor,
         fontColor,
         gridRight: right,
-        gridBottom: bottom,
+        gridBottom: bottom
     });
     const hoverSeriesData: HoverSeriesItem[] = traces.map((trace) => ({
         name: trace.displayName ?? trace.name,
@@ -224,9 +227,13 @@ const buildOption = (g: Graph): ECOption => {
     }));
     setSeriesData(hoverSeriesData);
     const series: LineSeriesOption[] = traces.map((trace) => ({
+        // id lets ECharts match series by identity across setOption calls,
+        // and enables toggleLegendItem to do a single-series update instead of a full rebuild.
+        id: trace.uid ?? trace.displayName ?? trace.name,
         name: trace.displayName ?? trace.name,
         type: "line",
-        data: trace.y,
+        // Skip rendering of legendonly data
+        data: trace.visible === "legendonly" ? [] : trace.y,
         lineStyle: {
             color: trace.line?.color || undefined,
             width: trace.line?.width ?? 1
@@ -241,7 +248,7 @@ const buildOption = (g: Graph): ECOption => {
         areaStyle:
             trace.fill && trace.fill !== ""
                 ? { opacity: 0.3, color: trace.line?.color || undefined }
-                : undefined,
+                : undefined
     }));
 
     // Initial legend selections: hide traces that are "legendonly"
@@ -257,7 +264,9 @@ const buildOption = (g: Graph): ECOption => {
         legendItems.value = traces.map((trace) => ({
             name: trace.displayName ?? trace.name,
             color: trace.line?.color || trace.marker?.color || "#aaa",
-            selected: trace.visible !== "legendonly"
+            selected: trace.visible !== "legendonly",
+            uid: trace.uid ?? trace.displayName ?? trace.name ?? "",
+            yData: (trace.y ?? []) as (number | null)[]
         }));
     } else {
         legendItems.value = [];
@@ -372,7 +381,9 @@ const buildOption = (g: Graph): ECOption => {
         series
     };
 
-    console.debug(`[xbat:perf] buildOption — ${g.traces.length} traces, ${(performance.now() - t0).toFixed(2)}ms`);
+    console.debug(
+        `[xbat:perf] buildOption — ${g.traces.length} traces, ${(performance.now() - t0).toFixed(2)}ms`
+    );
     return option;
 };
 
@@ -421,7 +432,12 @@ const registerHandlers = () => {
     chart.getZr().on("dblclick", () => {
         currentZoomStart.value = 0;
         currentZoomEnd.value = 100;
-        chart?.dispatchAction({ type: "dataZoom", dataZoomIndex: 0, start: 0, end: 100 });
+        chart?.dispatchAction({
+            type: "dataZoom",
+            dataZoomIndex: 0,
+            start: 0,
+            end: 100
+        });
         emit("relayout", { "xaxis.autorange": true });
         activateBoxZoom();
     });
@@ -456,18 +472,24 @@ watch(
 
                 const tBuild = performance.now();
                 const option = buildOption(g as unknown as Graph);
-                console.debug(`[xbat:perf] buildOption (watcher): ${(performance.now() - tBuild).toFixed(2)}ms`);
+                console.debug(
+                    `[xbat:perf] buildOption (watcher): ${(performance.now() - tBuild).toFixed(2)}ms`
+                );
 
                 const tSet = performance.now();
                 // Use replaceMerge for series so removed traces are cleaned up
                 chart.setOption(option, { replaceMerge: ["series"] });
-                console.debug(`[xbat:perf] setOption: ${(performance.now() - tSet).toFixed(2)}ms`);
+                console.debug(
+                    `[xbat:perf] setOption: ${(performance.now() - tSet).toFixed(2)}ms`
+                );
 
                 // Activate box zoom after the next render frame so ECharts has fully processed setOption
                 requestAnimationFrame(() => activateBoxZoom());
 
                 currentGraph.value = g as unknown as Graph;
-                console.debug(`[xbat:perf] total render cycle: ${(performance.now() - tWatch).toFixed(2)}ms`);
+                console.debug(
+                    `[xbat:perf] total render cycle: ${(performance.now() - tWatch).toFixed(2)}ms`
+                );
                 emit("rendered");
             });
         });
@@ -499,10 +521,7 @@ watch(
             return;
         }
 
-        if (
-            "xaxis.range[0]" in newLayout &&
-            "xaxis.range[1]" in newLayout
-        ) {
+        if ("xaxis.range[0]" in newLayout && "xaxis.range[1]" in newLayout) {
             const r0 = newLayout["xaxis.range[0]"] as number;
             const r1 = newLayout["xaxis.range[1]"] as number;
             const start = (r0 / (len - 1)) * 100;
