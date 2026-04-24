@@ -181,6 +181,8 @@ export const useGraphBase = () => {
                     }
                 }
             ];
+        }else{
+            layout.annotations = [];
         }
 
         if (layout.xaxis) {

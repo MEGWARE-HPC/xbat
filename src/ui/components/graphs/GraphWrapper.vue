@@ -3,10 +3,13 @@
         <v-dialog
             :model-value="fullscreen"
             @update:model-value="fullscreen = false"
+            @after-enter="onDialogEnter"
+            @after-leave="onDialogLeave"
             transition="dialog-bottom-transition"
             fullscreen
             style="height: 100vh"
             scrollable
+            eager
         >
             <v-card>
                 <v-toolbar>
@@ -26,19 +29,8 @@
                         <v-tabs-window-item value="graph">
                             <v-row>
                                 <v-col sm="12" md="8">
-                                    <component
-                                        :is="
-                                            props.roofline
-                                                ? RooflineGraph
-                                                : Graph
-                                        "
-                                        v-bind="$attrs"
-                                        :graph-id="graphId"
-                                        v-model:fullscreen="fullscreen"
-                                        :height="600"
-                                        :nodes="props.nodes"
-                                        flat
-                                    />
+                                    <!-- Teleport target when fullscreen; graph moves here -->
+                                    <div ref="dialogGraphSlot" style="height: 600px" />
                                 </v-col>
                                 <v-divider vertical style="height: 85vh" />
                                 <v-col sm="12" md="4">
@@ -96,13 +88,27 @@
                 </v-card-text>
             </v-card>
         </v-dialog>
-        <component
-            :is="props.roofline ? RooflineGraph : Graph"
-            v-bind="$attrs"
-            v-model:fullscreen="fullscreen"
-            :graph-id="graphId"
-            :nodes="props.nodes"
-        ></component>
+
+        <!-- Normal-view anchor — graph lives here when not fullscreen -->
+        <div ref="normalGraphSlot"></div>
+
+        <!-- Single graph instance, teleported between the two slots.
+             eager on the dialog ensures dialogGraphSlot is in DOM at mount. -->
+        <Teleport
+            v-if="teleportReady"
+            :to="fullscreen ? dialogGraphSlot! : normalGraphSlot!"
+        >
+            <component
+                :is="props.roofline ? RooflineGraph : Graph"
+                ref="graphRef"
+                v-bind="$attrs"
+                v-model:fullscreen="fullscreen"
+                :graph-id="graphId"
+                :nodes="props.nodes"
+                :height="fullscreen ? 600 : undefined"
+                :flat="fullscreen || undefined"
+            />
+        </Teleport>
     </div>
 </template>
 <script setup lang="ts">
@@ -138,6 +144,12 @@ const tab = ref("graph");
 const fullscreen = ref(false);
 const panel = ref("traces");
 
+const dialogGraphSlot = ref<HTMLElement | null>(null);
+const normalGraphSlot = ref<HTMLElement | null>(null);
+// Guard so Teleport only mounts after both slot refs are populated
+const teleportReady = ref(false);
+const graphRef = ref<{ resize?: () => void } | null>(null);
+
 watch(
     () => props.fullscreen,
     (v) => {
@@ -158,6 +170,21 @@ watch(
         deep: true
     }
 );
+
+// Called once dialog open animation finishes — container has final dimensions
+const onDialogEnter = () => {
+    nextTick(() => graphRef.value?.resize?.());
+};
+
+// Called once dialog close animation finishes — graph is back in normal slot
+const onDialogLeave = () => {
+    nextTick(() => graphRef.value?.resize?.());
+};
+
+onMounted(() => {
+    // eager dialog ensures dialogGraphSlot is already in DOM here
+    teleportReady.value = true;
+});
 
 onUnmounted(() => {
     $graphStore.unregisterGraph(graphId);

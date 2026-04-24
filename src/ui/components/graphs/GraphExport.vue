@@ -308,7 +308,7 @@ const state = reactive({
     traceWidth: 1,
     yTitle: "",
     xTitle: "Runtime [HH:MM:SS]",
-    fontsize: 12,
+    fontsize: 16,
     fontsizeTitle: 24,
     titleX: 0.5,
     titleY: 1,

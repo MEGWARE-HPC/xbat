@@ -184,7 +184,9 @@ const exportImg = async (
 const buildOption = (g: Graph): ECOption => {
     const t0 = performance.now();
     const layout = g.layout;
-    const traces = g.traces.filter((t) => t.visible !== "hidden");
+    const traces = g.traces.filter(
+        (t) => t.visible !== "hidden" && t.visible !== false
+    );
 
     const hasRangeslider = !!layout?.xaxis?.rangeslider;
     const showLegend = layout?.showlegend !== false;
@@ -572,7 +574,7 @@ onUnmounted(() => {
     chart = null;
 });
 
-defineExpose({ exportImg, getImageBase64, graphMounted });
+defineExpose({ exportImg, getImageBase64, graphMounted, resize: () => chart?.resize() });
 </script>
 
 <style lang="scss" scoped>

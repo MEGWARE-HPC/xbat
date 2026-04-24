@@ -271,6 +271,8 @@ onMounted(() => {
 onUnmounted(() => {
     if (unsubscribe.value !== null) unsubscribe.value();
 });
+
+defineExpose({ resize: () => (graphRef.value as any)?.resize?.() });
 </script>
 
 <style lang="scss" scoped>
