@@ -813,7 +813,7 @@ class StopType(str, Enum):
 def stop(
     stop_type: Annotated[StopType, typer.Argument()],
     nos_or_ids: Annotated[
-        list[int], typer.Argument(help="The numbers/IDs benchmark runs/jobs to stop.")
+        list[int], typer.Argument(help="The benchmark run numbers/jobs IDs to stop.")
     ],
     quiet: Annotated[
         bool,
