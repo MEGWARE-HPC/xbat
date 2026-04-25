@@ -641,30 +641,58 @@
         </v-dialog>
 
         <v-dialog v-model="ExportBackupDlg" max-width="640">
-            <v-card>
-                <v-card-title>Export Backup</v-card-title>
-                <v-card-text>
+            <v-card class="backup-dialog-card">
+                <v-card-title class="backup-dialog-title">
+                    <div class="backup-dialog-title-wrap">
+                        <v-icon
+                            icon="$configBackup"
+                            class="backup-dialog-title-icon"
+                        />
+                        <div class="backup-dialog-title-texts">
+                            <div class="backup-dialog-title-main">
+                                Export Backup
+                            </div>
+                            <div class="backup-dialog-title-sub">
+                                Create a JSON backup of configurations and
+                                folders.
+                            </div>
+                        </div>
+                    </div>
+                </v-card-title>
+
+                <v-card-text class="backup-dialog-text">
                     <v-select
                         v-model="exportScope"
                         :items="backupScopeItems"
                         item-title="title"
                         item-value="value"
                         label="Export scope"
+                        hide-details="auto"
                     />
 
                     <v-text-field
                         v-if="exportScope === 'owner'"
                         v-model="exportOwner"
                         label="Target username"
+                        class="mt-3"
                         autofocus
+                        hide-details="auto"
                     />
 
-                    <div class="text-medium-emphasis text-caption mt-2">
-                        Export creates a JSON backup containing configurations
-                        and folders.
+                    <div class="backup-dialog-note mt-3">
+                        <v-icon
+                            icon="$information"
+                            class="backup-dialog-note-icon"
+                            size="small"
+                        />
+                        <span>
+                            The exported file includes all folders and
+                            configurations available in the selected scope.
+                        </span>
                     </div>
                 </v-card-text>
-                <v-card-actions>
+
+                <v-card-actions class="backup-dialog-actions">
                     <v-spacer />
                     <v-btn color="font-light" @click="ExportBackupDlg = false">
                         Cancel
@@ -2007,6 +2035,72 @@ const applyDelete = async () => {
 
 .fb-head-sort-icon {
     flex: 0 0 auto;
+}
+
+.backup-dialog-card {
+    overflow: hidden;
+}
+
+.backup-dialog-title {
+    padding-bottom: 10px;
+}
+
+.backup-dialog-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.backup-dialog-title-icon {
+    color: $primary-light;
+    opacity: 0.9;
+}
+
+.backup-dialog-title-texts {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.backup-dialog-title-main {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: $font-base;
+    line-height: 1.2;
+}
+
+.backup-dialog-title-sub {
+    font-size: 0.82rem;
+    color: $font-light;
+    margin-top: 2px;
+}
+
+.backup-dialog-text {
+    padding-top: 8px;
+}
+
+.backup-dialog-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(var(--v-theme-surface-light), 0.55);
+    border: 1px solid rgba(var(--v-theme-font-base), 0.05);
+    color: $font-light;
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.backup-dialog-note-icon {
+    color: $primary-light;
+    opacity: 0.85;
+    margin-top: 1px;
+    flex: 0 0 auto;
+}
+
+.backup-dialog-actions {
+    padding-top: 6px;
 }
 
 .restore-result-card {
