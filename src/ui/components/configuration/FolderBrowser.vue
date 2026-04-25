@@ -698,9 +698,26 @@
         </v-dialog>
 
         <v-dialog v-model="RestoreBackupDlg" max-width="720">
-            <v-card>
-                <v-card-title>Restore Backup</v-card-title>
-                <v-card-text>
+            <v-card class="backup-dialog-card">
+                <v-card-title class="backup-dialog-title">
+                    <div class="backup-dialog-title-wrap">
+                        <v-icon
+                            icon="$cloudUpload"
+                            class="backup-dialog-title-icon"
+                        />
+                        <div class="backup-dialog-title-texts">
+                            <div class="backup-dialog-title-main">
+                                Restore Backup
+                            </div>
+                            <div class="backup-dialog-title-sub">
+                                Upload a backup file and choose how it should be
+                                restored.
+                            </div>
+                        </div>
+                    </div>
+                </v-card-title>
+
+                <v-card-text class="backup-dialog-text">
                     <v-file-upload
                         v-model="restoreFile"
                         divider-text="or choose locally"
@@ -721,52 +738,57 @@
                     </v-file-upload>
 
                     <v-select
-                        class="mt-2"
+                        class="mt-3"
                         v-model="restoreScope"
                         :items="backupScopeItems"
                         item-title="title"
                         item-value="value"
                         label="Restore scope"
+                        hide-details="auto"
                     />
 
                     <v-text-field
                         v-if="restoreScope === 'owner'"
                         v-model="restoreOwner"
                         label="Target username"
+                        class="mt-3"
+                        hide-details="auto"
                     />
 
                     <v-select
-                        class="mt-2"
+                        class="mt-3"
                         v-model="restoreConflictStrategy"
                         :items="conflictStrategyItems"
                         item-title="title"
                         item-value="value"
                         label="Conflict strategy"
+                        hide-details="auto"
                     />
 
-                    <div class="text-medium-emphasis text-caption mt-2">
+                    <div class="backup-dialog-caption mt-3">
                         <div>
-                            <strong>overwrite</strong>: overwrite duplicate
-                            configurations and update duplicate folders
+                            <strong>Overwrite</strong>: overwrite duplicate
+                            configurations and update duplicate folders.
                         </div>
                         <div>
-                            <strong>rename</strong>: restore duplicates with a
-                            new name
+                            <strong>Rename</strong>: restore duplicates with a
+                            new name.
                         </div>
                         <div>
-                            <strong>skip</strong>: skip duplicate configurations
-                            and reuse duplicate folders
+                            <strong>Skip</strong>: skip duplicate configurations
+                            and reuse duplicate folders.
                         </div>
                     </div>
 
-                    <div class="text-medium-emphasis text-caption mt-2">
-                        When restoring into <strong>self</strong> or
-                        <strong>owner</strong>, shared project assignments are
-                        cleared by the backend. <strong>all</strong> preserves
+                    <div class="backup-dialog-caption mt-2">
+                        Restoring to <strong>My configurations</strong> or
+                        <strong>Specific user</strong> clears shared project
+                        assignments. <strong>All users</strong> preserves
                         original owners.
                     </div>
                 </v-card-text>
-                <v-card-actions>
+
+                <v-card-actions class="backup-dialog-actions">
                     <v-spacer />
                     <v-btn color="font-light" @click="RestoreBackupDlg = false">
                         Cancel
