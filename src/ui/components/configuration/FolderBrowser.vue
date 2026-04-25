@@ -679,16 +679,9 @@
                         hide-details="auto"
                     />
 
-                    <div class="backup-dialog-note mt-3">
-                        <v-icon
-                            icon="$information"
-                            class="backup-dialog-note-icon"
-                            size="small"
-                        />
-                        <span>
-                            The exported file includes all folders and
-                            configurations available in the selected scope.
-                        </span>
+                    <div class="backup-dialog-caption mt-3">
+                        Export creates a JSON backup containing configurations
+                        and folders for the selected scope.
                     </div>
                 </v-card-text>
 
@@ -2079,24 +2072,10 @@ const applyDelete = async () => {
     padding-top: 8px;
 }
 
-.backup-dialog-note {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 10px 12px;
-    border-radius: 10px;
-    background: rgba(var(--v-theme-surface-light), 0.55);
-    border: 1px solid rgba(var(--v-theme-font-base), 0.05);
+.backup-dialog-caption {
     color: $font-light;
     font-size: 0.82rem;
     line-height: 1.45;
-}
-
-.backup-dialog-note-icon {
-    color: $primary-light;
-    opacity: 0.85;
-    margin-top: 1px;
-    flex: 0 0 auto;
 }
 
 .backup-dialog-actions {
