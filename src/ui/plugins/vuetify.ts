@@ -84,6 +84,7 @@ import {
     mdiContentSaveMove,
     mdiDatabaseImportOutline,
     mdiCloudUpload,
+    mdiCloudDownload,
     mdiRead,
     mdiInformation,
     mdiFolderZip,
@@ -105,7 +106,6 @@ import {
     mdiArrowLeftTop,
     mdiFolderNetwork,
     mdiFolderMove,
-    mdiDownloadBox,
     mdiCloudBraces,
     mdiShareVariant,
     mdiTrashCan
@@ -242,6 +242,7 @@ export default defineNuxtPlugin((app) => {
                 saveMove: mdiContentSaveMove,
                 dataImport: mdiDatabaseImportOutline,
                 cloudUpload: mdiCloudUpload,
+                cloudDownload: mdiCloudDownload,
                 read: mdiRead,
                 info: mdiInformation,
                 gestureTap: mdiGestureTapButton,
@@ -261,7 +262,6 @@ export default defineNuxtPlugin((app) => {
                 newFolder: mdiFolderPlus,
                 folderNetwork: mdiFolderNetwork,
                 folderMove: mdiFolderMove,
-                configBackup: mdiDownloadBox,
                 jsonRestore: mdiCloudBraces
             },
             sets: {

@@ -74,7 +74,7 @@
                                             v-bind="tipProps"
                                         >
                                             <v-btn
-                                                icon="$configBackup"
+                                                icon="$cloudDownload"
                                                 color="primary-light"
                                                 @click="openExportBackup()"
                                             />
@@ -645,7 +645,7 @@
                 <v-card-title class="backup-dialog-title">
                     <div class="backup-dialog-title-wrap">
                         <v-icon
-                            icon="$configBackup"
+                            icon="$cloudDownload"
                             class="backup-dialog-title-icon"
                         />
                         <div class="backup-dialog-title-texts">
