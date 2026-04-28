@@ -3,6 +3,11 @@
 
 source <(/usr/local/share/xbat/conf-to-env.sh --stdout)
 
+if [[ ! -d "/etc/xbat/clickhouse" ]]; then
+    echo "Warning: /etc/xbat/clickhouse not found, assuming no-db option. Skipping ClickHouse configuration." >&2
+    exit 0
+fi
+
 USER_IN_FILE="/etc/xbat/clickhouse/users/users.xml.in"
 USER_OUT_FILE="/etc/xbat/clickhouse/users/users.xml"
 
