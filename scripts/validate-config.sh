@@ -301,7 +301,7 @@ validate_clickhouse_section() {
     check_infrastructure_value "CLICKHOUSE_USER" "xbat" "has been changed from default user name"
     check_infrastructure_value "CLICKHOUSE_DAEMON_USER" "xbatd" "has been changed from default daemon user name"
     check_infrastructure_value "CLICKHOUSE_DATABASE" "xbat" "has been changed from default database name"
-    check_infrastructure_value "CLICKHOUSE_DAEMON_PORT" "7101" "has been changed from default daemon port (7101)"
+    check_infrastructure_value "CLICKHOUSE_DAEMON_PORT" "7002" "has been changed from default daemon port (7002)"
 }
 
 validate_pgbouncer_section() {

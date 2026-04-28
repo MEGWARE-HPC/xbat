@@ -89,7 +89,7 @@ def _get_clickhouse_base_cmd():
         port = 9000
     # for --no-db setups or dev environments, use the "daemon_port" instead
     else:
-        port = ch_config.get("daemon_port", 7101)
+        port = ch_config.get("daemon_port", 7002)
 
     base_cmd = ["clickhouse-client", "--host", host, "--port", str(port)]
     if database:
