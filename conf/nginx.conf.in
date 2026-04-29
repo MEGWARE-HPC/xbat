@@ -134,7 +134,7 @@ http {
             client_max_body_size 5G;
             proxy_pass http://docker-xbat-backend;
             proxy_redirect http://docker-xbat-backend/ $scheme://$http_host/;
-            proxy_read_timeout 300s;
+            proxy_read_timeout 900s;
             proxy_buffering off;
 
             
@@ -144,7 +144,7 @@ http {
         location ~ /(benchmarks/export|measurements/[^/]+/(csv|json)) {
             proxy_pass http://docker-xbat-backend;
             proxy_redirect http://docker-xbat-backend/ $scheme://$http_host/;
-            proxy_read_timeout 300s;
+            proxy_read_timeout 900s;
             proxy_buffering off;
         }
 
