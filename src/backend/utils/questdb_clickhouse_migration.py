@@ -83,18 +83,23 @@ def _format_csv_value(value: str,
         return f'"{_convert_timestamp(value)}"'
 
     if is_numeric_column:
+        # Treat non-numeric sentinel strings as 0
+        if value.lower() in ('null', 'nan', 'inf', '-inf', 'infinity', '-infinity'):
+            return '0'
         try:
+            float_val = float(value)
+            # float('nan'/'inf') succeeds in Python but ClickHouse CSV cannot parse them.
+            # Replace with 0 to match how NaN values are handled elsewhere in the codebase.
+            if not (float_val == float_val) or float_val == float('inf') or float_val == float('-inf'):
+                return '0'
             # If this should be an integer, convert float to int
             if is_integer:
-                float_val = float(value)
-                int_val = int(float_val)
-                return str(int_val)
+                return str(int(float_val))
             # Check if it's an integer
             elif '.' not in value:
                 int(value)
                 return value
             else:
-                float(value)
                 return value
         except ValueError:
             # If conversion fails, treat as string
