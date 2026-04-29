@@ -19,6 +19,8 @@ from shared import clickhouse as cdb
 logger = logging.getLogger(get_logger())
 clickhouse = cdb.ClickHouse()
 
+EXPORT_IMPORT_CONCURRENCY = 8  # Limit concurrent export/import operations to prevent overwhelming the system
+
 
 def data_anonymise(collection_db, username):
     target_keys = [
@@ -115,7 +117,7 @@ async def clickhouse_import_csvs(csv_paths, old_jobId, new_jobId):
     """
 
     start_time = time.time()
-    semaphore = asyncio.Semaphore(8)
+    semaphore = asyncio.Semaphore(EXPORT_IMPORT_CONCURRENCY)
 
     base_cmd = _get_clickhouse_base_cmd()
     if base_cmd is None:
@@ -207,7 +209,7 @@ async def clickhouse_save_as_csv(job_id, runNr_path):
     tables = await clickhouse.get_table_names()
     export_start_time = time.time()
     # Use a semaphore to limit the number of concurrent exports
-    semaphore = asyncio.Semaphore(8)
+    semaphore = asyncio.Semaphore(EXPORT_IMPORT_CONCURRENCY)
 
     base_cmd = _get_clickhouse_base_cmd()
     if base_cmd is None:
