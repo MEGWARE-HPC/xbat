@@ -1,4 +1,5 @@
 import json
+import re
 import uuid
 import shutil
 import time
@@ -36,16 +37,66 @@ READ_EXCLUDE = {
     "config._id": False
 }
 
+SORT_FIELD_MAP = {
+    "runNr": "runNr",
+    "name": "name",
+    "issuer": "issuer",
+    "startTime": "startTime",
+    "state": "state",
+    "configName": "configuration.configuration.configurationName",
+}
 
-def _create_aggregation_pipeline(filterQuery):
+
+def _build_search_filter(search):
+    """
+    Builds a MongoDB $or filter for full-text-style search across benchmark fields.
+    Escapes the input to prevent regex injection.
+
+    :param search: raw search string from the user
+    :return: MongoDB filter dict
+    """
+    pattern = re.escape(search)
+    conditions = [
+        {
+            "name": {
+                "$regex": pattern,
+                "$options": "i"
+            }
+        },
+        {
+            "issuer": {
+                "$regex": pattern,
+                "$options": "i"
+            }
+        },
+        {
+            "configuration.configuration.configurationName": {
+                "$regex": pattern,
+                "$options": "i"
+            }
+        },
+    ]
+    try:
+        numeric = int(search)
+        conditions.append({"runNr": numeric})
+        conditions.append({"jobIds": numeric})
+    except (ValueError, TypeError):
+        pass
+    return {"$or": conditions}
+
+
+def _create_aggregation_pipeline(filterQuery, search=None, sort_field="runNr", sort_direction=-1):
     """
     The function creates an aggregation pipeline to join jobIds to benchmarks
     
     :param filterQuery: query object
+    :param search: optional search string applied after the lookup
+    :param sort_field: MongoDB field to sort by
+    :param sort_direction: 1 for ascending, -1 for descending
     :return: pipeline
     """
     # TODO this aggregation is only required for backwards compatibility as jobIds are already present
-    return [{
+    pipeline = [{
         "$match": filterQuery
     }, {
         '$lookup': {
@@ -64,6 +115,10 @@ def _create_aggregation_pipeline(filterQuery):
             **READ_EXCLUDE
         }
     }]
+    if search:
+        pipeline.append({"$match": _build_search_filter(search)})
+    pipeline.append({"$sort": {sort_field: sort_direction}})
+    return pipeline
 
 
 def _set_benchmark_state(benchmarks):
@@ -99,14 +154,84 @@ def get_user_benchmarks(runNrs=[]):
                          _create_aggregation_pipeline(filterQuery))))
 
 
-def get_all(runNrs=[]):
+def get_all(runNrs=[], page=None, pageSize=None, search=None, ownedOnly=False, project=None, sortBy="runNr", sortOrder="desc"):
     """
     Returns all benchmarks of user including ones shared from project.
+    Supports optional server-side search, filtering, sorting, and pagination.
 
-    :return: benchmarks
+    :param runNrs: filter by specific run numbers
+    :param page: 1-based page number; omit to return all results
+    :param pageSize: items per page; required when page is specified
+    :param search: search string matched against name, runNr, jobId, configuration name, and issuer
+    :param ownedOnly: restrict to benchmarks owned by the requesting user
+    :param project: filter to benchmarks shared with the given project ObjectId string
+    :param sortBy: field to sort by (runNr, name, issuer, startTime, state, configName)
+    :param sortOrder: sort direction, 'asc' or 'desc'
+    :return: benchmarks with pagination metadata
     """
-    result = get_user_benchmarks(runNrs=runNrs)
-    return {"data": sanitize_mongo(result)}, 200
+    user = get_user_from_token()
+    filterQuery = create_user_benchmark_filter(user)
+
+    and_conditions = []
+
+    if len(runNrs):
+        and_conditions.append({"runNr": {"$in": runNrs}})
+
+    # Exclude old-format benchmarks without a configurationName and not CLI
+    and_conditions.append({
+        "$or": [
+            {"cli": True},
+            {"configuration.configuration.configurationName": {"$exists": True}}
+        ]
+    })
+
+    if ownedOnly:
+        and_conditions.append({"issuer": user["user_name"]})
+
+    if project:
+        try:
+            and_conditions.append({"sharedProjects": ObjectId(project)})
+        except Exception:
+            raise httpErrors.BadRequest("Invalid project ID")
+
+    if and_conditions:
+        filterQuery["$and"] = and_conditions
+
+    sort_direction = 1 if sortOrder == "asc" else -1
+    sort_field = SORT_FIELD_MAP.get(sortBy, "runNr")
+
+    pipeline = _create_aggregation_pipeline(filterQuery,
+                                            search=search,
+                                            sort_field=sort_field,
+                                            sort_direction=sort_direction)
+
+    if page is not None and pageSize is not None:
+        paginated_pipeline = pipeline + [{
+            "$facet": {
+                "data": [
+                    {"$skip": (page - 1) * pageSize},
+                    {"$limit": pageSize}
+                ],
+                "total": [{"$count": "count"}]
+            }
+        }]
+        facet_result = list(db.aggregate("benchmarks", paginated_pipeline))
+        benchmarks = _set_benchmark_state(facet_result[0]["data"])
+        total = facet_result[0]["total"][0]["count"] if facet_result[0]["total"] else 0
+        return {
+            "data": sanitize_mongo(benchmarks),
+            "total": total,
+            "page": page,
+            "pageSize": pageSize
+        }, 200
+
+    result = _set_benchmark_state(list(db.aggregate("benchmarks", pipeline)))
+    return {
+        "data": sanitize_mongo(result),
+        "total": len(result),
+        "page": None,
+        "pageSize": None
+    }, 200
 
 
 def get(runNr):
@@ -462,7 +587,8 @@ async def import_benchmark():
                         raise httpErrors.InternalServerError(
                             "An unexpected error occurred while processing JSON file"
                         )
-            app.logger.debug(f"Finished processing JSON files for runNr {new_runNr}")
+            app.logger.debug(
+                f"Finished processing JSON files for runNr {new_runNr}")
 
             # Process CSV files for ClickHouse
             jobs_folder = runNr_folder / "jobs"
@@ -473,7 +599,9 @@ async def import_benchmark():
                     old_jobId = int(job_folder.stem)
                     new_jobId = jobId_map.get(old_jobId, old_jobId)
 
-                    app.logger.debug(f"Processing job folder: {job_folder.name} (old_jobId: {old_jobId}, new_jobId: {new_jobId})")
+                    app.logger.debug(
+                        f"Processing job folder: {job_folder.name} (old_jobId: {old_jobId}, new_jobId: {new_jobId})"
+                    )
 
                     try:
                         csv_paths = list(job_folder.glob("*.csv"))
