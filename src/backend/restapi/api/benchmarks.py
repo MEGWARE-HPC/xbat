@@ -407,6 +407,8 @@ async def import_benchmark():
             if not benchmarks_path.exists():
                 continue
 
+            app.logger.debug(f"Processing runNr folder: {runNr_folder.name}")
+
             # Load benchmarks.json
             with open(benchmarks_path, 'r') as benchmark_json:
                 benchmark_data = json.load(benchmark_json)
@@ -460,6 +462,7 @@ async def import_benchmark():
                         raise httpErrors.InternalServerError(
                             "An unexpected error occurred while processing JSON file"
                         )
+            app.logger.debug(f"Finished processing JSON files for runNr {new_runNr}")
 
             # Process CSV files for ClickHouse
             jobs_folder = runNr_folder / "jobs"
@@ -469,6 +472,8 @@ async def import_benchmark():
                         continue
                     old_jobId = int(job_folder.stem)
                     new_jobId = jobId_map.get(old_jobId, old_jobId)
+
+                    app.logger.debug(f"Processing job folder: {job_folder.name} (old_jobId: {old_jobId}, new_jobId: {new_jobId})")
 
                     try:
                         csv_paths = list(job_folder.glob("*.csv"))
@@ -482,7 +487,7 @@ async def import_benchmark():
 
         # Log total import duration
         import_duration = time.time() - import_start_time
-        app.logger.info(
+        app.logger.debug(
             f"Total import duration: {import_duration:.2f} seconds")
         # After successful import, release the reserved jobIds
         if all_reserved_jobIds:
