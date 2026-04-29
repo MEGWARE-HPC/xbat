@@ -66,6 +66,9 @@ fi
 # ==========================
 
 # ==== CONFIGURATION ====
+# Strip protocol prefix if the user passed a full URL (e.g. https://host or http://host)
+API_HOST="${API_HOST#https://}"
+API_HOST="${API_HOST#http://}"
 API_BASE="https://$API_HOST"
 TOKEN_URL="$API_BASE/oauth/token"
 VALIDATE_URL="$API_BASE/api/v1/current_user"
@@ -112,13 +115,13 @@ EOF
 
 validate_token() {
   local status
-  status=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $ACCESS_TOKEN" "$VALIDATE_URL")
+  status=$(curl -sk -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $ACCESS_TOKEN" "$VALIDATE_URL")
   [[ "$status" == "200" ]]
 }
 
 request_new_token() {
   echo "[*] Requesting new access token..."
-  TOKEN_RESPONSE=$(curl -s -X POST "$TOKEN_URL" \
+  TOKEN_RESPONSE=$(curl -sk -X POST "$TOKEN_URL" \
     -d "grant_type=password" \
     -d "username=$USERNAME" \
     -d "password=$PASSWORD" \
@@ -155,7 +158,7 @@ if [[ "$ACTION" == "export" ]]; then
   echo "[*] Fetching benchmarks from $BENCHMARKS_URL"
   
   # Fetch benchmarks
-  BENCHMARKS_RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "$BENCHMARKS_URL" \
+  BENCHMARKS_RESPONSE=$(curl -sk -w "\n%{http_code}" -X GET "$BENCHMARKS_URL" \
     -H "accept: application/json" \
     -H "Authorization: Bearer $ACCESS_TOKEN")
   
@@ -192,6 +195,44 @@ if [[ "$ACTION" == "export" ]]; then
     echo "    - runNr: $run_nr"
   done
   
+  # Scan output directory for already exported files
+  EXISTING_FILES=($(find "$OUTPUT_DIR" -maxdepth 1 -name "exported_*.tgz" -type f 2>/dev/null))
+  
+  if [[ ${#EXISTING_FILES[@]} -gt 0 ]]; then
+    echo ""
+    echo "[*] Scanning output directory for existing exports..."
+    
+    declare -A EXISTING_RUN_NRS
+    for file in "${EXISTING_FILES[@]}"; do
+      basename=$(basename "$file")
+      if [[ $basename =~ exported_([0-9]+)\.tgz ]]; then
+        EXISTING_RUN_NRS["${BASH_REMATCH[1]}"]=1
+      fi
+    done
+    
+    echo "[+] Found ${#EXISTING_RUN_NRS[@]} already exported benchmark(s)"
+    
+    # Determine missing runNrs
+    MISSING_RUN_NRS=()
+    while read -r run_nr; do
+      if [[ -z "$run_nr" ]]; then continue; fi
+      if [[ -z "${EXISTING_RUN_NRS[$run_nr]+_}" ]]; then
+        MISSING_RUN_NRS+=("$run_nr")
+      fi
+    done <<< "$RUN_NRS"
+    
+    if [[ ${#MISSING_RUN_NRS[@]} -eq 0 ]]; then
+      echo "[+] All benchmarks are already exported. Nothing to do."
+      exit 0
+    fi
+    
+    MISSING_CSV=$(IFS=,; echo "${MISSING_RUN_NRS[*]}")
+    echo "[*] Missing benchmarks (not yet exported): $MISSING_CSV"
+    
+    # Replace RUN_NRS with only the missing ones
+    RUN_NRS=$(printf '%s\n' "${MISSING_RUN_NRS[@]}")
+  fi
+  
   echo ""
   echo "[*] Exporting benchmarks..."
   
@@ -212,7 +253,7 @@ if [[ "$ACTION" == "export" ]]; then
     # Export benchmark
     OUTPUT_FILE="$OUTPUT_DIR/exported_${run_nr}.tgz"
     
-    HTTP_STATUS=$(curl -# -w "%{http_code}" -X POST "$EXPORT_URL" \
+    HTTP_STATUS=$(curl -#k -w "%{http_code}" -X POST "$EXPORT_URL" \
       --max-time 0 \
       --connect-timeout 30 \
       --retry 3 \
@@ -277,20 +318,67 @@ elif [[ "$ACTION" == "import" ]]; then
   for run_nr in "${SORTED_RUN_NRS[@]}"; do
     echo "    - runNr: $run_nr (${FILE_MAP[$run_nr]})"
   done
-  
+
+  # Check which benchmarks are already imported
+  echo ""
+  echo "[*] Checking for already imported benchmarks..."
+  EXISTING_RESPONSE=$(curl -sk -w "\n%{http_code}" -X GET "$BENCHMARKS_URL" \
+    -H "accept: application/json" \
+    -H "Authorization: Bearer $ACCESS_TOKEN")
+
+  EXISTING_HTTP_STATUS=$(echo "$EXISTING_RESPONSE" | tail -n 1)
+  EXISTING_JSON=$(echo "$EXISTING_RESPONSE" | sed '$d')
+
+  if [[ "$EXISTING_HTTP_STATUS" != "200" ]]; then
+    echo "[!] Warning: Failed to fetch existing benchmarks (HTTP $EXISTING_HTTP_STATUS). Proceeding without skip check."
+  else
+    declare -A ALREADY_IMPORTED
+    while IFS= read -r run_nr; do
+      [[ -n "$run_nr" ]] && ALREADY_IMPORTED["$run_nr"]=1
+    done < <(echo "$EXISTING_JSON" | jq -r '.data[] | .runNr | tostring')
+
+    FILTERED_RUN_NRS=()
+    SKIPPED_COUNT=0
+    for run_nr in "${SORTED_RUN_NRS[@]}"; do
+      if [[ -n "${ALREADY_IMPORTED[$run_nr]+_}" ]]; then
+        echo "[*] Skipping runNr $run_nr (already imported)"
+        ((SKIPPED_COUNT++))
+      else
+        FILTERED_RUN_NRS+=("$run_nr")
+      fi
+    done
+
+    SORTED_RUN_NRS=("${FILTERED_RUN_NRS[@]}")
+
+    if [[ $SKIPPED_COUNT -gt 0 ]]; then
+      echo "[+] Skipped $SKIPPED_COUNT already imported benchmark(s)"
+    fi
+
+    if [[ ${#SORTED_RUN_NRS[@]} -eq 0 ]]; then
+      echo "[+] All benchmarks are already imported. Nothing to do."
+      exit 0
+    fi
+  fi
+
+  echo ""
+  echo "[*] Benchmarks to import (${#SORTED_RUN_NRS[@]} total):"
+  for run_nr in "${SORTED_RUN_NRS[@]}"; do
+    echo "    - runNr: $run_nr (${FILE_MAP[$run_nr]})"
+  done
+
   echo ""
   echo "[*] Importing benchmarks..."
-  
+
   # Import each benchmark
   IMPORT_COUNT=0
   IMPORT_FAILED=0
-  
+
   for run_nr in "${SORTED_RUN_NRS[@]}"; do
     file="${FILE_MAP[$run_nr]}"
     echo "[*] Importing runNr: $run_nr"
-    
+
     # Import benchmark with FormData
-    IMPORT_RESPONSE=$(curl -# -w "\n%{http_code}" -X POST "$IMPORT_URL" \
+    IMPORT_RESPONSE=$(curl -#k -w "\n%{http_code}" -X POST "$IMPORT_URL" \
       --max-time 0 \
       --connect-timeout 30 \
       --retry 3 \
@@ -299,11 +387,11 @@ elif [[ "$ACTION" == "import" ]]; then
       -F "file=@$file" \
       -F "reassignRunNr=false" \
       -F "updateColl=false")
-    
+
     HTTP_STATUS=$(echo "$IMPORT_RESPONSE" | tail -n 1)
     IMPORT_BODY=$(echo "$IMPORT_RESPONSE" | sed '$d')
-    
-    if [[ "$HTTP_STATUS" == "200" || "$HTTP_STATUS" == "201" ]]; then
+
+    if [[ "$HTTP_STATUS" == "200" || "$HTTP_STATUS" == "201" || "$HTTP_STATUS" == "204" ]]; then
       echo "[+] Successfully imported runNr: $run_nr"
       ((IMPORT_COUNT++))
     else
