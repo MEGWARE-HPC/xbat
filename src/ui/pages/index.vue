@@ -265,11 +265,13 @@ const { data, refresh, pending } = await useAsyncData(
             $authStore.userLevel !== $authStore.UserLevelEnum.admin &&
             $authStore.userLevel !== $authStore.UserLevelEnum.demo;
         const opts = {
-            page: pagination.page,
-            pageSize: pagination.itemsPerPage,
             sortBy: sortEntry?.key ?? "runNr",
             sortOrder: sortEntry?.order ?? "desc"
         };
+        if (pagination.itemsPerPage !== -1) {
+            opts.page = pagination.page;
+            opts.pageSize = pagination.itemsPerPage;
+        }
         if (debouncedSearch.value) opts.search = debouncedSearch.value;
         if (hideShared.value && isRegularUser) opts.ownedOnly = true;
         if (!hideShared.value && projectFilter.value) opts.project = projectFilter.value;

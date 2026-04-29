@@ -163,7 +163,7 @@ def get_all(runNrs=[], page=None, pageSize=None, search=None, ownedOnly=False, p
     :param page: 1-based page number; omit to return all results
     :param pageSize: items per page; required when page is specified
     :param search: search string matched against name, runNr, jobId, configuration name, and issuer
-    :param ownedOnly: restrict to benchmarks owned by the requesting user
+    :param ownedOnly: restrict to benchmarks owned by the requesting user (hide-shared setting in frontend)
     :param project: filter to benchmarks shared with the given project ObjectId string
     :param sortBy: field to sort by (runNr, name, issuer, startTime, state, configName)
     :param sortOrder: sort direction, 'asc' or 'desc'
