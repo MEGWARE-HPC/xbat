@@ -203,9 +203,9 @@ def _create_query(jobId: int,
     if level != "job" and node:
         filters.append(f"node='{node}'")
     if capture_start:
-        filters.append(f"ts >= '{capture_start.isoformat()}'")
+        filters.append(f"ts >= '{capture_start.replace(tzinfo=None).isoformat()}'")
     if capture_end:
-        filters.append(f"ts <= '{capture_end.isoformat()}'")
+        filters.append(f"ts <= '{capture_end.replace(tzinfo=None).isoformat()}'")
 
     columns = [f"{value_calculation} as val", "ts"]
     groups = ["ts"]
@@ -286,9 +286,9 @@ async def calculate_metrics(jobId, group, metric, level, node, deciles):
         if level != "job" and node:
             parts.append(f"AND node='{node}'")
         if capture_start:
-            parts.append(f"AND ts >= '{capture_start.isoformat()}'")
+            parts.append(f"AND ts >= '{capture_start.replace(tzinfo=None).isoformat()}'")
         if capture_end:
-            parts.append(f"AND ts <= '{capture_end.isoformat()}'")
+            parts.append(f"AND ts <= '{capture_end.replace(tzinfo=None).isoformat()}'")
         queries.append(" ".join(parts))
 
     all_levels = await clickhouse.execute_queries(queries)
@@ -868,9 +868,9 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
 
             time_filters = []
             if capture_start:
-                time_filters.append(f"ts >= '{capture_start.isoformat()}'")
+                time_filters.append(f"ts >= '{capture_start.replace(tzinfo=None).isoformat()}'")
             if capture_end:
-                time_filters.append(f"ts <= '{capture_end.isoformat()}'")
+                time_filters.append(f"ts <= '{capture_end.replace(tzinfo=None).isoformat()}'")
             time_clause = (" AND " +
                            " AND ".join(time_filters)) if time_filters else ""
 
