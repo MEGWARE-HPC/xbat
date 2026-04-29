@@ -12,7 +12,7 @@ server_tls_sslmode = disable
 
 # Connection Pooling Settings
 pool_mode = transaction
-max_client_conn = 256
+max_client_conn = 512
 default_pool_size = 16
 min_pool_size = 8
 

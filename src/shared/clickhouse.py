@@ -113,7 +113,9 @@ class ClickHouse:
             for table in tables
         ]
 
-        await self.execute_queries(queries)
+        # Temporarily execute with concurrency of 2 to avoid reaching max_client_conn of pgbouncer when deleting many jobs at once.
+        # TODO: Proper fix would be to add a delete call that is able to delete multiple benchmarks at once.
+        await self.execute_queries(queries, 2)
 
     async def get_table_names(self, exclude_templates=True):
         """Get list of table names in ClickHouse"""
