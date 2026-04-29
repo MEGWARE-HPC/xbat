@@ -19,89 +19,6 @@
 
                     <div class="fb-header-actions" v-if="canCreate">
                         <div class="fb-toolbar-shell">
-                            <!-- Base actions -->
-                            <v-btn-group
-                                divided
-                                variant="text"
-                                density="comfortable"
-                                class="fb-toolbar"
-                            >
-                                <v-tooltip location="bottom">
-                                    <template #activator="{ props: tipProps }">
-                                        <span
-                                            class="fb-toolbar-item"
-                                            v-bind="tipProps"
-                                        >
-                                            <v-btn
-                                                icon="$newFile"
-                                                color="primary-light"
-                                                @click="
-                                                    $emit('create-config', {
-                                                        folderId:
-                                                            createCfgFolderId
-                                                    })
-                                                "
-                                            />
-                                        </span>
-                                    </template>
-                                    <span>New Configuration</span>
-                                </v-tooltip>
-
-                                <v-tooltip location="bottom">
-                                    <template #activator="{ props: tipProps }">
-                                        <span
-                                            class="fb-toolbar-item"
-                                            v-bind="tipProps"
-                                        >
-                                            <v-btn
-                                                icon="$newFolder"
-                                                color="primary-light"
-                                                :disabled="
-                                                    isSharedView ||
-                                                    folderId.startsWith('__')
-                                                "
-                                                @click="openCreateFolder()"
-                                            />
-                                        </span>
-                                    </template>
-                                    <span>New Folder</span>
-                                </v-tooltip>
-
-                                <v-tooltip location="bottom">
-                                    <template #activator="{ props: tipProps }">
-                                        <span
-                                            class="fb-toolbar-item"
-                                            v-bind="tipProps"
-                                        >
-                                            <v-btn
-                                                icon="$cloudDownload"
-                                                color="primary-light"
-                                                @click="openExportBackup()"
-                                            />
-                                        </span>
-                                    </template>
-                                    <span>Export Backup</span>
-                                </v-tooltip>
-
-                                <v-tooltip location="bottom">
-                                    <template #activator="{ props: tipProps }">
-                                        <span
-                                            class="fb-toolbar-item"
-                                            v-bind="tipProps"
-                                        >
-                                            <v-btn
-                                                icon="$cloudUpload"
-                                                color="primary-light"
-                                                @click="openRestoreBackup()"
-                                            />
-                                        </span>
-                                    </template>
-                                    <span>Restore Backup</span>
-                                </v-tooltip>
-                            </v-btn-group>
-
-                            <div v-if="hasSelect" class="fb-toolbar-divider" />
-
                             <!-- Selection actions -->
                             <v-btn-group
                                 v-if="hasSelect"
@@ -233,6 +150,89 @@
                                         <span>Delete</span>
                                     </v-tooltip>
                                 </template>
+                            </v-btn-group>
+
+                            <div v-if="hasSelect" class="fb-toolbar-divider" />
+
+                            <!-- Base actions -->
+                            <v-btn-group
+                                divided
+                                variant="text"
+                                density="comfortable"
+                                class="fb-toolbar"
+                            >
+                                <v-tooltip location="bottom">
+                                    <template #activator="{ props: tipProps }">
+                                        <span
+                                            class="fb-toolbar-item"
+                                            v-bind="tipProps"
+                                        >
+                                            <v-btn
+                                                icon="$newFile"
+                                                color="primary-light"
+                                                @click="
+                                                    $emit('create-config', {
+                                                        folderId:
+                                                            createCfgFolderId
+                                                    })
+                                                "
+                                            />
+                                        </span>
+                                    </template>
+                                    <span>New Configuration</span>
+                                </v-tooltip>
+
+                                <v-tooltip location="bottom">
+                                    <template #activator="{ props: tipProps }">
+                                        <span
+                                            class="fb-toolbar-item"
+                                            v-bind="tipProps"
+                                        >
+                                            <v-btn
+                                                icon="$newFolder"
+                                                color="primary-light"
+                                                :disabled="
+                                                    isSharedView ||
+                                                    folderId.startsWith('__')
+                                                "
+                                                @click="openCreateFolder()"
+                                            />
+                                        </span>
+                                    </template>
+                                    <span>New Folder</span>
+                                </v-tooltip>
+
+                                <v-tooltip location="bottom">
+                                    <template #activator="{ props: tipProps }">
+                                        <span
+                                            class="fb-toolbar-item"
+                                            v-bind="tipProps"
+                                        >
+                                            <v-btn
+                                                icon="$cloudDownload"
+                                                color="primary-light"
+                                                @click="openExportBackup()"
+                                            />
+                                        </span>
+                                    </template>
+                                    <span>Export Backup</span>
+                                </v-tooltip>
+
+                                <v-tooltip location="bottom">
+                                    <template #activator="{ props: tipProps }">
+                                        <span
+                                            class="fb-toolbar-item"
+                                            v-bind="tipProps"
+                                        >
+                                            <v-btn
+                                                icon="$cloudUpload"
+                                                color="primary-light"
+                                                @click="openRestoreBackup()"
+                                            />
+                                        </span>
+                                    </template>
+                                    <span>Restore Backup</span>
+                                </v-tooltip>
                             </v-btn-group>
                         </div>
                     </div>
