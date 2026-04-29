@@ -6,37 +6,12 @@ from shared.date import get_current_datetime
 from shared.helpers import sanitize_mongo, convert_jobscript_to_v0160
 from backend.restapi.user_helper import get_user_from_token, get_user_projects
 from backend.restapi.api.configuration_folders import owner_folder
+from backend.restapi.utils.ids import ensure_objectId, transform_objectId
 
 db = MongoDB()
 
 COLLECTION_NAME = "configurations"
 CONFIGURATION_FOLDERS_COLLECTION = "configuration_folders"
-
-
-def ensure_objectId(v):
-    if isinstance(v, ObjectId):
-        return v
-    if v is None:
-        return None
-    try:
-        return ObjectId(v)
-    except Exception:
-        return None
-
-
-def transform_objectId(c):
-    cfg = c.get("configuration", {})
-    # transform folderId
-    if cfg.get("folderId"):
-        cfg["folderId"] = ensure_objectId(cfg["folderId"])
-    # transform projectId(s)
-    if "sharedProjects" in cfg:
-        cfg["sharedProjects"] = [
-            ensure_objectId(p) for p in cfg["sharedProjects"]
-        ]
-
-    c["configuration"] = cfg
-    return c
 
 
 def check_config_name(config):
@@ -292,7 +267,7 @@ def post():
         "edited": timestamp,
     }
 
-    config = transform_objectId(config)
+    config = transform_objectId(config, "configuration")
 
     owner = user["user_name"]
     folder_id = check_config_folder(config, owner)
@@ -344,7 +319,7 @@ def put(_id):
     config["misc"]["created"] = (existing.get("misc") or {}).get("created")
     config["misc"]["edited"] = get_current_datetime()
 
-    config = transform_objectId(config)
+    config = transform_objectId(config, "configuration")
 
     folder_id = check_config_folder(config, existing_owner)
     name = check_config_name(config)

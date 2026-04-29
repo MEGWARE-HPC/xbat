@@ -5,40 +5,11 @@ from shared.mongodb import MongoDB
 from shared.date import get_current_datetime
 from shared.helpers import sanitize_mongo
 from backend.restapi.user_helper import get_user_from_token, get_user_projects
+from backend.restapi.utils.ids import ensure_objectId, transform_objectId
 
 db = MongoDB()
 
 COLLECTION_NAME = "configuration_folders"
-
-
-def ensure_objectId(v):
-    if isinstance(v, ObjectId):
-        return v
-    if v is None or v == "":
-        return None
-    try:
-        return ObjectId(v)
-    except Exception:
-        return None
-
-
-def transform_objectId(v):
-    """
-    Convert sharedProjects strings to ObjectId if they exist
-    """
-    folder = v.get("folder", {})
-
-    folder["parentFolderId"] = ensure_objectId(folder.get("parentFolderId"))
-
-    shared = []
-    for p in folder.get("sharedProjects", []) or []:
-        oid = ensure_objectId(p)
-        if oid:
-            shared.append(oid)
-    folder["sharedProjects"] = shared
-
-    v["folder"] = folder
-    return v
 
 
 def check_folder_name(doc):
@@ -249,7 +220,7 @@ def post():
         "edited": timestamp,
     }
 
-    folder = transform_objectId(folder)
+    folder = transform_objectId(folder, "folder")
 
     parent_id = folder["folder"].get("parentFolderId")
     name = check_folder_name(folder)
@@ -296,7 +267,7 @@ def put(_id):
     folder["misc"]["created"] = (existing.get("misc") or {}).get("created")
     folder["misc"]["edited"] = get_current_datetime()
 
-    folder = transform_objectId(folder)
+    folder = transform_objectId(folder, "folder")
 
     parent_id = folder["folder"].get("parentFolderId")
     name = check_folder_name(folder)

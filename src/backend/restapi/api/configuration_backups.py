@@ -9,6 +9,7 @@ from shared.date import get_current_datetime, get_current_filename_datetime_str
 from shared.helpers import sanitize_mongo, convert_jobscript_to_v0160
 from backend.restapi.user_helper import get_user_from_token
 from backend.restapi.api.configuration_folders import owner_folder
+from backend.restapi.utils.ids import ensure_objectId, coerce_objectid_list, normalize_string
 
 db = MongoDB()
 
@@ -17,31 +18,6 @@ FOLDER_COLLECTION = "configuration_folders"
 
 PRIVILEGED_TYPES = ("manager", "admin")
 BACKUP_SCHEMA_VERSION = "configuration-backup-v1"
-
-
-def ensure_objectId(v):
-    if isinstance(v, ObjectId):
-        return v
-    if v is None or v == "":
-        return None
-    try:
-        return ObjectId(v)
-    except Exception:
-        return None
-
-
-def coerce_objectid_list(values):
-    result = []
-    for v in values or []:
-        oid = ensure_objectId(v)
-        if oid:
-            result.append(oid)
-    return result
-
-
-def normalize_string(v):
-    return str(v or "").strip()
-
 
 # Export
 
