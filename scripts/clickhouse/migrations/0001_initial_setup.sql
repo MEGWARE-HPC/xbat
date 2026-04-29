@@ -245,7 +245,7 @@ CREATE TABLE IF NOT EXISTS likwid_core_power AS template_topology_float;
 
 CREATE TABLE IF NOT EXISTS likwid_dram_power AS template_topology_float;
 
-CREATE TABLE IF NOT EXISTS likwid_platform_power AS template_float;
+CREATE TABLE IF NOT EXISTS likwid_platform_power AS template_topology_float;
 
 CREATE TABLE IF NOT EXISTS fpga_power AS template_device_float;
 
