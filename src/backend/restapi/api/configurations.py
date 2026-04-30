@@ -4,9 +4,9 @@ from shared import httpErrors
 from shared.mongodb import MongoDB
 from shared.date import get_current_datetime
 from shared.helpers import sanitize_mongo, convert_jobscript_to_v0160
-from backend.restapi.api.configuration_folders import owner_folder
 from backend.restapi.utils.ids import ensure_objectId, transform_objectId
 from backend.restapi.utils.users import get_user_from_token, get_user_projects, has_full_read_access, can_modify_owned_doc
+from backend.restapi.utils.folders import owner_folder
 
 db = MongoDB()
 

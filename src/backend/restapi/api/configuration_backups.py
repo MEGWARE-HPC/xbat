@@ -7,9 +7,9 @@ from shared import httpErrors
 from shared.mongodb import MongoDB
 from shared.date import get_current_datetime, get_current_filename_datetime_str
 from shared.helpers import sanitize_mongo, convert_jobscript_to_v0160
-from backend.restapi.api.configuration_folders import owner_folder
 from backend.restapi.utils.ids import ensure_objectId, coerce_objectid_list, normalize_string
 from backend.restapi.utils.users import get_user_from_token, is_privileged_user
+from backend.restapi.utils.folders import owner_folder, find_existing_folder, next_unique_folder_name
 
 db = MongoDB()
 
@@ -534,31 +534,6 @@ def get_target_owner(item_owner, restore_info):
         return owner
 
     return restore_info["target_owner"]
-
-
-def find_existing_folder(owner, parent_folder_id, folder_name):
-    query = {
-        "misc.owner": owner,
-        "folder.folderName": folder_name,
-        "folder.parentFolderId": ensure_objectId(parent_folder_id),
-    }
-    return db.getOne(FOLDER_COLLECTION, query, {
-        "_id": 1,
-        "folder.folderName": 1
-    })
-
-
-def next_unique_folder_name(owner, parent_folder_id, base_name):
-    candidate = base_name
-    if find_existing_folder(owner, parent_folder_id, candidate) is None:
-        return candidate
-
-    idx = 2
-    while True:
-        candidate = f"{base_name} ({idx})"
-        if find_existing_folder(owner, parent_folder_id, candidate) is None:
-            return candidate
-        idx += 1
 
 
 def find_existing_config(owner, folder_id, configuration_name):
