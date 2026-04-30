@@ -21,6 +21,7 @@ This release contains many breaking changes and improvements. Please refer to th
 - UI of ClickHouse is now available at port 7004 (or --port <port> + 4) instead of being proxied over 7000
 - unified font usage across browsers in the documentation (#184) and switched to Source Sans 3
 - upgraded xbat font from Source Sans Pro to Source Sans 3
+- improved performance of benchmark overview
 
 ### Fixed
 
