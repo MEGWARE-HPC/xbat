@@ -15,7 +15,6 @@ services:
             #- "#FRONTEND_NETWORK#:#CLICKHOUSE_PG_PORT#:#CLICKHOUSE_PG_PORT#"  # ClickHouse PostgreSQL protocol
             #- "#FRONTEND_NETWORK#:#CLICKHOUSE_HTTP_PORT#:#CLICKHOUSE_HTTP_PORT#"  # ClickHouse UI
         depends_on:
-            - xbat-ui
             - xbat-backend
     xbat-backend:
         image: xbat_backend
@@ -59,20 +58,6 @@ services:
             - xbat-pgbouncer
         expose:
             - 8002
-    xbat-ui:
-        image: xbat_ui
-        container_name: xbat-ui
-        restart: unless-stopped
-        volumes:
-            - /etc/localtime:/etc/localtime:ro
-        environment:
-            - NUXT_PUBLIC_DEMO_MODE=${DEMO_ENABLED}
-            - NUXT_PUBLIC_DEMO_USER=${DEMO_USER}
-            - NUXT_PUBLIC_DEMO_PASSWORD=${DEMO_PASSWORD}
-        depends_on:
-            - xbat-backend
-        expose:
-            - 8003
     xbat-mongodb:
         image: docker.io/mongo:8
         restart: unless-stopped

@@ -82,7 +82,6 @@ check_prerequisites() {
 build_docker_images() {
     log_info "Building docker images..."
     "$EXECUTOR" build -t xbat_nginx -f ./docker/nginx.dockerfile .
-    "$EXECUTOR" build -t xbat_ui --ulimit nofile=4096:4096 -f ./docker/ui.dockerfile .
     "$EXECUTOR" build -t xbat_backend -f ./docker/backend.dockerfile .
     "$EXECUTOR" build -t xbat_ctld -f ./docker/xbatctld.dockerfile .
 }
@@ -213,7 +212,6 @@ install_action() {
     sed -i "s!#CLICKHOUSE_PG_PORT#!$CLICKHOUSE_PG_PORT!" ./conf/nginx.conf.in
     sed -i "s!#CLICKHOUSE_HTTP_PORT#!$CLICKHOUSE_HTTP_PORT!" ./conf/nginx.conf.in
     sed -i "s!workers = 8!workers = $WORKERS!" ./src/backend/config-prod.py
-    sed -i "s!instances: \"8\"!instances: \"$WORKERS\"!" ./src/ui/ecosystem.config.cjs
 
     build_docker_images
     prepare_databases

@@ -99,10 +99,6 @@ http {
         server xbat-backend:8001;
     }
 
-    upstream docker-xbat-ui {
-        server xbat-ui:8003;
-    }
-
     server {
         listen 7000 ssl;
         listen [::]:7000 ssl;
@@ -125,8 +121,8 @@ http {
         
 
         location / {
-            proxy_pass http://docker-xbat-ui;
-            proxy_redirect http://docker-xbat-ui/ $scheme://$http_host/;
+            root /usr/share/nginx/html;
+            try_files $uri $uri/ /index.html;
         }
 
         # /import route with higher read timeout and increased client body size
