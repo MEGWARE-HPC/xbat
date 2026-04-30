@@ -2,7 +2,7 @@ FROM oven/bun:alpine AS ui-builder
 
 WORKDIR /app
 
-COPY ./src/ui/package.json ./src/ui/bun.lockb ./
+COPY ./src/ui/package.json ./src/ui/package-lock.json ./
 
 RUN bun install --frozen-lockfile
 
