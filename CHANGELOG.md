@@ -10,6 +10,8 @@ This release contains many breaking changes and improvements. Please refer to th
 
 - Configuration validator via `./setup.sh validate` to check for issues with the configuration
 - Database migrations via `./setup.sh migrate` for ClickHouse
+- a folder system for configurations, provide an improved folder browser experience, also add sorting functionality (#54)
+- backup/restore support for configurations (#166)
 
 ### Changed
 
