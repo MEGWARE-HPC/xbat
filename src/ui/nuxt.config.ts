@@ -43,6 +43,9 @@ export default defineNuxtConfig({
         "@nuxtjs/color-mode",
         "@nuxt/fonts"
     ],
+    image: {
+        provider: "none"
+    },
     devServer: {
         https: {
             key: "../../dev/certs/key.pem",
