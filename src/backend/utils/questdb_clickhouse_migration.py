@@ -291,9 +291,10 @@ def _convert_csv_file(csv_path: Path,
 
 
 def detect_format(
-        extract_folder: Path) -> Literal["questdb", "clickhouse", "unknown"]:
+        extract_folder: Path) -> Literal["questdb", "clickhouse"]:
     """
     Detect whether the export folder is in QuestDB or ClickHouse format.
+    Assume everything that does not match clickhou
     
     Args:
         extract_folder: Path to the extracted folder containing runNr subdirectories
@@ -301,7 +302,6 @@ def detect_format(
     Returns:
         "questdb" if old format detected
         "clickhouse" if new format detected
-        "unknown" if format cannot be determined
     """
     # Find all runNr directories recursively
     runNr_folders = _find_runNr_folders(extract_folder)
@@ -312,12 +312,7 @@ def detect_format(
         if jobs_folder.exists() and jobs_folder.is_dir():
             return "clickhouse"
 
-        # Check for CSV files directly in runNr folder (QuestDB format)
-        csv_files = list(runNr_folder.glob("*.csv"))
-        if csv_files:
-            return "questdb"
-
-    return "unknown"
+    return "questdb"
 
 
 def _convert_csv_file_wrapper(args):
