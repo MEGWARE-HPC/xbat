@@ -85,6 +85,10 @@
                     :page="pagination.page"
                     :sort-by="pagination.sortBy"
                     must-sort
+                    :row-props="({ item }) => ({
+                        onMouseenter: () => { hoveredRunNr = item.runNr },
+                        onMouseleave: () => { hoveredRunNr = null }
+                    })"
                 >
                     <template v-slot:[`item.startTime`]="{ item }">
                         <ClientOnly>
@@ -100,7 +104,7 @@
                                     )
                                 }}
                             </div>
-                            <div class="job-hover-info">
+                            <div class="job-hover-info" v-if="hoveredRunNr === item.runNr">
                                 <Tooltip location="bottom" custom>
                                     <v-card>
                                         <v-card-text>
@@ -226,6 +230,8 @@ const headers = [
 const { overviewItemsPerPage } = usePreferences();
 
 const { $api, $authStore, $store, $snackbar } = useNuxtApp();
+
+const hoveredRunNr = ref(null);
 
 const pagination = reactive({
     page: 1,
@@ -419,8 +425,7 @@ onBeforeRouteLeave(() => {
 }
 
 .overview-table {
-    .name-edit,
-    .job-hover-info {
+    .name-edit {
         opacity: 0;
         visibility: hidden;
         display: inline-block;
@@ -430,11 +435,11 @@ onBeforeRouteLeave(() => {
         position: absolute;
         top: calc(50% - 10px);
         left: 0;
+        display: inline-block;
     }
     :deep(tr) {
         &:hover {
-            .name-edit,
-            .job-hover-info {
+            .name-edit {
                 opacity: 1;
                 visibility: visible;
             }
