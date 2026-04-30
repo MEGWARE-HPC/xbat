@@ -7,16 +7,15 @@ from shared import httpErrors
 from shared.mongodb import MongoDB
 from shared.date import get_current_datetime, get_current_filename_datetime_str
 from shared.helpers import sanitize_mongo, convert_jobscript_to_v0160
-from backend.restapi.user_helper import get_user_from_token
 from backend.restapi.api.configuration_folders import owner_folder
 from backend.restapi.utils.ids import ensure_objectId, coerce_objectid_list, normalize_string
+from backend.restapi.utils.users import get_user_from_token, is_privileged_user
 
 db = MongoDB()
 
 CONFIG_COLLECTION = "configurations"
 FOLDER_COLLECTION = "configuration_folders"
 
-PRIVILEGED_TYPES = ("manager", "admin")
 BACKUP_SCHEMA_VERSION = "configuration-backup-v1"
 
 # Export
@@ -38,7 +37,7 @@ def get_export_scope():
     if the_scope not in ("self", "owner", "all"):
         raise httpErrors.BadRequest("Invalid scope")
 
-    is_privileged = user["user_type"] in PRIVILEGED_TYPES
+    is_privileged = is_privileged_user(user)
 
     if not is_privileged:
         if the_scope != "self":
@@ -364,7 +363,7 @@ def get_restore_scope():
     if conflict_strategy not in ("overwrite", "rename", "skip"):
         raise httpErrors.BadRequest("Invalid conflictStrategy")
 
-    is_privileged = user["user_type"] in PRIVILEGED_TYPES
+    is_privileged = is_privileged_user(user)
 
     if not is_privileged:
         if the_scope != "self":

@@ -4,9 +4,9 @@ from shared import httpErrors
 from shared.mongodb import MongoDB
 from shared.date import get_current_datetime
 from shared.helpers import sanitize_mongo, convert_jobscript_to_v0160
-from backend.restapi.user_helper import get_user_from_token, get_user_projects
 from backend.restapi.api.configuration_folders import owner_folder
 from backend.restapi.utils.ids import ensure_objectId, transform_objectId
+from backend.restapi.utils.users import get_user_from_token, get_user_projects, has_full_read_access, can_modify_owned_doc
 
 db = MongoDB()
 
@@ -187,7 +187,7 @@ def get_user_configurations(_id=None):
 
     filters = []
 
-    if user["user_type"] not in ["admin", "manager", "demo"]:
+    if not has_full_read_access(user):
         filters.append({"misc.owner": user["user_name"]})
 
         project_ids = [p["_id"] for p in get_user_projects(user)]
@@ -310,8 +310,7 @@ def put(_id):
 
     existing_owner = (existing.get("misc") or {}).get("owner")
 
-    if user["user_name"] != existing_owner and user["user_type"] not in (
-            "manager", "admin"):
+    if not can_modify_owned_doc(user, existing_owner):
         raise httpErrors.Forbidden()
 
     config["misc"] = config.get("misc") or {}
@@ -357,8 +356,7 @@ def delete(_id):
     if cfg is None:
         raise httpErrors.NotFound()
 
-    if (user["user_name"] != cfg["misc"]["owner"]
-            and user["user_type"] not in ("manager", "admin")):
+    if not can_modify_owned_doc(user, cfg["misc"]["owner"]):
         raise httpErrors.Forbidden()
 
     result = db.deleteOne(COLLECTION_NAME, {"_id": ensure_objectId(_id)})

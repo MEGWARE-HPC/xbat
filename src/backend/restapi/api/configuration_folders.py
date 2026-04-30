@@ -4,8 +4,8 @@ from shared import httpErrors
 from shared.mongodb import MongoDB
 from shared.date import get_current_datetime
 from shared.helpers import sanitize_mongo
-from backend.restapi.user_helper import get_user_from_token, get_user_projects
 from backend.restapi.utils.ids import ensure_objectId, transform_objectId
+from backend.restapi.utils.users import get_user_from_token, get_user_projects, has_full_read_access, can_modify_owned_doc
 
 db = MongoDB()
 
@@ -84,7 +84,7 @@ def get_user_folders(_id=None):
     if user is None:
         return None
 
-    if user["user_type"] not in ["admin", "manager", "demo"]:
+    if not has_full_read_access(user):
         filters.append({"misc.owner": user["user_name"]})
 
         project_ids = [p["_id"] for p in get_user_projects(user)]
@@ -257,8 +257,7 @@ def put(_id):
         raise httpErrors.NotFound()
 
     existing_owner = (existing.get("misc") or {}).get("owner")
-    if (user["user_name"] != existing_owner
-            and user["user_type"] not in ("manager", "admin")):
+    if not can_modify_owned_doc(user, existing_owner):
         raise httpErrors.Forbidden()
 
     folder["folder"] = folder.get("folder") or {}
@@ -309,8 +308,7 @@ def delete(_id):
     if folder is None:
         raise httpErrors.NotFound()
 
-    if (user["user_name"] != folder["misc"]["owner"]
-            and user["user_type"] not in ("manager", "admin")):
+    if not can_modify_owned_doc(user, folder["misc"]["owner"]):
         raise httpErrors.Forbidden()
 
     def collect_folder_ids(folder_id):
