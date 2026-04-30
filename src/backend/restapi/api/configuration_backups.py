@@ -9,8 +9,8 @@ from shared.date import get_current_datetime, get_current_filename_datetime_str
 from shared.helpers import sanitize_mongo, convert_jobscript_to_v0160
 from backend.restapi.utils.ids import ensure_objectId, coerce_objectid_list, normalize_string
 from backend.restapi.utils.users import get_user_from_token, is_privileged_user
-from backend.restapi.utils.folders import owner_folder, find_existing_folder, next_unique_folder_name
-from backend.restapi.utils.configurations import find_existing_config, next_unique_config_name
+from backend.restapi.utils.folders import owner_folder, get_owned_folders, find_existing_folder, next_unique_folder_name
+from backend.restapi.utils.configurations import get_owned_configs, find_existing_config, next_unique_config_name
 
 db = MongoDB()
 
@@ -77,22 +77,6 @@ def get_export_scope():
     }
 
 
-def get_owned_folders(owners=None):
-    query = {}
-    if owners is not None:
-        query["misc.owner"] = {"$in": owners}
-
-    return sanitize_mongo(db.getMany(FOLDER_COLLECTION, query))
-
-
-def get_owned_configs(owners=None):
-    query = {}
-    if owners is not None:
-        query["misc.owner"] = {"$in": owners}
-
-    return sanitize_mongo(db.getMany(CONFIG_COLLECTION, query))
-
-
 def get_home_ids(owners=None):
     """
     Returns { owner: "<home_folder_id>" }
@@ -124,25 +108,6 @@ def get_home_ids(owners=None):
             result[owner] = str(doc["_id"])
 
     return result
-
-
-def build_folder_map(folders):
-    """
-    Returns:
-    - folder_owner_map: { "<folder_id>": "<owner>" }
-    - folder_ids: set("<folder_id>")
-    """
-    folder_owner_map = {}
-    folder_ids = set()
-
-    for doc in folders:
-        folder_id = str(doc["_id"])
-        owner = (doc.get("misc") or {}).get("owner")
-
-        folder_ids.add(folder_id)
-        folder_owner_map[folder_id] = owner
-
-    return folder_owner_map, folder_ids
 
 
 def normalize_export_id(folder_doc, home_ids, folder_owner_map, folder_ids):

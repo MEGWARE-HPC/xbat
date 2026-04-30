@@ -11,6 +11,14 @@ COLLECTION_NAME = "configurations"
 CONFIGURATION_FOLDERS_COLLECTION = "configuration_folders"
 
 
+def get_owned_configs(owners=None):
+    query = {}
+    if owners is not None:
+        query["misc.owner"] = {"$in": owners}
+
+    return sanitize_mongo(db.getMany(COLLECTION_NAME, query))
+
+
 def check_config_name(config):
     cfg = config.setdefault("configuration", {})
     name = str(cfg.get("configurationName") or "").strip()

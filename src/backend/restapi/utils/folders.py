@@ -12,6 +12,33 @@ db = MongoDB()
 COLLECTION_NAME = "configuration_folders"
 
 
+def get_owned_folders(owners=None):
+    query = {}
+    if owners is not None:
+        query["misc.owner"] = {"$in": owners}
+
+    return sanitize_mongo(db.getMany(COLLECTION_NAME, query))
+
+
+def build_folder_map(folders):
+    """
+    Returns:
+    - folder_owner_map: { "<folder_id>": "<owner>" }
+    - folder_ids: set("<folder_id>")
+    """
+    folder_owner_map = {}
+    folder_ids = set()
+
+    for doc in folders:
+        folder_id = str(doc["_id"])
+        owner = (doc.get("misc") or {}).get("owner")
+
+        folder_ids.add(folder_id)
+        folder_owner_map[folder_id] = owner
+
+    return folder_owner_map, folder_ids
+
+
 def check_folder_name(doc):
     folder = doc.setdefault("folder", {})
     name = str(folder.get("folderName") or "").strip()
