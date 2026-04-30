@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY ./src/ui/package.json ./src/ui/package-lock.json ./
 
-RUN bun install --frozen-lockfile
+RUN bun install
 
 COPY ./src/ui .
 COPY CHANGELOG.md ./public/CHANGELOG.md
