@@ -69,6 +69,17 @@ link_directories(
   /usr/local/lib
 )
 
+# Find Boost
+# Boost.Log on older distros (e.g. el8/Boost 1.66) requires BOOST_ALL_DYN_LINK
+# because the CMake FindBoost fallback module does not set it in the imported
+# target's INTERFACE_COMPILE_DEFINITIONS, causing undefined reference errors.
+set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_MULTITHREADED ON)
+set(Boost_USE_STATIC_RUNTIME OFF)
+find_package(Boost REQUIRED COMPONENTS log log_setup system thread)
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE BOOST_ALL_DYN_LINK)
+
 # Core libraries that are provided by the system (except for clickhouse-cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE
   clickhouse-cpp-lib
@@ -89,9 +100,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   ${XBAT_LIB_DIR}/libamd_smi.so
   ${XBAT_LIB_DIR}/liblikwid.so
 )
-
-# Find Boost
-find_package(Boost REQUIRED COMPONENTS log log_setup system thread)
 
 # Install target (optional)
 install(TARGETS ${PROJECT_NAME} DESTINATION /usr/local/bin)
