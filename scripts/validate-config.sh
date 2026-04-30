@@ -290,6 +290,7 @@ validate_clickhouse_section() {
     check_required_var "CLICKHOUSE_PASSWORD" && print_success "password is set"
     check_required_var "CLICKHOUSE_DAEMON_PASSWORD" && print_success "daemon_password is set"
     check_required_var "CLICKHOUSE_DAEMON_USER" && print_success "daemon_user is set"
+    check_required_var "CLICKHOUSE_SSL" && print_success "ssl is set"
     
     # Check for default values that need to be changed
     check_default_value "CLICKHOUSE_PASSWORD" "changeme" "uses default password 'changeme'"
@@ -302,6 +303,7 @@ validate_clickhouse_section() {
     check_infrastructure_value "CLICKHOUSE_DAEMON_USER" "xbatd" "has been changed from default daemon user name"
     check_infrastructure_value "CLICKHOUSE_DATABASE" "xbat" "has been changed from default database name"
     check_infrastructure_value "CLICKHOUSE_DAEMON_PORT" "7002" "has been changed from default daemon port (7002)"
+    check_infrastructure_value "CLICKHOUSE_SSL" "true" "has been changed from default SSL setting (true) - only change this value if you are deploying with --no-db and your ClickHouse instance does not have SSL enabled"
 }
 
 validate_pgbouncer_section() {

@@ -245,7 +245,8 @@ int main(int argc, char* argv[]) {
             {"clickhouse_port", pt.get<uint>("clickhouse.port")},
             {"clickhouse_database", pt.get<std::string>("clickhouse.database")},
             {"clickhouse_user", pt.get<std::string>("clickhouse.user")},
-            {"clickhouse_password", pt.get<std::string>("clickhouse.password")}};
+            {"clickhouse_password", pt.get<std::string>("clickhouse.password")},
+            {"clickhouse_ssl", pt.get<bool>("clickhouse.ssl", true)}};
 
     } catch (boost::property_tree::ptree_bad_path const&) {
         std::cerr << "Invalid configuration at " << confPath << "\n"

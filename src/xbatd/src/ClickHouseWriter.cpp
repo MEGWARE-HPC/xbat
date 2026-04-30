@@ -95,9 +95,13 @@ void ClickHouseWriter::writeToDb(CQueue& dataQueue, config_map& config) {
             .SetPort(std::get<uint>(config["clickhouse_port"]))
             .SetDefaultDatabase(std::get<std::string>(config["clickhouse_database"]))
             .SetUser(std::get<std::string>(config["clickhouse_user"]))
-            .SetPassword(std::get<std::string>(config["clickhouse_password"]))
-            .SetSSLOptions(clickhouse::ClientOptions::SSLOptions()
-                .SetSkipVerification(true));
+            .SetPassword(std::get<std::string>(config["clickhouse_password"]));
+
+        if (std::get<bool>(config["clickhouse_ssl"])) {
+            clientOptions.SetSSLOptions(
+                clickhouse::ClientOptions::SSLOptions()
+                    .SetSkipVerification(true));
+        }
 
         clickhouse::Client client(clientOptions);
 
