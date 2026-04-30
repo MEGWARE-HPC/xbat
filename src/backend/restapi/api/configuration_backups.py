@@ -10,6 +10,7 @@ from shared.helpers import sanitize_mongo, convert_jobscript_to_v0160
 from backend.restapi.utils.ids import ensure_objectId, coerce_objectid_list, normalize_string
 from backend.restapi.utils.users import get_user_from_token, is_privileged_user
 from backend.restapi.utils.folders import owner_folder, find_existing_folder, next_unique_folder_name
+from backend.restapi.utils.configurations import find_existing_config, next_unique_config_name
 
 db = MongoDB()
 
@@ -534,31 +535,6 @@ def get_target_owner(item_owner, restore_info):
         return owner
 
     return restore_info["target_owner"]
-
-
-def find_existing_config(owner, folder_id, configuration_name):
-    query = {
-        "misc.owner": owner,
-        "configuration.folderId": ensure_objectId(folder_id),
-        "configuration.configurationName": configuration_name,
-    }
-    return db.getOne(CONFIG_COLLECTION, query, {
-        "_id": 1,
-        "configuration.configurationName": 1
-    })
-
-
-def next_unique_config_name(owner, folder_id, base_name):
-    candidate = base_name
-    if find_existing_config(owner, folder_id, candidate) is None:
-        return candidate
-
-    idx = 2
-    while True:
-        candidate = f"{base_name} ({idx})"
-        if find_existing_config(owner, folder_id, candidate) is None:
-            return candidate
-        idx += 1
 
 
 def restore_folders(payload, restore_info, summary):
