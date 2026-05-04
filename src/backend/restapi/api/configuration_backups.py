@@ -7,16 +7,16 @@ from shared import httpErrors
 from shared.mongodb import MongoDB
 from shared.date import get_current_datetime, get_current_filename_datetime_str
 from shared.helpers import sanitize_mongo, convert_jobscript_to_v0160
-from backend.restapi.user_helper import get_user_from_token
-from backend.restapi.api.configuration_folders import owner_folder
 from backend.restapi.utils.ids import ensure_objectId, coerce_objectid_list, normalize_string
+from backend.restapi.utils.users import get_user_from_token, is_privileged_user
+from backend.restapi.utils.folders import owner_folder, get_owned_folders, find_existing_folder, next_unique_folder_name
+from backend.restapi.utils.configurations import get_owned_configs, find_existing_config, next_unique_config_name
 
 db = MongoDB()
 
 CONFIG_COLLECTION = "configurations"
 FOLDER_COLLECTION = "configuration_folders"
 
-PRIVILEGED_TYPES = ("manager", "admin")
 BACKUP_SCHEMA_VERSION = "configuration-backup-v1"
 
 # Export
@@ -38,7 +38,7 @@ def get_export_scope():
     if the_scope not in ("self", "owner", "all"):
         raise httpErrors.BadRequest("Invalid scope")
 
-    is_privileged = user["user_type"] in PRIVILEGED_TYPES
+    is_privileged = is_privileged_user(user)
 
     if not is_privileged:
         if the_scope != "self":
@@ -77,22 +77,6 @@ def get_export_scope():
     }
 
 
-def get_owned_folders(owners=None):
-    query = {}
-    if owners is not None:
-        query["misc.owner"] = {"$in": owners}
-
-    return sanitize_mongo(db.getMany(FOLDER_COLLECTION, query))
-
-
-def get_owned_configs(owners=None):
-    query = {}
-    if owners is not None:
-        query["misc.owner"] = {"$in": owners}
-
-    return sanitize_mongo(db.getMany(CONFIG_COLLECTION, query))
-
-
 def get_home_ids(owners=None):
     """
     Returns { owner: "<home_folder_id>" }
@@ -124,25 +108,6 @@ def get_home_ids(owners=None):
             result[owner] = str(doc["_id"])
 
     return result
-
-
-def build_folder_map(folders):
-    """
-    Returns:
-    - folder_owner_map: { "<folder_id>": "<owner>" }
-    - folder_ids: set("<folder_id>")
-    """
-    folder_owner_map = {}
-    folder_ids = set()
-
-    for doc in folders:
-        folder_id = str(doc["_id"])
-        owner = (doc.get("misc") or {}).get("owner")
-
-        folder_ids.add(folder_id)
-        folder_owner_map[folder_id] = owner
-
-    return folder_owner_map, folder_ids
 
 
 def normalize_export_id(folder_doc, home_ids, folder_owner_map, folder_ids):
@@ -364,7 +329,7 @@ def get_restore_scope():
     if conflict_strategy not in ("overwrite", "rename", "skip"):
         raise httpErrors.BadRequest("Invalid conflictStrategy")
 
-    is_privileged = user["user_type"] in PRIVILEGED_TYPES
+    is_privileged = is_privileged_user(user)
 
     if not is_privileged:
         if the_scope != "self":
@@ -535,56 +500,6 @@ def get_target_owner(item_owner, restore_info):
         return owner
 
     return restore_info["target_owner"]
-
-
-def find_existing_folder(owner, parent_folder_id, folder_name):
-    query = {
-        "misc.owner": owner,
-        "folder.folderName": folder_name,
-        "folder.parentFolderId": ensure_objectId(parent_folder_id),
-    }
-    return db.getOne(FOLDER_COLLECTION, query, {
-        "_id": 1,
-        "folder.folderName": 1
-    })
-
-
-def next_unique_folder_name(owner, parent_folder_id, base_name):
-    candidate = base_name
-    if find_existing_folder(owner, parent_folder_id, candidate) is None:
-        return candidate
-
-    idx = 2
-    while True:
-        candidate = f"{base_name} ({idx})"
-        if find_existing_folder(owner, parent_folder_id, candidate) is None:
-            return candidate
-        idx += 1
-
-
-def find_existing_config(owner, folder_id, configuration_name):
-    query = {
-        "misc.owner": owner,
-        "configuration.folderId": ensure_objectId(folder_id),
-        "configuration.configurationName": configuration_name,
-    }
-    return db.getOne(CONFIG_COLLECTION, query, {
-        "_id": 1,
-        "configuration.configurationName": 1
-    })
-
-
-def next_unique_config_name(owner, folder_id, base_name):
-    candidate = base_name
-    if find_existing_config(owner, folder_id, candidate) is None:
-        return candidate
-
-    idx = 2
-    while True:
-        candidate = f"{base_name} ({idx})"
-        if find_existing_config(owner, folder_id, candidate) is None:
-            return candidate
-        idx += 1
 
 
 def restore_folders(payload, restore_info, summary):
