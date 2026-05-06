@@ -1,4 +1,4 @@
-import { computed, reactive, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 
 export function useFolderBrowser(props: any, emit: any) {
     const { $api, $snackbar, $store } = useNuxtApp();
@@ -14,23 +14,21 @@ export function useFolderBrowser(props: any, emit: any) {
 
     const selectedSet = computed(() => new Set(selectItems.value));
 
-    const folderToken = (id: string) => `f:${String(id)}`;
-    const configToken = (id: string) => `c:${String(id)}`;
+    const folderToken = (id: any) => `f:${String(id)}`;
+    const configToken = (id: any) => `c:${String(id)}`;
 
-    const isSelected = (token: string) => selectedSet.value.has(String(token));
+    const isSelected = (token: any) => selectedSet.value.has(String(token));
 
-    const setSelected = (arr: string[]) => {
+    const setSelected = (arr: any[]) => {
         selectItems.value = arr.map(String);
         emit("update:selected", selectItems.value.slice());
     };
 
-    const toggleSelect = (token: string) => {
+    const toggleSelect = (token: any) => {
         const t = String(token);
         const s = new Set(selectedSet.value);
-
         if (s.has(t)) s.delete(t);
         else s.add(t);
-
         setSelected(Array.from(s));
     };
 
@@ -61,11 +59,8 @@ export function useFolderBrowser(props: any, emit: any) {
 
     const configById = computed(() => {
         const m = new Map();
-
-        for (const item of props.configs || []) {
+        for (const item of props.configs || [])
             m.set(String(item.id), item.doc);
-        }
-
         return m;
     });
 
@@ -77,12 +72,11 @@ export function useFolderBrowser(props: any, emit: any) {
     );
 
     const cfgFolderIds = computed(() => {
-        const ids: string[] = [];
+        const ids = [];
 
         for (const cid of ownSelectConfigIds.value) {
             const doc = configById.value.get(String(cid));
             const fid = doc?.configuration?.folderId;
-
             if (fid) ids.push(String(fid));
         }
 
@@ -93,7 +87,6 @@ export function useFolderBrowser(props: any, emit: any) {
 
     const moveInvalid = computed(() => {
         const dest = String(moveDestId.value || "");
-
         if (!dest) return true;
 
         if (cfgFolderIdSet.value.size === 1) {
@@ -105,18 +98,13 @@ export function useFolderBrowser(props: any, emit: any) {
 
     const folderNodeById = computed(() => {
         const m = new Map();
-
-        for (const f of props.folder?.children || []) {
-            m.set(String(f.id), f);
-        }
-
+        for (const f of props.folder?.children || []) m.set(String(f.id), f);
         return m;
     });
 
     const ownSelectFolderIds = computed(() =>
         selectedFolderIds.value.filter((id) => {
             const node = folderNodeById.value.get(String(id));
-
             return (
                 (node?.misc?.owner && node.misc.owner === props.userName) ||
                 props.userLevel >= props.UserLevelEnum.manager
@@ -124,23 +112,20 @@ export function useFolderBrowser(props: any, emit: any) {
         })
     );
 
+    const canDownload = computed(
+        () => !mixedSelect.value && selectedConfigIds.value.length > 0
+    );
+
     const canShare = computed(
         () => !mixedSelect.value && ownSelectConfigIds.value.length > 0
     );
 
-    const canRename = computed(() => {
-        if (mixedSelect.value) return false;
-
-        if (selectedConfigIds.value.length === 1) {
-            return ownSelectConfigIds.value.length === 1;
-        }
-
-        if (selectedFolderIds.value.length === 1) {
-            return ownSelectFolderIds.value.length === 1;
-        }
-
-        return false;
-    });
+    const canRename = computed(
+        () =>
+            !mixedSelect.value &&
+            selectedFolderIds.value.length + selectedConfigIds.value.length ===
+                1
+    );
 
     const canDuplicate = computed(
         () =>
@@ -157,11 +142,7 @@ export function useFolderBrowser(props: any, emit: any) {
             ownSelectConfigIds.value.length > 0
     );
 
-    const canDelete = computed(
-        () =>
-            ownSelectFolderIds.value.length + ownSelectConfigIds.value.length >
-            0
-    );
+    const canDelete = computed(() => hasSelect.value);
 
     const canCreate = computed(
         () => props.userLevel > (props.UserLevelEnum?.guest ?? 0)
@@ -189,12 +170,21 @@ export function useFolderBrowser(props: any, emit: any) {
         { title: "Skip", value: "skip" }
     ];
 
-    const folderId = computed(() => String(props.folder?.id ?? ""));
-
     const isMyRoot = computed(() => {
         const fid = String(props.folder?.id ?? "");
         return !!props.myRootId && fid === String(props.myRootId);
     });
+
+    const headerTitle = computed(() => {
+        if (isSharedView.value) return props.folder?.name || "";
+        if (folderId.value === "__all__") return props.folder?.name || "";
+
+        if (isMyRoot.value) return "Home";
+
+        return props.folder?.name || "";
+    });
+
+    const folderId = computed(() => String(props.folder?.id ?? ""));
 
     const isSharedView = computed(() =>
         folderId.value.startsWith("__shared__")
@@ -203,14 +193,6 @@ export function useFolderBrowser(props: any, emit: any) {
     const isSharedProject = computed(() =>
         folderId.value.startsWith("__shared__:")
     );
-
-    const headerTitle = computed(() => {
-        if (isSharedView.value) return props.folder?.name || "";
-        if (folderId.value === "__all__") return props.folder?.name || "";
-        if (isMyRoot.value) return "Home";
-
-        return props.folder?.name || "";
-    });
 
     const parentId = computed(() => props.folder?.__parentId ?? null);
 
@@ -221,7 +203,7 @@ export function useFolderBrowser(props: any, emit: any) {
     const sortBy = ref("name");
     const sortDesc = ref(false);
 
-    const setSort = (key: string) => {
+    const setSort = (key: any) => {
         if (sortBy.value === key) {
             sortDesc.value = !sortDesc.value;
             return;
@@ -235,7 +217,6 @@ export function useFolderBrowser(props: any, emit: any) {
 
     const parseDateValue = (v: any) => {
         if (!v) return 0;
-
         const t = new Date(v).getTime();
         return Number.isNaN(t) ? 0 : t;
     };
@@ -321,16 +302,11 @@ export function useFolderBrowser(props: any, emit: any) {
     });
 
     const visibleTokens = computed(() => {
-        const tokens: string[] = [];
-
-        for (const f of folders.value) {
+        const tokens = [];
+        for (const f of folders.value)
             if (f?.id) tokens.push(folderToken(f.id));
-        }
-
-        for (const c of props.configs || []) {
+        for (const c of props.configs || [])
             if (c?.id) tokens.push(configToken(c.id));
-        }
-
         return tokens;
     });
 
@@ -338,7 +314,6 @@ export function useFolderBrowser(props: any, emit: any) {
         get() {
             const toks = visibleTokens.value;
             if (!toks.length) return false;
-
             return toks.every((t) => selectedSet.value.has(t));
         },
         set(v) {
@@ -346,13 +321,11 @@ export function useFolderBrowser(props: any, emit: any) {
             if (!toks.length) return;
 
             const s = new Set(selectedSet.value);
-
             if (v) {
                 for (const t of toks) s.add(t);
             } else {
                 for (const t of toks) s.delete(t);
             }
-
             setSelected(Array.from(s));
         }
     });
@@ -362,10 +335,7 @@ export function useFolderBrowser(props: any, emit: any) {
         if (!toks.length) return false;
 
         let hit = 0;
-
-        for (const t of toks) {
-            if (selectedSet.value.has(t)) hit++;
-        }
+        for (const t of toks) if (selectedSet.value.has(t)) hit++;
 
         return hit > 0 && hit < toks.length;
     });
@@ -401,7 +371,6 @@ export function useFolderBrowser(props: any, emit: any) {
 
         const d = new Date(v);
         if (Number.isNaN(d.getTime())) return "—";
-
         return new Intl.DateTimeFormat(undefined, {
             year: "numeric",
             month: "2-digit",
@@ -411,7 +380,7 @@ export function useFolderBrowser(props: any, emit: any) {
         }).format(d);
     };
 
-    const restoreModeLabel = (mode: string) => {
+    const restoreModeLabel = (mode: any) => {
         switch (String(mode || "").toLowerCase()) {
             case "self":
                 return "My Configurations";
@@ -436,31 +405,30 @@ export function useFolderBrowser(props: any, emit: any) {
     const exportScope = ref("self");
     const exportOwner = ref("");
 
-    const restoreFile = ref<any>(null);
+    const restoreFile = ref(null);
     const restoreScope = ref("self");
     const restoreOwner = ref("");
     const restoreConflictStrategy = ref("rename");
-    const restoreSummary = ref<any>(null);
+    const restoreSummary = ref(null);
 
     const inputFolderName = ref("");
     const inputRename = ref("");
-    const shareProjectIds = ref<string[]>([]);
+    const shareProjectIds = ref([]);
 
     const moveDestId = ref("");
-    const moveFolderTree = ref<any[]>([]);
+    const moveFolderTree = ref([]);
     const moveFolderPath = ref("");
 
     const selectedRestoreFile = computed(() => {
         if (Array.isArray(restoreFile.value)) {
             return restoreFile.value[0] || null;
         }
-
         return restoreFile.value || null;
     });
 
     const normalizeOwner = (v: any) => String(v || "").trim();
 
-    const getErrorMessage = (error: unknown, fallback: string) => {
+    const getErrorMessage = (error: any, fallback: any) => {
         if (error instanceof Error && error.message) return error.message;
         return fallback;
     };
@@ -499,7 +467,7 @@ export function useFolderBrowser(props: any, emit: any) {
 
     const normalizeName = (v: any) => String(v || "").trim();
 
-    const sibFolderName = (name: string, excludeId = "") => {
+    const sibFolderName = (name: any, excludeId = "") => {
         const target = normalizeName(name);
 
         return (props.folder?.children || []).some(
@@ -509,7 +477,7 @@ export function useFolderBrowser(props: any, emit: any) {
         );
     };
 
-    const sibConfigName = (name: string, excludeId = "") => {
+    const sibConfigName = (name: any, excludeId = "") => {
         const target = normalizeName(name);
 
         return (props.configs || []).some(
@@ -666,19 +634,19 @@ export function useFolderBrowser(props: any, emit: any) {
     const openRename = async () => {
         inputRename.value = "";
 
+        // folder selected
         if (selectedFolderIds.value.length === 1) {
             const id = selectedFolderIds.value[0];
             const node = folderNodeById.value.get(String(id));
-
             inputRename.value = node?.name || "";
             RenameDlg.value = true;
             return;
         }
 
+        // config selected
         if (selectedConfigIds.value.length === 1) {
             const id = selectedConfigIds.value[0];
             const doc = configById.value.get(String(id));
-
             inputRename.value = doc?.configuration?.configurationName || "";
             RenameDlg.value = true;
         }
@@ -690,6 +658,7 @@ export function useFolderBrowser(props: any, emit: any) {
         const name = normalizeName(inputRename.value);
         if (!name) return;
 
+        // rename folder
         if (selectedFolderIds.value.length === 1) {
             const fid = selectedFolderIds.value[0];
 
@@ -718,6 +687,7 @@ export function useFolderBrowser(props: any, emit: any) {
             return;
         }
 
+        // rename config
         if (selectedConfigIds.value.length === 1) {
             const cid = selectedConfigIds.value[0];
 
@@ -749,8 +719,8 @@ export function useFolderBrowser(props: any, emit: any) {
         }
     };
 
-    const buildMoveTree = (nodes: any[], parentPath = "home") => {
-        const result: any[] = [];
+    const buildMoveTree = (nodes: any, parentPath = "home") => {
+        const result = [];
 
         for (const node of nodes || []) {
             if (!node?.id) continue;
@@ -771,10 +741,10 @@ export function useFolderBrowser(props: any, emit: any) {
         return result;
     };
 
-    const findUserHomeTree = (treeNodes: any[], userName: string) => {
+    const findUserHomeTree = (treeNodes: any, userName: any) => {
         return (
             (treeNodes || []).find(
-                (n) => n?.name === userName && n?.misc?.owner === userName
+                (n: any) => n?.name === userName && n?.misc?.owner === userName
             ) || null
         );
     };
@@ -808,7 +778,6 @@ export function useFolderBrowser(props: any, emit: any) {
 
     const moveDestination = (node: any) => {
         if (!node?.id) return;
-
         moveDestId.value = String(node.id);
         moveFolderPath.value = node.path || "";
     };
@@ -862,57 +831,63 @@ export function useFolderBrowser(props: any, emit: any) {
         emit("refresh");
     };
 
-    return reactive({
+    return {
         selectItems,
-        selectedFolderIds,
-        selectedConfigIds,
-        hasSelect,
-        mixedSelect,
+        selectedSet,
         folderToken,
         configToken,
         isSelected,
         setSelected,
         toggleSelect,
-
+        selectedTokens,
+        selectedFolderIds,
+        selectedConfigIds,
+        hasSelect,
+        mixedSelect,
+        configById,
         ownSelectConfigIds,
-        ownSelectFolderIds,
+        cfgFolderIds,
         cfgFolderIdSet,
         moveInvalid,
-
+        folderNodeById,
+        ownSelectFolderIds,
+        canDownload,
         canShare,
         canRename,
         canDuplicate,
         canMove,
         canDelete,
         canCreate,
-
+        isPrivileged,
         backupScopeItems,
         conflictStrategyItems,
-
+        isMyRoot,
+        headerTitle,
         folderId,
         isSharedView,
-        headerTitle,
+        isSharedRoot,
+        isSharedProject,
         parentId,
         canGoUp,
-
+        folders,
         sortBy,
         sortDesc,
         setSort,
+        normalizeString,
+        parseDateValue,
+        compareValues,
         sortedFolders,
         sortedConfigs,
-
+        visibleTokens,
         headerCheck,
         headerState,
         rowGridStyle,
-
         headerIcon,
         headerIconClass,
         childFolderIcon,
         childFolderIconClass,
-
         formatDate,
         restoreModeLabel,
-
         CreateFolderDlg,
         RenameDlg,
         MoveDlg,
@@ -921,46 +896,46 @@ export function useFolderBrowser(props: any, emit: any) {
         ExportBackupDlg,
         RestoreBackupDlg,
         RestoreResultDlg,
-
         exportScope,
         exportOwner,
-
         restoreFile,
         restoreScope,
         restoreOwner,
         restoreConflictStrategy,
         restoreSummary,
-
         inputFolderName,
         inputRename,
         shareProjectIds,
-
         moveDestId,
         moveFolderTree,
         moveFolderPath,
-
+        selectedRestoreFile,
+        normalizeOwner,
+        getErrorMessage,
+        clearDialogs,
         createCfgFolderId,
-
         duplicateConfig,
         openCreateFolder,
+        normalizeName,
+        sibFolderName,
+        sibConfigName,
         createFolder,
-
+        downloadSelected,
         openExportBackup,
         applyExportBackup,
         openRestoreBackup,
         applyRestoreBackup,
-
         openShare,
         applyShare,
-
         openRename,
         applyRename,
-
+        buildMoveTree,
+        findUserHomeTree,
         openMove,
         moveDestination,
+        selectMoveDestination,
         applyMove,
-
         openDelete,
         applyDelete
-    });
+    };
 }
