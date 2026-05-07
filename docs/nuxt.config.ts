@@ -23,6 +23,12 @@ export default defineNuxtConfig({
         "@pinia/nuxt",
         "@nuxtjs/sitemap"
     ],
+    devServer: {
+        https: {
+            key: "../dev/certs/key.pem",
+            cert: "../dev/certs/cert.pem"
+        }
+    },
     fonts: {
         families: [
             {
