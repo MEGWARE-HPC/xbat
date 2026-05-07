@@ -6,7 +6,7 @@ swagger-ui-bundle==1.1.0
 pymongo==4.13.2
 wheel==0.46.3
 gunicorn==23.0.0
-Authlib==1.6.6
+Authlib==1.6.11
 blueprint==3.4.2
 python-freeipa==1.0.8
 pyyaml==6.0.3
@@ -20,5 +20,5 @@ redis==5.3.1
 filelock==3.20.3
 grpcio==1.75.1
 grpcio-tools==1.75.1
-aiohttp==3.13.3
+aiohttp==3.13.5
 bcrypt==5.0.0
