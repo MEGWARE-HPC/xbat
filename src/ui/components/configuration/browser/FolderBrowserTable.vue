@@ -202,7 +202,7 @@
                 sortedFolders.length === 0 &&
                 sortedConfigs.length === 0
             "
-            class="text-medium-emphasis"
+            class="text-medium-emphasis fb-empty-folder-row"
             title="This folder is empty"
         />
     </v-list>
@@ -375,5 +375,14 @@ const headerCheck = computed({
 
 .fb-head-sort-icon {
     flex: 0 0 auto;
+}
+
+.fb-empty-folder-row :deep(.v-list-item__content) {
+    text-align: center;
+}
+
+.fb-empty-folder-row :deep(.v-list-item-title) {
+    text-align: center;
+    width: 100%;
 }
 </style>

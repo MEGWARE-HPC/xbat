@@ -111,6 +111,9 @@ def get_user_folders(_id=None):
     if user is None:
         return None
 
+    if _id is None:
+        ensure_home_folder(user)
+
     if not has_full_read_access(user):
         filters.append({"misc.owner": user["user_name"]})
 
@@ -280,6 +283,13 @@ def owner_folder(owner):
             "Failed to get/create home folder")
 
     return doc["_id"]
+
+
+def ensure_home_folder(user):
+    if user is None:
+        return None
+
+    return owner_folder(user["user_name"])
 
 
 def find_existing_folder(owner, parent_folder_id, folder_name):
