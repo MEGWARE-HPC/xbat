@@ -2,9 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## v1.3.0 - 2026-05-08
 
 ### Added
+
+- a folder system for configurations, provide an improved folder browser experience, also add sorting functionality (#54)
+- backup/restore support for configurations, including API endpoints and frontend UI actions (#166)
 
 ### Changed
 
@@ -19,7 +22,7 @@ All notable changes to this project will be documented in this file.
 
 - jobs not being processed
 - duplicate headers in CSV export of measurements
-- nginx timeout for CSV exports
+- nginx timeout for large CSV exports
 
 ## v1.2.0 - 2026-01-05
 
