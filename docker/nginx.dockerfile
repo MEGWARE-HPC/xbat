@@ -13,7 +13,7 @@ RUN bun run generate
 
 #############################
 
-FROM docker.io/nginx:latest
+FROM nginx:stable-alpine-slim
 
 COPY ./conf/nginx.conf.in /etc/nginx/nginx.conf.in
 COPY --from=ui-builder /app/.output/public /usr/share/nginx/html

@@ -4,32 +4,47 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
-This release contains many breaking changes and improvements. Please refer to the [Upgrade Guide](/docs/admin/upgrade-guide) for detailed instructions on how to upgrade from v1.2.0 to v2.0.0.
+This release contains many breaking changes and improvements. Please refer to the [Upgrade Guide](/docs/admin/upgrade-guide) for detailed instructions on how to upgrade from v1.3.0 to v2.0.0.
 
 ### Added
 
-- Configuration validator via `./setup.sh validate` to check for issues with the configuration
-- Database migrations via `./setup.sh migrate` for ClickHouse
-- a folder system for configurations, provide an improved folder browser experience, also add sorting functionality (#54)
-- backup/restore support for configurations (#166)
+- configuration validator via `./setup.sh validate` to check for issues with the configuration
+- database migrations via `./setup.sh migrate` for ClickHouse
+- configuration for xbatd can be generated with `./setup.sh generate-xbatd-conf [--stdout]`
+- script to export and import all benchmarks
 
 ### Changed
 
 - replaced QuestDB with ClickHouse DB
-- migrated MongoDB from v5 to v8 (to retain data from the previous database, please follow the migration guide.) (#90)
 - xbatd to use CMake instead of Makefile based build system
-- unified font usage across browsers in the documentation (#184) and switched to Source Sans 3
-- upgraded xbat font from Source Sans Pro to Source Sans 3
 - UI of ClickHouse is now available at port 7004 (or --port <port> + 4) instead of being proxied over 7000
+- improved performance of benchmark overview (+ pagination for API endpoint)
+- updated and optimized containers
+- migrated MongoDB from v5 to v8 (to retain data from the previous database, please follow the migration guide.) (#90)
+- restructured format of exported benchmarks (with compatibility to import old QuestDB-era benchmarks)
+- UI is now served over nginx for improved performance and reduced container count
+
+### Fixed
+
+- improved stability for import and export of large benchmarks
+
+## v1.3.0 - 2026-05-08
+
+### Added
+
+- a folder system for configurations, provide an improved folder browser experience, also add sorting functionality (#54)
+- backup/restore support for configurations, including API endpoints and frontend UI actions (#166)
+
+### Changed
+
 - unified font usage across browsers in the documentation (#184) and switched to Source Sans 3
 - upgraded xbat font from Source Sans Pro to Source Sans 3
-- improved performance of benchmark overview
 
 ### Fixed
 
 - jobs not being processed
 - duplicate headers in CSV export of measurements
-- nginx timeout for CSV exports
+- nginx timeout for large CSV exports
 
 ## v1.2.0 - 2026-01-05
 

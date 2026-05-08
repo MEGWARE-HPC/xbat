@@ -285,12 +285,12 @@ const { data: partitions } = await useAsyncData(
 );
 
 const { data: configurations, refresh } = await useAsyncData(
-    `configurations-${$authStore.user.user_name}`,
+    `configuration-page-configurations-${$authStore.user.user_name}`,
     async () => (await $api.configurations.get())?.data || []
 );
 
 const { data: folderTree, refresh: refreshFolders } = await useAsyncData(
-    `configuration-folders-tree-page-${$authStore.user.user_name}`,
+    `configuration-page-folders-tree-${$authStore.user.user_name}`,
     async () => (await $api.configurationFolders.get())?.data || []
 );
 
