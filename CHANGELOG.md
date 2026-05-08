@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Added
+
+### Changed
+
+- migrated MongoDB from v5 to v8 (to retain data from the previous database, please follow the migration guide.) (#90)
+
+### Fixed
+
 ## v1.3.0 - 2026-05-08
 
 ### Added
@@ -11,10 +21,6 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
-- upgraded Nuxt/Content from v2 to v3 (#82)
-- upgraded QuestDB from v8 to v9 (#135)
-- optimized queries for accessing QuestDB
-- migrated MongoDB from v5 to v8 (to retain data from the previous database, please follow the migration guide.) (#90)
 - unified font usage across browsers in the documentation (#184) and switched to Source Sans 3
 - upgraded xbat font from Source Sans Pro to Source Sans 3
 
