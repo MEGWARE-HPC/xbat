@@ -1,10 +1,15 @@
-FROM docker.io/almalinux:9.4
+FROM almalinux:9.6-minimal
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
 
 WORKDIR /home/
 
-RUN yum update -y \
-    && yum install -y python3.12-devel python3.12-pip python3.12-setuptools openssl-devel bzip2-devel openssh-clients rsync \
-    && yum clean -y all
+RUN sed -i 's/enabled=0/enabled=1/' /etc/yum.repos.d/almalinux-crb.repo || true \
+    && microdnf -y update \
+    && microdnf -y install python3.12 python3.12-pip python3.12-setuptools openssl tar gzip bzip2 openssh-clients rsync \
+    && microdnf -y clean all
 
 COPY ./src /home/
 
