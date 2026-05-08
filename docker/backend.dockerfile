@@ -8,9 +8,9 @@ RUN sed -i 's/enabled=0/enabled=1/' /etc/yum.repos.d/almalinux-crb.repo || true 
     && microdnf -y install make gcc python3.12 python3.12-devel python3.12-pip python3.12-setuptools sssd-client pam openldap-devel libffi zlib wget tar gzip pigz \
     && microdnf -y clean all
 
-RUN yum install -y yum-utils && \
+RUN microdnf install -y yum-utils && \
     yum-config-manager --add-repo https://packages.clickhouse.com/rpm/clickhouse.repo && \
-    yum install -y clickhouse-client
+    microdnf install -y clickhouse-client
 
 COPY ./src/setup.py /home/
 COPY ./src/backend /home/backend
