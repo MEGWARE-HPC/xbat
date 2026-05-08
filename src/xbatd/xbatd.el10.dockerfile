@@ -1,4 +1,4 @@
-FROM almalinux:9.7-minimal
+FROM almalinux:10.1-minimal
 
 # require crb for ninja-build
 RUN microdnf -y update && \
@@ -25,17 +25,17 @@ RUN microdnf -y update && \
 RUN mkdir -p ~/rpmbuild/BUILD ~/rpmbuild/BUILDROOT ~/rpmbuild/RPMS ~/rpmbuild/SOURCES ~/rpmbuild/SPECS ~/rpmbuild/SRPMS /usr/local/share/xbatd
 
 # install nvml
-RUN curl -fsSL -o /etc/yum.repos.d/cuda-rhel9.repo \
-        https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo && \
+RUN curl -fsSL -o /etc/yum.repos.d/cuda-rhel10.repo \
+    https://developer.download.nvidia.com/compute/cuda/repos/rhel10/x86_64/cuda-rhel10.repo && \
     microdnf -y install \
-        nvidia-driver nvidia-driver-NVML nvidia-driver-devel cuda-nvml-devel-13-1 && \
+    nvidia-driver nvidia-driver-NVML nvidia-driver-devel cuda-nvml-devel-13-1 && \
     microdnf clean all
 
 # install rocm
 RUN printf '%s\n' \
 '[ROCm-7.2]' \
 'name=ROCm 7.2' \
-'baseurl=https://repo.radeon.com/rocm/rhel9/7.2/main/' \
+'baseurl=https://repo.radeon.com/rocm/rhel10/7.2/main/' \
 'enabled=1' \
 'gpgcheck=0' \
 > /etc/yum.repos.d/rocm.repo

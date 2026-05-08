@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- xbatd support for el10 and optimized build process
+
 ### Changed
 
 - updated and optimized containers
@@ -24,6 +26,7 @@ All notable changes to this project will be documented in this file.
 
 - unified font usage across browsers in the documentation (#184) and switched to Source Sans 3
 - upgraded xbat font from Source Sans Pro to Source Sans 3
+- improved xbatd for el8 and el9
 
 ### Fixed
 
