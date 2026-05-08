@@ -7,16 +7,12 @@
 
 namespace Topology {
 
-/* use string instead of uint32_t to prevent need for conversions since these
- * values will be used exclusively as strings for tagging database entries
- */
 struct hwThread {
-    // TODO make hwThread also string
-    int hwThread;
-    std::string thread;
-    std::string core;
-    std::string socket;
-    std::string numa;
+    uint32_t hwThread;
+    uint32_t thread;
+    uint32_t core;
+    uint32_t socket;
+    uint32_t numa;
 };
 
 struct cpuTopology {
@@ -41,7 +37,7 @@ struct cpuTopology {
     uint32_t l2CacheTotal;
     uint32_t l3CacheTotal;
     uint32_t cacheTotal;
-    std::map<int, hwThread> hwThreads;
+    std::map<uint32_t, hwThread> hwThreads;
 };
 
 int getCpuTopology(cpuTopology &);

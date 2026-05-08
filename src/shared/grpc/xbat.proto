@@ -13,7 +13,6 @@ service xbatctld {
   rpc SubmitBenchmark (NewBenchmark) returns (BenchmarkCreated);
   rpc CancelJobs (JobIds) returns (google.protobuf.Empty);
   rpc GetUserInfo (UserName) returns (UserData);
-  rpc PurgeQuestDB (google.protobuf.Empty) returns (google.protobuf.Empty);
 }
 
 message JobIds {

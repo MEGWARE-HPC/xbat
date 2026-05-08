@@ -69,18 +69,26 @@
                 </div>
             </v-card-title>
             <v-card-text class="pt-2">
-                <v-data-table
+                <v-data-table-server
                     :headers="tableHeaders"
-                    :items="filteredBenchmarks"
+                    :items="displayBenchmarks"
+                    :items-length="total"
+                    item-value="runNr"
+                    @update:options="onUpdateOptions"
                     @click:row="handleRowClick"
-                    :search="state.search"
                     show-select
                     v-model="state.selected"
-                    v-model:sortBy="tableSortBy"
+                    return-object
                     :loading="pending"
                     class="overview-table"
-                    :items-per-page="overviewItemsPerPage"
-                    @update:itemsPerPage="overviewItemsPerPage = $event"
+                    :items-per-page="pagination.itemsPerPage"
+                    :page="pagination.page"
+                    :sort-by="pagination.sortBy"
+                    must-sort
+                    :row-props="({ item }) => ({
+                        onMouseenter: () => { hoveredRunNr = item.runNr },
+                        onMouseleave: () => { hoveredRunNr = null }
+                    })"
                 >
                     <template v-slot:[`item.startTime`]="{ item }">
                         <ClientOnly>
@@ -88,25 +96,27 @@
                         </ClientOnly>
                     </template>
                     <template v-slot:[`item.jobIds`]="{ item }">
-                        <div class="job-ids">
-                            {{
-                                encodeBraceNotation(item.jobIds, ", ").join(
-                                    ", "
-                                )
-                            }}
-                        </div>
-                        <div class="job-hover-info">
-                            <Tooltip location="bottom" custom>
-                                <v-card>
-                                    <v-card-text>
-                                        <JobOverviewTable
-                                            :jobs="
-                                                jobsByRunNr[item.runNr] || []
-                                            "
-                                        ></JobOverviewTable>
-                                    </v-card-text>
-                                </v-card>
-                            </Tooltip>
+                        <div style="position: relative;">
+                            <div class="job-ids">
+                                {{
+                                    encodeBraceNotation(item.jobIds, ", ").join(
+                                        ", "
+                                    )
+                                }}
+                            </div>
+                            <div class="job-hover-info" v-if="hoveredRunNr === item.runNr">
+                                <Tooltip location="bottom" custom>
+                                    <v-card>
+                                        <v-card-text>
+                                            <JobOverviewTable
+                                                :jobs="
+                                                    jobsByRunNr[item.runNr] || []
+                                                "
+                                            ></JobOverviewTable>
+                                        </v-card-text>
+                                    </v-card>
+                                </Tooltip>
+                            </div>
                         </div>
                     </template>
                     <template v-slot:[`item.name`]="{ item }">
@@ -176,7 +186,7 @@
                             </v-tooltip>
                         </v-chip>
                     </template>
-                </v-data-table>
+                </v-data-table-server>
             </v-card-text>
         </v-card>
         <BenchmarkComparison
@@ -190,6 +200,7 @@
 
 <script setup>
 import { useRouter, onBeforeRouteLeave } from "vue-router";
+import { useDebounceFn } from "@vueuse/core";
 import { sanitizeDate } from "~/utils/date";
 import { encodeBraceNotation } from "~/utils/braceNotation";
 
@@ -205,29 +216,79 @@ const headers = [
     },
     {
         title: "Job IDs",
-        key: "jobIds"
+        key: "jobIds",
+        sortable: false
     },
     { title: "Name", key: "name" },
     { title: "Configuration", key: "configName" },
     { title: "Issuer", key: "issuer" },
     { title: "Date", key: "startTime" },
     { title: "State", key: "state", align: "center" },
-    { title: "", key: "attributes" }
+    { title: "", key: "attributes", sortable: false }
 ];
 
 const { overviewItemsPerPage } = usePreferences();
 
 const { $api, $authStore, $store, $snackbar } = useNuxtApp();
 
+const hoveredRunNr = ref(null);
+
+const pagination = reactive({
+    page: 1,
+    itemsPerPage: overviewItemsPerPage.value,
+    sortBy: [{ key: "runNr", order: "desc" }]
+});
+
+const projectFilter = useCookie("xbat_project-filter", { default: () => null });
+const hideShared = useCookie("xbat_hide-shared", { default: () => true });
+
+// Debounced search value actually sent to the API (separate from the input)
+const debouncedSearch = ref("");
+const applyDebouncedSearch = useDebounceFn((val) => {
+    debouncedSearch.value = val?.trim() || "";
+    pagination.page = 1;
+    refresh();
+}, 350);
+
+const state = reactive({
+    selected: [],
+    intervalHandle: null,
+    search: "",
+    projectsToShareWith: [],
+    showShareConflictWarning: false,
+    showBenchmarkComparison: false,
+    isExporting: false,
+    isImporting: false,
+    nonExportable: false,
+    selectedFile: null
+});
+
 const { data, refresh, pending } = await useAsyncData(
-    `benchmarks-${$authStore.user?.user_name}`,
+    computed(() => `benchmarks-${$authStore.user?.user_name}`),
     async () => {
+        const sortEntry = pagination.sortBy?.[0];
+        const isRegularUser =
+            $authStore.userLevel !== $authStore.UserLevelEnum.admin &&
+            $authStore.userLevel !== $authStore.UserLevelEnum.demo;
+        const opts = {
+            sortBy: sortEntry?.key ?? "runNr",
+            sortOrder: sortEntry?.order ?? "desc"
+        };
+        if (pagination.itemsPerPage !== -1) {
+            opts.page = pagination.page;
+            opts.pageSize = pagination.itemsPerPage;
+        }
+        if (debouncedSearch.value) opts.search = debouncedSearch.value;
+        if (hideShared.value && isRegularUser) opts.ownedOnly = true;
+        if (!hideShared.value && projectFilter.value) opts.project = projectFilter.value;
+
         const [b, j] = await Promise.all([
-            $api.benchmarks.get(),
+            $api.benchmarks.get(null, opts),
             $api.slurm.getJobs()
         ]);
         return {
             benchmarks: b?.data || [],
+            total: b?.total ?? 0,
             slurmJobs: j || {}
         };
     }
@@ -248,8 +309,9 @@ const jobsByRunNr = computed(() => {
     }, {});
 });
 
-const slurmJobs = computed(() => data.value.slurmJobs);
-const benchmarks = computed(() => data.value.benchmarks);
+const slurmJobs = computed(() => data.value?.slurmJobs ?? {});
+const benchmarks = computed(() => data.value?.benchmarks ?? []);
+const total = computed(() => data.value?.total ?? 0);
 
 const { benchmarkStates } = useBenchmarks({
     slurmJobs: slurmJobs,
@@ -258,11 +320,7 @@ const { benchmarkStates } = useBenchmarks({
 
 const projects = computed(() => $authStore.user?.projects || []);
 
-const tableSortBy = ref([{ key: "runNr", order: "desc" }]);
 const router = useRouter();
-
-const projectFilter = useCookie("xbat_project-filter", { default: () => null });
-const hideShared = useCookie("xbat_hide-shared", { default: () => true });
 
 watch(
     () => $authStore.userLevel,
@@ -276,18 +334,30 @@ watch(
     { immediate: true }
 );
 
-const state = reactive({
-    selected: [],
-    intervalHandle: null,
-    search: "",
-    projectsToShareWith: [],
-    showShareConflictWarning: false,
-    showBenchmarkComparison: false,
-    isExporting: false,
-    isImporting: false,
-    nonExportable: false,
-    selectedFile: null
+watch(
+    () => state.search,
+    applyDebouncedSearch
+);
+
+// Reset to page 1 when filters change and re-fetch
+watch([hideShared, projectFilter], () => {
+    pagination.page = 1;
+    refresh();
 });
+
+const onUpdateOptions = ({
+    page,
+    itemsPerPage,
+    sortBy
+}) => {
+    const sortChanged = JSON.stringify(sortBy) !== JSON.stringify(pagination.sortBy);
+    overviewItemsPerPage.value = itemsPerPage;
+    pagination.itemsPerPage = itemsPerPage;
+    pagination.sortBy = sortBy;
+    // Reset to page 1 when the sort column/direction changes
+    pagination.page = sortChanged ? 1 : page;
+    refresh();
+};
 
 const setRefresh = () => {
     setTimeout(async () => {
@@ -305,42 +375,23 @@ const tableHeaders = computed(() =>
 );
 
 const selectedJobs = computed(() => {
-    return state.selected.map((x) => x.jobIds).flat(1);
+    return state.selected.flatMap((x) => x?.jobIds ?? []);
 });
 
 const filteredBenchmarks = computed(() => {
     if (!benchmarks.value) return [];
-    let filtered = unref(benchmarks);
 
-    if (
-        hideShared.value &&
-        $authStore.userLevel != $authStore.UserLevelEnum.admin &&
-        $authStore.userLevel != $authStore.UserLevelEnum.demo
-    )
-        filtered = filtered.filter(
-            (x) => x.issuer == $authStore.user?.user_name
-        );
-    if (!hideShared.value && projectFilter.value)
-        filtered = filtered.filter((x) =>
-            x?.sharedProjects?.includes(projectFilter.value)
-        );
-
-    return (
-        filtered
-            // filter old benchmarks
-            .filter(
-                (x) =>
-                    x.cli || x.configuration?.configuration?.configurationName
-            )
-            .map((x) =>
-                Object.assign(x, {
-                    configName: x.cli
-                        ? null
-                        : x.configuration.configuration.configurationName
-                })
-            )
+    return benchmarks.value.map((x) =>
+        Object.assign(x, {
+            configName: x.cli
+                ? null
+                : x.configuration?.configuration?.configurationName
+        })
     );
 });
+
+// Alias used in the template for the server-paginated table
+const displayBenchmarks = filteredBenchmarks;
 
 const updateBenchmarkName = async ({ runNr, value }) => {
     if ($store.demo) {
@@ -374,8 +425,7 @@ onBeforeRouteLeave(() => {
 }
 
 .overview-table {
-    .name-edit,
-    .job-hover-info {
+    .name-edit {
         opacity: 0;
         visibility: hidden;
         display: inline-block;
@@ -384,12 +434,12 @@ onBeforeRouteLeave(() => {
     .job-hover-info {
         position: absolute;
         top: calc(50% - 10px);
-        left: 20px;
+        left: 0;
+        display: inline-block;
     }
     :deep(tr) {
         &:hover {
-            .name-edit,
-            .job-hover-info {
+            .name-edit {
                 opacity: 1;
                 visibility: visible;
             }

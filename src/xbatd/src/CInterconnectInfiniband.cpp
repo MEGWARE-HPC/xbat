@@ -83,15 +83,8 @@ void CInterconnectInfiniband::calculateUsage(std::map<std::string, uint64_t> &pr
 
         auto meta = metricInfo[entry.first];
         double value = (entry.second / intervalS) * meta.scale;
-        std::map<std::string, std::string> tags = {
-            {"level", "node"}};
 
-        CQueue::ILP<double> ilp = {
-            meta.label,
-            tags,
-            value,
-            intervalEnd};
-        dataQueue->pushSingle(ilp);
+        dataQueue->push(CQueue::BasicMeasurement<double>{meta.label, "node", value, intervalEnd});
     }
 }
 

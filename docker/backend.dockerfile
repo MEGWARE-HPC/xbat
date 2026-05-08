@@ -8,6 +8,10 @@ RUN sed -i 's/enabled=0/enabled=1/' /etc/yum.repos.d/almalinux-crb.repo || true 
     && microdnf -y install make gcc python3.12 python3.12-devel python3.12-pip python3.12-setuptools sssd-client pam openldap-devel libffi zlib wget tar gzip pigz \
     && microdnf -y clean all
 
+RUN microdnf install -y yum-utils && \
+    yum-config-manager --add-repo https://packages.clickhouse.com/rpm/clickhouse.repo && \
+    microdnf install -y clickhouse-client
+
 COPY ./src/setup.py /home/
 COPY ./src/backend /home/backend
 COPY ./src/shared /home/shared
@@ -20,7 +24,7 @@ RUN ln -fs /usr/bin/python3.12 /usr/bin/python3 && ln -fs /usr/bin/python3.12 /u
 
 RUN pip3 install --no-cache-dir --trusted-host pypi.org --trusted-host files.pythonhosted.org -r backend/requirements.txt && pip3 install -e .
 
-EXPOSE 7001
+EXPOSE 8001
 WORKDIR /home/backend
 
 ENV BUILD=prod

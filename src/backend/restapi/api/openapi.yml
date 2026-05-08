@@ -114,6 +114,47 @@ paths:
         - benchmarks
       parameters:
         - $ref: "#/components/parameters/BenchmarkIdsQuery"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+          description: "1-based page number. When omitted all results are returned."
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+          description: "Number of items per page. Required when page is specified."
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: "Search string matched against benchmark name, runNr, any jobId, configuration name, and issuer."
+        - name: ownedOnly
+          in: query
+          schema:
+            type: boolean
+          description: "Restrict results to benchmarks owned by the requesting user."
+        - name: project
+          in: query
+          schema:
+            type: string
+          description: "Filter to benchmarks shared with the given project ID."
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [runNr, name, issuer, startTime, state, configName]
+            default: runNr
+          description: "Field to sort results by."
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: "Sort direction."
       summary: Benchmarks
       responses:
         "200":
@@ -191,18 +232,6 @@ paths:
       responses:
         "204":
           description: Successfully imported benchmark data
-      security:
-        - oauth2:
-            - benchmarks_w
-  /benchmarks/purge:
-    post:
-      operationId: backend.restapi.api.benchmarks.purge
-      tags:
-        - maintenance
-      summary: Purge old benchmarks from QuestDB
-      responses:
-        "204":
-          description: Successfully purged old benchmarks
       security:
         - oauth2:
             - benchmarks_w

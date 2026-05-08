@@ -4,14 +4,29 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+This release contains many breaking changes and improvements. Please refer to the [Upgrade Guide](/docs/admin/upgrade-guide) for detailed instructions on how to upgrade from v1.3.0 to v2.0.0.
+
 ### Added
+
+- configuration validator via `./setup.sh validate` to check for issues with the configuration
+- database migrations via `./setup.sh migrate` for ClickHouse
+- configuration for xbatd can be generated with `./setup.sh generate-xbatd-conf [--stdout]`
+- script to export and import all benchmarks
 
 ### Changed
 
+- replaced QuestDB with ClickHouse DB
+- xbatd to use CMake instead of Makefile based build system
+- UI of ClickHouse is now available at port 7004 (or --port <port> + 4) instead of being proxied over 7000
+- improved performance of benchmark overview (+ pagination for API endpoint)
 - updated and optimized containers
 - migrated MongoDB from v5 to v8 (to retain data from the previous database, please follow the migration guide.) (#90)
+- restructured format of exported benchmarks (with compatibility to import old QuestDB-era benchmarks)
+- UI is now served over nginx for improved performance and reduced container count
 
 ### Fixed
+
+- improved stability for import and export of large benchmarks
 
 ## v1.3.0 - 2026-05-08
 

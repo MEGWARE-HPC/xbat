@@ -7,6 +7,6 @@ services:
     xbat-mongodb:
         deploy:
             replicas: 0
-    xbat-questdb:
+    xbat-clickhouse:
         deploy:
             replicas: 0

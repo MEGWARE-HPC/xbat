@@ -86,14 +86,7 @@ int CEnergyIpmi::parse(std::string &result) {
 
     if (!valueStr.length()) return 1;
     int64_t value = std::stoll(valueStr);
-    std::map<std::string, std::string> tags = {{"level", "node"}};
-    CQueue::ILP<int64_t> ilp = {
-        "ipmi_power_system",
-        tags,
-        value,
-        intervalEnd};
-
-    dataQueue->pushSingle<int64_t>(ilp);
+    dataQueue->push(CQueue::BasicMeasurement<int64_t>{"ipmi_power_system", "node", value, intervalEnd});
 
     return 0;
 }

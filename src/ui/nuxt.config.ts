@@ -43,6 +43,9 @@ export default defineNuxtConfig({
         "@nuxtjs/color-mode",
         "@nuxt/fonts"
     ],
+    image: {
+        provider: "none"
+    },
     devServer: {
         https: {
             key: "../../dev/certs/key.pem",
@@ -86,8 +89,8 @@ export default defineNuxtConfig({
             demoUser: "",
             demoPassword: ""
         },
-        composeBackendUrl: "http://xbat-backend:7001",
-        composeFrontendUrl: "http://xbat-ui:7003"
+        composeBackendUrl: "http://xbat-backend:8001",
+        composeFrontendUrl: "http://xbat-ui:8003"
     },
     compatibilityDate: "2024-07-03"
 });

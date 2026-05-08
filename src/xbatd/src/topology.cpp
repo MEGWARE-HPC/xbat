@@ -71,19 +71,19 @@ int Topology::getCpuTopology(cpuTopology &topo) {
 
     topo.cacheTotal = topo.cachePerSocket * topo.sockets;
 
-    std::map<int, hwThread> mapping;
+    std::map<uint32_t, hwThread> mapping;
 
     for (uint32_t i = 0; i < topology->numHWThreads; i++) {
         auto threadInfo = topology->threadPool[i];
 
-        int apicId = topology->threadPool[i].apicId;
+        uint32_t apicId = topology->threadPool[i].apicId;
 
         hwThread thread = {
             apicId,
-            std::to_string(threadInfo.threadId),
-            std::to_string(threadInfo.coreId),
-            std::to_string(threadInfo.packageId),
-            std::to_string(numaMapping[apicId])};
+            threadInfo.threadId,
+            threadInfo.coreId,
+            threadInfo.packageId,
+            numaMapping[apicId]};
 
         mapping[apicId] = thread;
     }

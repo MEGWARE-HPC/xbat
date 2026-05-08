@@ -64,60 +64,58 @@ int CNvidiaGPU::prepare() {
 }
 
 int CNvidiaGPU::collect() {
-    std::vector<CQueue::ILP<int64_t>> int_data;
-    std::vector<CQueue::ILP<double>> double_data;
     for (size_t i = 0; i < devices.size(); i++) {
         nvmlDevice_t device = devices[i];
-        std::map<std::string, std::string> tags = {{"level", "device"}, {"device", std::to_string(i)}};
+        std::string deviceId = std::to_string(i);
 
         nvmlDevice_t migDevice;
         bool migEnabled = nvmlDeviceGetMigDeviceHandleByIndex(device, 0, &migDevice) == NVML_SUCCESS;
 
         nvmlMemory_t fb;
         if (nvmlDeviceGetMemoryInfo(device, &fb) == NVML_SUCCESS) {
-            int_data.insert(int_data.end(), {CQueue::ILP<int64_t>{"gpu_mem_fb_free", tags, static_cast<int64_t>(fb.free), intervalEnd},
-                                             CQueue::ILP<int64_t>{"gpu_mem_fb_used", tags, static_cast<int64_t>(fb.used), intervalEnd}});
-            double_data.push_back(CQueue::ILP<double>{"gpu_mem_fb_usage", tags, (static_cast<double>(fb.used) / fb.total) * 100, intervalEnd});
+            dataQueue->push(CQueue::DeviceMeasurement<int64_t>{"gpu_mem_fb_free", "device", deviceId, static_cast<int64_t>(fb.free), intervalEnd});
+            dataQueue->push(CQueue::DeviceMeasurement<int64_t>{"gpu_mem_fb_used", "device", deviceId, static_cast<int64_t>(fb.used), intervalEnd});
+            dataQueue->push(CQueue::DeviceMeasurement<double>{"gpu_mem_fb_usage", "device", deviceId, (static_cast<double>(fb.used) / fb.total) * 100, intervalEnd});
         }
 
         nvmlBAR1Memory_t bar1;
         if (nvmlDeviceGetBAR1MemoryInfo(device, &bar1) == NVML_SUCCESS) {
-            int_data.insert(int_data.end(), {CQueue::ILP<int64_t>{"gpu_mem_bar1_free", tags, static_cast<int64_t>(bar1.bar1Free), intervalEnd},
-                                             CQueue::ILP<int64_t>{"gpu_mem_bar1_used", tags, static_cast<int64_t>(bar1.bar1Used), intervalEnd}});
-            double_data.push_back(CQueue::ILP<double>{"gpu_mem_bar1_usage", tags, (static_cast<double>(bar1.bar1Used) / bar1.bar1Total) * 100, intervalEnd});
+            dataQueue->push(CQueue::DeviceMeasurement<int64_t>{"gpu_mem_bar1_free", "device", deviceId, static_cast<int64_t>(bar1.bar1Free), intervalEnd});
+            dataQueue->push(CQueue::DeviceMeasurement<int64_t>{"gpu_mem_bar1_used", "device", deviceId, static_cast<int64_t>(bar1.bar1Used), intervalEnd});
+            dataQueue->push(CQueue::DeviceMeasurement<double>{"gpu_mem_bar1_usage", "device", deviceId, (static_cast<double>(bar1.bar1Used) / bar1.bar1Total) * 100, intervalEnd});
         }
 
         nvmlUtilization_t util;
         if (!migEnabled && nvmlDeviceGetUtilizationRates(device, &util) == NVML_SUCCESS) {
-            double_data.insert(double_data.end(), {CQueue::ILP<double>{"gpu_util", tags, static_cast<double>(util.gpu), intervalEnd},
-                                                   CQueue::ILP<double>{"gpu_mem_util", tags, static_cast<double>(util.memory), intervalEnd}});
+            dataQueue->push(CQueue::DeviceMeasurement<double>{"gpu_util", "device", deviceId, static_cast<double>(util.gpu), intervalEnd});
+            dataQueue->push(CQueue::DeviceMeasurement<double>{"gpu_mem_util", "device", deviceId, static_cast<double>(util.memory), intervalEnd});
         }
 
         nvmlPstates_t pstate;
         if (nvmlDeviceGetPerformanceState(device, &pstate) == NVML_SUCCESS)
-            int_data.push_back(CQueue::ILP<int64_t>{"gpu_pstate", tags, static_cast<int64_t>(pstate), intervalEnd});
+            dataQueue->push(CQueue::DeviceMeasurement<int64_t>{"gpu_pstate", "device", deviceId, static_cast<int64_t>(pstate), intervalEnd});
 
         nvmlEnableState_t mode;
         if (nvmlDeviceGetPowerManagementMode(device, &mode) == NVML_SUCCESS && mode == NVML_FEATURE_ENABLED) {
             unsigned int power;
             if (nvmlDeviceGetPowerUsage(device, &power) == NVML_SUCCESS)
-                double_data.push_back(CQueue::ILP<double>{"gpu_power", tags, static_cast<double>(power) / 1000, intervalEnd});
+                dataQueue->push(CQueue::DeviceMeasurement<double>{"gpu_power", "device", deviceId, static_cast<double>(power) / 1000, intervalEnd});
 
             /* TODO remove if it doesnt change during execution */
             unsigned int limit;
             if (nvmlDeviceGetPowerManagementLimit(device, &limit) == NVML_SUCCESS)
-                int_data.push_back(CQueue::ILP<int64_t>{"gpu_power_limit", tags, static_cast<int64_t>(limit) / 1000, intervalEnd});
+                dataQueue->push(CQueue::DeviceMeasurement<int64_t>{"gpu_power_limit", "device", deviceId, static_cast<int64_t>(limit) / 1000, intervalEnd});
         }
 
         unsigned int clock;
 
         for (auto const &[name, type] : clockTypes) {
             if (nvmlDeviceGetClockInfo(device, type, &clock) == NVML_SUCCESS)
-                int_data.push_back(CQueue::ILP<int64_t>{name, tags, static_cast<int64_t>(clock), intervalEnd});
+                dataQueue->push(CQueue::DeviceMeasurement<int64_t>{name, "device", deviceId, static_cast<int64_t>(clock), intervalEnd});
 
             /* TODO test if max clock is static or can change during runtime (e.g. when chaning P-states) */
             // if (nvmlDeviceGetMaxClockInfo(device, type, &clock) == NVML_SUCCESS)
-            //     int_data.push_back(CQueue::ILP<int64_t>{name + "_max", tags, static_cast<int64_t>(clock), intervalEnd});
+            //     dataQueue->push(CQueue::DeviceMeasurement<int64_t>{name + "_max", "device", deviceId, static_cast<int64_t>(clock), intervalEnd});
         }
 
         // not supported on MIG-enabled devices
@@ -125,10 +123,10 @@ int CNvidiaGPU::collect() {
             unsigned int utilization;
             unsigned int _;
             if (nvmlDeviceGetEncoderUtilization(device, &utilization, &_) == NVML_SUCCESS)
-                double_data.push_back(CQueue::ILP<double>{"gpu_enc_util", tags, static_cast<double>(utilization), intervalEnd});
+                dataQueue->push(CQueue::DeviceMeasurement<double>{"gpu_enc_util", "device", deviceId, static_cast<double>(utilization), intervalEnd});
 
             if (nvmlDeviceGetDecoderUtilization(device, &utilization, &_) == NVML_SUCCESS)
-                double_data.push_back(CQueue::ILP<double>{"gpu_dec_util", tags, static_cast<double>(utilization), intervalEnd});
+                dataQueue->push(CQueue::DeviceMeasurement<double>{"gpu_dec_util", "device", deviceId, static_cast<double>(utilization), intervalEnd});
         }
 
         /* TODO nvlink */
@@ -140,12 +138,6 @@ int CNvidiaGPU::collect() {
         //     }
         // }
     }
-
-    if ((int_data.size() + double_data.size()) == 0)
-        return 1;
-
-    dataQueue->pushMultiple<int64_t>(int_data);
-    dataQueue->pushMultiple<double>(double_data);
 
     return 0;
 }

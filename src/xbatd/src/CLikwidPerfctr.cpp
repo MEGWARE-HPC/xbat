@@ -16,7 +16,7 @@
 #include <regex>
 #include <thread>
 
-#include "nlohmann/json.hpp"
+#include "external/nlohmann-json/include/nlohmann/json.hpp"
 
 /**
  * @brief Construct a new CLikwidPerfctr::CLikwidPerfctr object and initialize parameters
@@ -222,7 +222,6 @@ int CLikwidPerfctr::measureSets() {
 
     int metricCount;
     size_t cpusCount = cpus.size();
-    std::vector<CQueue::ILP<double>> results;
     std::string collection_level = topology.smt ? "thread" : "core";
     for (size_t i = 0; i < gids.size(); i++) {
         metricCount = perfmon_getNumberOfMetrics(gids[i]);
@@ -266,16 +265,10 @@ int CLikwidPerfctr::measureSets() {
             // node level: first hwThread contains value
             // std::cout << setName << "|" << metricName << "|" << level << " - " << std::endl;
             for (size_t l = 0; l < cpusCount; l++) {
-                if (level == "socket" && (l % topology.coresPerSocket != 0 || topology.hwThreads[l].thread != "0"))
+                if (level == "socket" && (l % topology.coresPerSocket != 0 || topology.hwThreads[l].thread != 0))
                     continue;
                 if (level == "node" && l != 0)
                     break;
-                std::map<std::string, std::string> tags = {{"level", level}};
-
-                tags["thread"] = std::to_string(topology.hwThreads[l].hwThread);
-                tags["core"] = topology.hwThreads[l].core;
-                tags["socket"] = topology.hwThreads[l].socket;
-                tags["numa"] = topology.hwThreads[l].numa;
 
                 double value = 0.0;
                 if (!multiSetMemory) {
@@ -292,19 +285,22 @@ int CLikwidPerfctr::measureSets() {
 
                 // std::cout << value << ",";
 
-                CQueue::ILP<double>
-                    ilp = {
-                        metricMeta.label,
-                        tags,
-                        value * metricMeta.scale,
-                        intervalEnd};
-                results.push_back(ilp);
+                // Scale the value and push to the appropriate schema-aware queue
+                double scaledValue = value * metricMeta.scale;
+
+                // Use topology measurements for thread/core/socket level data
+                dataQueue->push(CQueue::TopologyMeasurement<double>{metricMeta.label,
+                                                                   level,
+                                                                   topology.hwThreads[l].hwThread,
+                                                                   topology.hwThreads[l].core,
+                                                                   topology.hwThreads[l].numa,
+                                                                   topology.hwThreads[l].socket,
+                                                                   scaledValue,
+                                                                   intervalEnd});
             }
             // std::cout << std::endl;
         }
     }
-
-    dataQueue->pushMultiple<double>(results);
 
     overhead = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count();
     currentCycleOverheads.push_back(overhead);

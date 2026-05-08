@@ -72,11 +72,3 @@ class XbatCtldRpcClient:
             app.logger.error(f"Failed to cancel jobs: {e}")
             return False
         return True
-
-    def purge_questdb(self):
-        try:
-            self.stub.PurgeQuestDB(empty_pb2.Empty())
-            return True
-        except grpc.RpcError as e:
-            app.logger.error(f"Failed to purge QuestDB: {e}")
-        return False

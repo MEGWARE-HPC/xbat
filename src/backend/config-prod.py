@@ -4,7 +4,7 @@ No SSL used as this is provided by nginx and backend is only accessible through 
 """
 
 wsgi_app = "restapi:create_app()"
-bind = "0.0.0.0:7001"
+bind = "0.0.0.0:8001"
 workers = 8
 worker_class = "uvicorn.workers.UvicornWorker"
 timeout = 240 # temporarily increased timeout due to slow export call
