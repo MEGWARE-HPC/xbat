@@ -47,8 +47,6 @@ mkdir -p %{LIB} %{LIB64} %{INCLUDE}
 
 cp metrics.json %{BASE}
 cp pci_devices.sh %{BASE}
-cp -r /c-questdb-client/include/* %{INCLUDE}
-cp -r /c-questdb-client/build/libquestdb_client.* %{LIB}
 cp -r /usr/lib64/libnvidia-ml.* %{LIB64}
 ln -s %{LIB64}/libnvidia-ml.so.1 %{LIB64}/libnvidia-ml.so
 cp -r /opt/rocm/lib/libamd_smi.* %{LIB}

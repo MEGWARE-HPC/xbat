@@ -8,7 +8,6 @@ Restart=always
 RestartSec=5
 TimeoutStopSec=30
 
-# for questdb
 LimitNOFILE=infinity
 LimitMEMLOCK=infinity
 

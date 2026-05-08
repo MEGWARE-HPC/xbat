@@ -95,7 +95,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 # Use full paths to libraries since they are copied to specific locations in RPM build
 target_link_libraries(${PROJECT_NAME} PRIVATE
-  ${XBAT_LIB_DIR}/libquestdb_client.so
   ${XBAT_LIB64_DIR}/libnvidia-ml.so
   ${XBAT_LIB_DIR}/libamd_smi.so
   ${XBAT_LIB_DIR}/liblikwid.so
