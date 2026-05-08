@@ -23,6 +23,30 @@ export default defineNuxtConfig({
         "@pinia/nuxt",
         "@nuxtjs/sitemap"
     ],
+    devServer: {
+        https: {
+            key: "../dev/certs/key.pem",
+            cert: "../dev/certs/cert.pem"
+        }
+    },
+    fonts: {
+        families: [
+            {
+                name: "Source Sans 3",
+                weights: [400, 500, 600],
+                styles: ["normal"],
+                subsets: ["latin"],
+                display: "swap"
+            },
+            {
+                name: "Source Code Pro",
+                weights: [400],
+                styles: ["normal"],
+                subsets: ["latin"],
+                display: "swap"
+            }
+        ]
+    },
     nitro: {
         prerender: {
             routes: [...routes]

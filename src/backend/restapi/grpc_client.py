@@ -48,11 +48,12 @@ class XbatCtldRpcClient:
     def submit_benchmark(self, data):
         try:
             new_benchmark = xbat_pb2.NewBenchmark(**data)
-            self.stub.SubmitBenchmark(new_benchmark)
-            return True
+            response = self.stub.SubmitBenchmark(new_benchmark)
+            result = json.loads(MessageToJson(response))
+            return result
         except grpc.RpcError as e:
             app.logger.error(f"Failed to submit benchmark: {e}")
-        return False
+        return None
 
     def get_user_info(self, user_name):
         try:

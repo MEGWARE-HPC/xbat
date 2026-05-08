@@ -32,17 +32,21 @@
                     :disabled="!systemBenchmarksAvailable"
                 >
                 </v-autocomplete>
-                <v-number-input
+                <v-text-field
                     label="Scaling Factor"
-                    v-model="state.modifiers.systemBenchmarksScalingFactor"
+                    type="number"
+                    v-model="scalingFactor"
+                    @update:modelValue="onScalingInput"
+                    @blur="commitScaling"
+                    @keydown.enter.prevent="commitScaling"
+                    @keydown="blockLeadingSign"
                     :min="0"
                     :max="1"
                     :step="0.05"
                     hide-details
                     :disabled="!systemBenchmarksAvailable"
                     v-if="query.level == 'job' || query.level == 'node'"
-                >
-                </v-number-input>
+                />
             </div>
             <div class="d-flex align-center modifier-header mb-2">
                 Range Filter
@@ -193,6 +197,13 @@ const enableBenchmarks = computed(() => {
     );
 });
 
+onMounted(() => {
+    const saved = storeGraph?.modifiers?.value;
+    if (saved && typeof saved === "object") {
+        Object.assign(state.modifiers, saved);
+    }
+});
+
 const modifiers = computed(() => [
     {
         title: "System Benchmarks",
@@ -230,6 +241,15 @@ const debounceModifiers = useDebounceFn(() => {
     storeGraph.modifiers.value = { ...state.modifiers };
 }, 1000);
 
+onBeforeUnmount(() => {
+    const dm: any = debounceModifiers;
+    if (dm && typeof dm.flush === "function") {
+        dm.flush();
+    } else {
+        storeGraph.modifiers.value = { ...state.modifiers };
+    }
+});
+
 watch(
     Object.keys(state.modifiers).map(
         (key) => () => state.modifiers[key as keyof GraphModifiers]
@@ -262,6 +282,40 @@ const filterByAvailable = computed(() => {
     );
 });
 
+type PeakItem = { value: string; title: string };
+
+const currentBenchmarkItems = computed<PeakItem[]>(() => {
+    if (!systemBenchmarksAvailable.value) return [];
+    if (query.value.metric === "FLOPS") {
+        return flopItems as PeakItem[];
+    }
+    if (query.value.metric === "Bandwidth") {
+        return query.value.group === "memory"
+            ? (dramItems as PeakItem[])
+            : (cacheItems as PeakItem[]);
+    }
+    return [];
+});
+
+const allowedBenchmarkValues = computed<Set<string>>(
+    () => new Set(currentBenchmarkItems.value.map((i) => i.value))
+);
+
+watch(
+    [() => query.value.metric, () => query.value.group, currentBenchmarkItems],
+    () => {
+        if (!systemBenchmarksAvailable.value) {
+            state.modifiers.systemBenchmarks = [];
+            return;
+        }
+        const allowed = allowedBenchmarkValues.value;
+        state.modifiers.systemBenchmarks = (
+            state.modifiers.systemBenchmarks || []
+        ).filter((v) => allowed.has(String(v)));
+    },
+    { immediate: true }
+);
+
 const currentNodeInfo = computed(() => {
     if (query.value.level === "job" || !query.value.node) return {};
     return (
@@ -285,27 +339,87 @@ const nodeLevelSettings = computed(() => {
     };
 });
 
+const scalingFactor = ref(
+    String(state.modifiers.systemBenchmarksScalingFactor ?? 1)
+);
+
+watch(
+    () => state.modifiers.systemBenchmarksScalingFactor,
+    (v) => {
+        scalingFactor.value = String(v ?? 1);
+    }
+);
+
 watch(
     () => query.value.level,
     (v) => {
-        if (v == "job" || v == "node") {
-            state.modifiers.systemBenchmarksScalingFactor = 1;
-            return;
-        }
+        if (!(v == "job" || v == "node")) {
+            if (state.modifiers.systemBenchmarksScalingFactor !== 1) {
+                state.modifiers.systemBenchmarksScalingFactor = 1;
+            }
 
-        const levelKey = v as keyof typeof nodeLevelSettings.value;
-
-        if (nodeLevelSettings.value[levelKey] !== undefined) {
-            state.modifiers.systemBenchmarksScalingFactor =
-                1 / nodeLevelSettings.value[levelKey]!;
-        } else {
-            state.modifiers.systemBenchmarksScalingFactor = 1;
+            if (typeof scalingFactor !== "undefined") {
+                scalingFactor.value = "1";
+            }
         }
     },
     {
         immediate: true
     }
 );
+
+const onScalingInput = (val: string) => {
+    let raw = typeof val === "string" ? val : String(val ?? "");
+    raw = raw.replace(/[^0-9eE+.\-]/g, "");
+    raw = raw.replace(/E/g, "e");
+
+    const eParts = raw.split("e");
+    let mantRaw = eParts[0] ?? "";
+    let expRaw = eParts.length > 1 ? eParts[1] ?? "" : undefined;
+    mantRaw = mantRaw.replace(/[+\-]/g, "");
+
+    const mParts = mantRaw.split(".");
+    if (mParts.length > 2) {
+        mantRaw = mParts[0] + "." + mParts.slice(1).join("");
+    }
+
+    let expNorm: string | undefined;
+    if (typeof expRaw === "string") {
+        expRaw = expRaw.replace(/[^0-9+\-]/g, "");
+        let sign = "";
+        if (expRaw.startsWith("+") || expRaw.startsWith("-")) {
+            sign = expRaw[0];
+            expRaw = expRaw.slice(1);
+        }
+        expRaw = expRaw.replace(/[+\-]/g, "");
+        expNorm = sign + expRaw;
+    }
+
+    const normalized =
+        typeof expNorm === "string" ? `${mantRaw}e${expNorm}` : mantRaw;
+
+    scalingFactor.value = normalized;
+};
+
+const commitScaling = () => {
+    let v = parseFloat(scalingFactor.value);
+    if (!Number.isFinite(v)) v = 1;
+    v = Math.min(1, Math.max(0, v));
+    v = Number(v.toFixed(2));
+
+    state.modifiers.systemBenchmarksScalingFactor = v;
+
+    scalingFactor.value = String(v);
+};
+
+const blockLeadingSign = (e: KeyboardEvent) => {
+    const el = e.target as HTMLInputElement | null;
+    const pos = el?.selectionStart ?? 0;
+    const key = e.key;
+    if (pos === 0 && (key === "+" || key === "-")) {
+        e.preventDefault();
+    }
+};
 </script>
 <style lang="scss" scoped>
 @use "~/assets/css/colors.scss" as *;

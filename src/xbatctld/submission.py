@@ -160,12 +160,37 @@ def _prepare_permutations(benchmarkId, output_path, log_path):
     return permutations
 
 
-def start_benchmark(data):
-    logger.debug("Starting benchmark with: %s", data)
-    benchmarkId = None
+def create_benchmark_record(data):
+    """
+    Creates a benchmark record in the database and validates user data.
+    
+    Args:
+        data: benchmark creation data (issuer, name, configId, variables, sharedProjects)
+    
+    Returns:
+        dict with benchmarkId, runNr, name, state, and user info
+    
+    Raises:
+        exc.SetupError: if benchmark creation or user validation fails
+    """
+    logger.debug("Creating benchmark record with: %s", data)
+
     try:
         benchmarkId = db.createBenchmark(**data)
 
+        if not benchmarkId:
+            raise exc.SetupError("Failed to create benchmark in database")
+
+        # Get the created benchmark to retrieve runNr
+        benchmark = db.getOne("benchmarks", {"_id": ObjectId(benchmarkId)})
+        if not benchmark:
+            raise exc.SetupError("Failed to retrieve created benchmark")
+
+        runNr = benchmark.get("runNr")
+        name = benchmark.get("name", data.get("name", ""))
+        state = benchmark.get("state", "pending")
+
+        # Validate user data
         user = db.getOne("users", {"user_name": data["issuer"]})
 
         if user is None or not {
@@ -173,41 +198,74 @@ def start_benchmark(data):
         } <= user.keys() or not user["uidnumber"] or not user[
                 "gidnumber"] or not user["homedirectory"] or not (
                     "home" in user["homedirectory"]):
+            # Mark benchmark as failed before raising
+            db.updateOne("benchmarks", {"_id": ObjectId(benchmarkId)}, {
+                "$set": {
+                    "failureReason": "Invalid user data",
+                    "state": "failed"
+                }
+            })
             raise exc.SetupError("Invalid user data")
 
-        jobIds = []
+        logger.debug("Created benchmark %s with runNr %s", benchmarkId, runNr)
 
-        if benchmarkId:
-            logger.debug("Created benchmark %s", benchmarkId)
-            jobIds = submit(benchmarkId, user)
+        return {
+            "benchmarkId": str(benchmarkId),
+            "runNr": runNr,
+            "name": name,
+            "state": state,
+            "user": user
+        }
 
-        if benchmarkId is not None and len(jobIds):
+    except Exception as e:
+        logger.error("Failed to create benchmark record: %s", e)
+        raise
+
+
+def submit_benchmark_jobs(benchmarkId, user):
+    """
+    Submits benchmark jobs to Slurm (asynchronous part).
+    
+    Args:
+        benchmarkId: benchmark database id (as string)
+        user: user data containing name, uid, gid and homedirectory
+    """
+    logger.debug("Submitting jobs for benchmark %s", benchmarkId)
+
+    try:
+        jobIds = submit(benchmarkId, user)
+
+        if len(jobIds):
             logger.debug("Submitted benchmark %s with job ids [%s]",
-                         str(benchmarkId), ",".join([str(j) for j in jobIds]))
+                         benchmarkId, ",".join([str(j) for j in jobIds]))
             db.updateOne("benchmarks", {"_id": ObjectId(benchmarkId)},
                          {"$set": {
                              "jobIds": jobIds,
                              "state": "running"
                          }})
+        else:
+            logger.warning("No jobs submitted for benchmark %s", benchmarkId)
+            db.updateOne("benchmarks", {"_id": ObjectId(benchmarkId)}, {
+                "$set": {
+                    "failureReason": "No jobs were submitted",
+                    "state": "failed"
+                }
+            })
 
     except Exception as e:
-        logger.error("Submission of benchmark failed\n%s\n%s", e,
-                     traceback.print_exc())
+        logger.error("Submission of benchmark %s jobs failed: %s\n%s",
+                     benchmarkId, e, traceback.format_exc())
 
         error_msg = str(e)
-
         if not (isinstance(e, exc.SetupError)
                 or isinstance(e, exc.SubmissionError)):
             error_msg = exc.SubmissionError().args[0]
 
-        if benchmarkId is not None:
-            db.updateOne(
-                "benchmarks", {"_id": ObjectId(benchmarkId)},
-                {"$set": {
-                    "failureReason": error_msg,
-                    "state": "failed"
-                }})
-        return
+        db.updateOne("benchmarks", {"_id": ObjectId(benchmarkId)},
+                     {"$set": {
+                         "failureReason": error_msg,
+                         "state": "failed"
+                     }})
 
 
 #TODO get UID/GID/HOMEDIR from database

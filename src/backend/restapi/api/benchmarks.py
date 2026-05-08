@@ -169,7 +169,7 @@ def post():
     """
     Start benchmark by forwarding request to controld.
     
-    :return: empty response
+    :return: created benchmark resource with runNr
     """
 
     data = request.get_json()
@@ -193,10 +193,10 @@ def post():
         data["sharedProjects"] if "sharedProjects" in data else [],
     })
 
-    if not response:
+    if not response or response.get("runNr") is None:
         raise httpErrors.InternalServerError("Failed to submit benchmark")
 
-    return {}, 204
+    return {"data": {"runNr": response["runNr"]}}, 201
 
 
 def backup_mongoDB():

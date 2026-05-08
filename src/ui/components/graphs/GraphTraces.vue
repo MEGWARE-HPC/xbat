@@ -235,7 +235,7 @@ const traces = computed(() => {
         return [];
 
     return storeGraph.graph.value.traces
-        .filter((t) => !t.auxiliary)
+        // .filter((t) => !t.auxiliary)
         .sort((a, b) => {
             if (
                 ["job", "node", "device"].includes(storeGraph.query.value.level)

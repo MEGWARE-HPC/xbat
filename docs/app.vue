@@ -12,8 +12,7 @@ import type { ContentNavigationItem } from "@nuxt/content";
 
 useHead({
     htmlAttrs: {
-        lang: "en",
-        style: "font-size: 14px; font-family: 'Source Sans Pro', sans-serif;"
+        lang: "en"
     }
 });
 

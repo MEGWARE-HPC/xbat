@@ -26,7 +26,7 @@ const benchmarkEntries: SidebarEntry[] = [
 ];
 
 const jobEntries: SidebarEntry[] = [
-    { name: "jobInfo.jobId", title: "ID" },
+    { name: "jobId", title: "ID" },
     { name: "jobInfo.name", title: "Name" },
     {
         name: "configuration.jobscript.variantName",

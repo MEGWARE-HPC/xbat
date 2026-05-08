@@ -216,7 +216,10 @@ export const useGraphStore = defineStore("graph", () => {
                 settings: { ...defaultSettings },
                 modifiers: { ...defaultModifiers },
                 metrics: {},
-                styling: { colorPalette: preferences.value.colorPalette },
+                styling: {
+                    colorPalette: preferences.value.colorPalette,
+                    showLegend: true
+                },
                 nodes: {},
                 noData: false,
                 loading: false
@@ -226,7 +229,10 @@ export const useGraphStore = defineStore("graph", () => {
                 graph: null,
                 type: "roofline",
                 nodes: {},
-                styling: { colorPalette: preferences.value.colorPalette },
+                styling: {
+                    colorPalette: preferences.value.colorPalette,
+                    showLegend: true
+                },
                 noData: false,
                 loading: false,
                 query: { ...defaultGraphQueryRoofline },
@@ -246,11 +252,15 @@ export const useGraphStore = defineStore("graph", () => {
     const syncColorPalette = (palette: string) => {
         Object.entries(graphs.value).forEach(([key, graph]) => {
             if (graph.type === "default") {
-                useStoreGraph(key, "default").styling.value = {
+                const store = useStoreGraph(key, "default");
+                store.styling.value = {
+                    ...store.styling.value,
                     colorPalette: palette
                 };
             } else if (graph.type === "roofline") {
-                useStoreGraph(key, "roofline").styling.value = {
+                const store = useStoreGraph(key, "roofline");
+                store.styling.value = {
+                    ...store.styling.value,
                     colorPalette: palette
                 };
             }

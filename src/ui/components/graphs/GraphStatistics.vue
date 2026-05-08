@@ -18,6 +18,20 @@
             }
         ]"
     >
+        <template v-slot:top>
+            <div class="d-flex justify-end pa-2">
+                <v-btn
+                    icon="$download"
+                    title="Export as CSV"
+                    size="small"
+                    density="comfortable"
+                    variant="outlined"
+                    rounded="sm"
+                    :disabled="!canExport"
+                    @click="exportStatisticsCsv"
+                />
+            </div>
+        </template>
         <template v-slot:header.data-table-group>
             {{ `Metric (${storeGraph.graph.value?.traces?.[0]?.unit || ""})` }}
         </template>
@@ -37,7 +51,7 @@ const defaultHeaders = [
     { title: "Variance", key: "statistics.var" }
 ];
 
-const { $graphStore } = useNuxtApp();
+const { $api, $graphStore, $snackbar } = useNuxtApp();
 
 const props = defineProps<{
     graphId: string;
@@ -79,4 +93,29 @@ const tableItems = computed(() => {
     state.filterMatchingNone = false;
     return visibleTraces;
 });
+
+const canExport = computed(() => {
+    return !!storeGraph.graph.value?.traces?.length;
+});
+const exportStatisticsCsv = async () => {
+    const query = storeGraph.query.value;
+    if (!query) return;
+
+    const responseBlob = await $api.measurements.exportStatistics(query);
+    if (!responseBlob || responseBlob.size === 0) {
+        $snackbar.show("No statistics data available for export");
+        return;
+    }
+    const url = window.URL.createObjectURL(responseBlob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${query.jobIds[0]}_${query.group}_${query.metric}_${query.level}_statistics.csv`;
+    document.body.appendChild(link);
+    link.click();
+
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(link);
+
+    return;
+};
 </script>

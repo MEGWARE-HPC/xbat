@@ -1,75 +1,22 @@
 from flask import request
-from bson.objectid import ObjectId
+
 from shared import httpErrors
 from shared.mongodb import MongoDB
 from shared.date import get_current_datetime
-from shared.helpers import sanitize_mongo, convert_jobscript_to_v0160
-from backend.restapi.user_helper import get_user_from_token, get_user_projects
+from shared.helpers import sanitize_mongo
+from backend.restapi.utils.ids import ensure_objectId, transform_objectId
+from backend.restapi.utils.users import get_user_from_token, can_modify_owned_doc
+from backend.restapi.utils.configurations import (
+    check_config_name,
+    check_config_folder,
+    unique_config_name,
+    get_user_configurations,
+)
 
 db = MongoDB()
 
 COLLECTION_NAME = "configurations"
-
-
-def transform_shared(c):
-    if ("sharedProjects" in c["configuration"]):
-        c["configuration"]["sharedProjects"] = [
-            ObjectId(p) for p in c["configuration"]["sharedProjects"]
-        ]
-    return c
-
-
-def get_user_configurations(_id=None):
-    """
-    Retrieves configurations based on user's permissions and project
-    access with optional _id filter.
-    
-    :param _id: database id
-    :return: Returns a list of configurations if `_id` is `None`,
-    otherwise it returns a single configuration or an empty dictionary.
-    """
-
-    # TODO remove when there a no configurations left with old format
-    def transform_configurations(configurations):
-        for configuration in configurations:
-            cfg = configuration["configuration"]
-            for jobscript in cfg["jobscript"]:
-                jobscript = convert_jobscript_to_v0160(jobscript)
-        return configurations
-
-    filters = []
-
-    user = get_user_from_token()
-
-    if user is None:
-        return None
-
-    if user["user_type"] != "admin" and user["user_type"] != "demo":
-        filters.append({"misc.owner": user["user_name"]})
-
-        project_ids = [p["_id"] for p in get_user_projects(user)]
-
-        if len(project_ids):
-            filters.append(
-                {"configuration.sharedProjects": {
-                    "$in": project_ids
-                }})
-
-    filterQuery = {}
-    if (len(filters)): filterQuery["$or"] = filters
-
-    if _id is None:
-        return transform_configurations(
-            sanitize_mongo(db.getMany(COLLECTION_NAME, filterQuery)))
-
-    filterQuery["$and"] = [{"_id": _id}]
-
-    configurations = db.getOne(COLLECTION_NAME, filterQuery)
-
-    if configurations is None:
-        return None
-
-    return transform_configurations([sanitize_mongo(configurations)])[0]
+CONFIGURATION_FOLDERS_COLLECTION = "configuration_folders"
 
 
 def get_all():
@@ -111,7 +58,7 @@ def post():
         raise httpErrors.Unauthorized()
 
     config = request.json
-    if config is None:
+    if not config:
         raise httpErrors.BadRequest("No configuration provided")
 
     timestamp = get_current_datetime()
@@ -121,7 +68,13 @@ def post():
         "edited": timestamp,
     }
 
-    config = transform_shared(config)
+    config = transform_objectId(config, "configuration")
+
+    owner = user["user_name"]
+    folder_id = check_config_folder(config, owner)
+    name = check_config_name(config)
+
+    unique_config_name(folder_id, name)
 
     result = db.insertOne(COLLECTION_NAME, config)
 
@@ -139,25 +92,50 @@ def put(_id):
     :param _id: database id
     :return: updated configuration
     """
+    user = get_user_from_token()
+    if user is None:
+        raise httpErrors.Unauthorized()
+
     config = request.json
 
-    if config is None:
+    if not config:
         raise httpErrors.BadRequest("No configuration provided")
 
+    cid = ensure_objectId(_id)
+    if not cid:
+        raise httpErrors.BadRequest("Invalid configuration id")
+
+    existing = db.getOne(COLLECTION_NAME, {"_id": cid})
+    if existing is None:
+        raise httpErrors.NotFound()
+
+    existing_owner = (existing.get("misc") or {}).get("owner")
+
+    if not can_modify_owned_doc(user, existing_owner):
+        raise httpErrors.Forbidden()
+
+    config["misc"] = config.get("misc") or {}
+    config["misc"]["owner"] = existing_owner
+    config["misc"]["created"] = (existing.get("misc") or {}).get("created")
     config["misc"]["edited"] = get_current_datetime()
-    config = transform_shared(config)
 
-    del config["_id"]
+    config = transform_objectId(config, "configuration")
 
-    identifier = {"_id": ObjectId(_id)}
+    folder_id = check_config_folder(config, existing_owner)
+    name = check_config_name(config)
 
-    result = db.replaceOne(COLLECTION_NAME, identifier, config)
+    unique_config_name(folder_id, name, exclude_id=cid)
+
+    if "_id" in config:
+        del config["_id"]
+
+    result = db.replaceOne(COLLECTION_NAME, {"_id": cid}, config)
 
     if not result.acknowledged:
         raise httpErrors.InternalServerError("Update of configuration failed")
 
     # return replaced document for consistent API similar to patch
-    return sanitize_mongo(db.getOne(COLLECTION_NAME, identifier)), 200
+    return sanitize_mongo(db.getOne(COLLECTION_NAME, {"_id": cid})), 200
 
 
 def delete(_id):
@@ -174,15 +152,14 @@ def delete(_id):
     if user is None:
         raise httpErrors.Unauthorized()
 
-    configuration = db.getOne(COLLECTION_NAME, {"_id": ObjectId(_id)})
+    cfg = db.getOne(COLLECTION_NAME, {"_id": ensure_objectId(_id)})
 
-    if configuration is None:
+    if cfg is None:
         raise httpErrors.NotFound()
 
-    if user["user_name"] != configuration["misc"]["owner"] and not (
-            user["user_type"] == 'manager' or user["user_type"] == "admin"):
+    if not can_modify_owned_doc(user, cfg["misc"]["owner"]):
         raise httpErrors.Forbidden()
 
-    result = db.deleteOne(COLLECTION_NAME, {"_id": ObjectId(_id)})
+    result = db.deleteOne(COLLECTION_NAME, {"_id": ensure_objectId(_id)})
 
     return {}, 204 if result.acknowledged else 400

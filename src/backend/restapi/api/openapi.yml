@@ -3,7 +3,7 @@ openapi: 3.0.0
 info:
   title: xbat rest API
   description: xbat rest API
-  version: 1.2.0
+  version: 2.0.0
   contact:
     name: MEGWARE Computer Vertrieb und Service GmbH
     url: https://megware.com
@@ -133,8 +133,15 @@ paths:
               $ref: "#/components/schemas/BenchmarkPost"
         required: true
       responses:
-        "204":
+        "201":
           description: Successfully submitted benchmark
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/BenchmarkCreated"
       security:
         - oauth2:
             - benchmarks_submit
@@ -315,6 +322,24 @@ paths:
       security:
         - oauth2:
             - benchmarks_r
+  /jobs/{jobId}/nodes:
+    get:
+      operationId: backend.restapi.api.jobs.get_node
+      tags:
+        - jobs
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      summary: Returns system information for specified job
+      responses:
+        "200":
+          description: Retrieved nodes
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - benchmarks_r
   /nodes:
     get:
       operationId: backend.restapi.api.nodes.get_all
@@ -452,6 +477,187 @@ paths:
       security:
         - oauth2:
             - configurations_w
+  /configuration_folders:
+    get:
+      operationId: backend.restapi.api.configuration_folders.get_all
+      tags:
+        - configuration
+      parameters:
+        - $ref: "#/components/parameters/ProjectIdQuery"
+      summary: Returns all configuration folders the user has access to
+      responses:
+        "200":
+          description: Successfully retrieved folders
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigurationFolder"
+      security:
+        - oauth2:
+            - configurations_r
+    post:
+      operationId: backend.restapi.api.configuration_folders.post
+      tags:
+        - configuration
+      summary: Create a new configuration folder
+      requestBody:
+        description: Folder object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigurationFolder"
+      responses:
+        "201":
+          description: Successfully added folder
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - configurations_w
+  /configuration_folders/{_id}:
+    get:
+      operationId: backend.restapi.api.configuration_folders.get
+      parameters:
+        - $ref: "#/components/parameters/DatabaseId"
+      tags:
+        - configuration
+      summary: Return a single configuration folder by ID
+      responses:
+        "200":
+          description: Successfully retrieved folder
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigurationFolder"
+      security:
+        - oauth2:
+            - configurations_r
+    put:
+      operationId: backend.restapi.api.configuration_folders.put
+      parameters:
+        - $ref: "#/components/parameters/DatabaseId"
+      tags:
+        - configuration
+      requestBody:
+        description: Folder object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigurationFolder"
+      summary: Replace entire folder document!
+      responses:
+        "200":
+          description: Successfully updated folder
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - configurations_w
+    delete:
+      operationId: backend.restapi.api.configuration_folders.delete
+      parameters:
+        - $ref: "#/components/parameters/DatabaseId"
+      tags:
+        - configuration
+      summary: Deletes the specified folder and all its subfolders recursively, along with all configurations contained in those folders.
+      responses:
+        "204":
+          description: Successfully deleted folder
+      security:
+        - oauth2:
+            - configurations_w
+  /configuration_backups/backup:
+    get:
+      operationId: backend.restapi.api.configuration_backups.export_backup
+      tags:
+        - configuration
+      summary: Export configurations and folders as a backup file
+      parameters:
+        - in: query
+          name: scope
+          required: false
+          schema:
+            type: string
+            enum:
+              - self
+              - owner
+              - all
+            default: self
+        - in: query
+          name: owner
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successfully exported backup
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - configurations_r
+  /configuration_backups/restore:
+    post:
+      operationId: backend.restapi.api.configuration_backups.restore_backup
+      tags:
+        - configuration
+      summary: Restore configurations and folders from a backup file
+      parameters:
+        - in: query
+          name: scope
+          required: false
+          schema:
+            type: string
+            enum:
+              - self
+              - owner
+              - all
+            default: self
+        - in: query
+          name: owner
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: conflictStrategy
+          required: false
+          schema:
+            type: string
+            enum:
+              - overwrite
+              - rename
+              - skip
+            default: rename
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Successfully restored backup
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - configurations_w
   /projects:
     get:
       operationId: backend.restapi.api.projects.get_all
@@ -559,7 +765,7 @@ paths:
       tags:
         - measurements
       summary: Measurement results
-      description: Returns all results for all measurements of the specified runNr
+      description: Returns all results for all measurements of the specified job
       responses:
         "200":
           description: Successfully retrieved measurements
@@ -571,7 +777,7 @@ paths:
         - oauth2:
             - benchmarks_r
   /measurements/{jobId}/json:
-   get:
+    get:
       operationId: backend.restapi.api.measurements.export_json
       parameters:
         - $ref: "#/components/parameters/JobId"
@@ -604,7 +810,7 @@ paths:
         - oauth2:
             - benchmarks_r
   /measurements/{jobId}/csv:
-   get:
+    get:
       operationId: backend.restapi.api.measurements.export_csv
       parameters:
         - $ref: "#/components/parameters/JobId"
@@ -633,8 +839,62 @@ paths:
       security:
         - oauth2:
             - benchmarks_r
+  /measurements/{jobId}/statistics:
+    get:
+      operationId: backend.restapi.api.measurements.export_statistics
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - $ref: "#/components/parameters/GroupQuery"
+          required: true
+        - $ref: "#/components/parameters/MetricQuery"
+          required: true
+        - $ref: "#/components/parameters/LevelQuery"
+          required: true
+        - $ref: "#/components/parameters/NodeQuery"
+      tags:
+        - measurements
+      summary: Returns statistics results
+      responses:
+        "200":
+          description: Successfully retrieved statistics
+          content:
+            application/json:
+              schema:
+                type: object
+      security:
+        - oauth2:
+            - benchmarks_r
+  /measurements/{jobId}/statistics/csv:
+    get:
+      operationId: backend.restapi.api.measurements.export_statistics_csv
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - $ref: "#/components/parameters/GroupQuery"
+        - $ref: "#/components/parameters/MetricQuery"
+        - $ref: "#/components/parameters/LevelQuery"
+        - $ref: "#/components/parameters/NodeQuery"
+      tags:
+        - measurements
+      summary: Export statistics results in CSV format
+      responses:
+        "200":
+          description: Successfully exported statistics results in CSV format
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              description: Indicates that the response contains an attachment file
+              schema:
+                type: string
+                example: attachment; filename="<jobId>_<group>.csv"
+      security:
+        - oauth2:
+            - benchmarks_r
   /measurements/{jobId}/energy:
-   get:
+    get:
       operationId: backend.restapi.api.measurements.calculate_energy
       parameters:
         - $ref: "#/components/parameters/JobId"
@@ -674,6 +934,24 @@ paths:
             application/json:
               schema:
                 type: object
+      security:
+        - oauth2:
+            - benchmarks_r
+  /metrics/roofline:
+    get:
+      operationId: backend.restapi.api.measurements.get_roofline
+      parameters:
+        - $ref: "#/components/parameters/JobIdsCommaQuery"
+      tags:
+        - measurements
+      summary: Roofline model
+      responses:
+        "200":
+          description: Successfully obtained roofline model data
+          content:
+              application/json:
+                schema:
+                  type: object
       security:
         - oauth2:
             - benchmarks_r
@@ -950,6 +1228,17 @@ components:
         items:
           type: integer
       description: Job IDs
+    JobIdsCommaQuery:
+      name: jobIds
+      in: query
+      description: Comma-separated Job IDs
+      required: true
+      style: form
+      explode: false
+      schema:
+        type: array
+        items:
+          type: integer
     NodeHash:
       name: node_hash
       in: path
@@ -1017,6 +1306,23 @@ components:
         - configuration
       properties:
         configuration:
+          type: object
+        sharedProjects:
+          type: array
+          items:
+            type: string
+        misc:
+          type: object
+        _id:
+          type: string
+        folderId:
+          type: string
+    ConfigurationFolder:
+      description: Configuration folder
+      required:
+        - folder
+      properties:
+        folder:
           type: object
         sharedProjects:
           type: array
@@ -1185,6 +1491,12 @@ components:
             type: string
         name:
           type: string
+    BenchmarkCreated:
+      description: Response when creating a benchmark
+      properties:
+        runNr:
+          type: integer
+          description: The run number of the created benchmark
     BenchmarkExport:
       description: Export benchmarks
       properties:

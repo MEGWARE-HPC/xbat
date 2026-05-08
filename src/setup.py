@@ -60,7 +60,7 @@ class CustomDevelop(develop):
 
 setup(
     name="xbat",
-    version="1.2.0",
+    version="2.0.0",
     packages=["xbatctld", "backend", "shared"],
     cmdclass={
         "build_proto": GenerateProtoCommand,

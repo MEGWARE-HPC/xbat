@@ -210,11 +210,20 @@ const submit = async () => {
     // check of form.name and form.configId for ts
     if (!formValid.value || !form.name || !form.configId) return;
 
+    const businessVars = Array.isArray(variableForm.value[form.configId])
+        ? variableForm.value[form.configId].map((v: any) => ({
+              key: v.key,
+              values: v.values,
+              selected: v.selected,
+              input: v.input
+          }))
+        : [];
+
     await $api.benchmarks.submit({
         name: form.name,
         configId: form.configId,
         sharedProjects: form.sharedProjects,
-        variables: variableForm.value[form.configId] || []
+        variables: businessVars
     });
 
     if (!$store.error) {

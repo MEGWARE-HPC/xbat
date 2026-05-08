@@ -1,4 +1,4 @@
-import { defineCollection, defineContentConfig } from "@nuxt/content";
+import { defineCollection, defineContentConfig, z } from "@nuxt/content";
 
 export default defineContentConfig({
     collections: {
@@ -7,22 +7,12 @@ export default defineContentConfig({
                 include: "docs/**/*"
             },
             type: "page",
-            schema: {
-                title: {
-                    type: "string",
-                    required: true
-                },
-                description: {
-                    type: "string"
-                },
-                date: {
-                    type: "date"
-                },
-                draft: {
-                    type: "boolean",
-                    default: false
-                }
-            }
+            schema: z.object({
+                title: z.string().min(1),
+                description: z.string().optional(),
+                date: z.string().optional(),
+                draft: z.boolean().default(false)
+            })
         })
     }
 });
