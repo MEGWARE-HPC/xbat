@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Added
+
+### Changed
+
+- migrated MongoDB from v5 to v8 (to retain data from the previous database, please follow the migration guide.) (#90)
+
+### Fixed
+
 ## v1.3.0 - 2026-05-08
 
 ### Added
