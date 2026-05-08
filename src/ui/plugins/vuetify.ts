@@ -4,7 +4,7 @@ import "vuetify/styles";
 import { createVuetify } from "vuetify";
 import { aliases, mdi } from "vuetify/iconsets/mdi-svg";
 // TODO wait for stable update and resolution of icon aliases
-import { VFileUpload } from "vuetify/labs/VFileUpload";
+import { VFileUpload, VFileUploadItem } from "vuetify/labs/VFileUpload";
 
 import {
     mdiChevronUp,
@@ -47,9 +47,10 @@ import {
     mdiShareVariantOutline,
     mdiContentDuplicate,
     mdiTrashCanOutline,
-    mdiFileDocumentPlusOutline,
+    mdiFileDocumentPlus,
     mdiCompare,
     mdiChevronDown,
+    mdiChevronRight,
     mdiAccountMultipleRemoveOutline,
     mdiCancel,
     mdiDeleteAlertOutline,
@@ -83,6 +84,7 @@ import {
     mdiContentSaveMove,
     mdiDatabaseImportOutline,
     mdiCloudUpload,
+    mdiCloudDownload,
     mdiRead,
     mdiInformation,
     mdiFolderZip,
@@ -92,10 +94,21 @@ import {
     mdiSort,
     mdiSortNumericAscending,
     mdiSortNumericDescending,
+    mdiSortAlphabeticalAscending,
+    mdiSortAlphabeticalDescending,
     mdiFormatListGroupPlus,
     mdiCheckboxMarked,
     mdiCheckboxBlankOutline,
-    mdiBackupRestore
+    mdiBackupRestore,
+    mdiFolder,
+    mdiFolderOpen,
+    mdiFolderPlus,
+    mdiArrowLeftTop,
+    mdiFolderNetwork,
+    mdiFolderMove,
+    mdiCloudBraces,
+    mdiShareVariant,
+    mdiTrashCan
 } from "@mdi/js";
 
 /*
@@ -110,7 +123,8 @@ export default defineNuxtPlugin((app) => {
     const vuetify = createVuetify({
         ssr: true,
         components: {
-            VFileUpload
+            VFileUpload,
+            VFileUploadItem
         },
         theme: {
             themes: {
@@ -156,6 +170,7 @@ export default defineNuxtPlugin((app) => {
                 notEqual: mdiNotEqual,
                 chevronUp: mdiChevronUp,
                 chevronDown: mdiChevronDown,
+                chevronRight: mdiChevronRight,
                 chevronDoubleLeft: mdiChevronDoubleLeft,
                 chevronDoubleRight: mdiChevronDoubleRight,
                 plus: mdiPlus,
@@ -191,13 +206,16 @@ export default defineNuxtPlugin((app) => {
                 hide: mdiEyeOff,
                 arrowLeft: mdiArrowLeft,
                 arrowRight: mdiArrowRight,
+                arrowLeftTop: mdiArrowLeftTop,
                 color: mdiPalette,
                 currency: mdiCurrencyUsd,
                 server: mdiServer,
                 share: mdiShareVariantOutline,
+                shareVariant: mdiShareVariant,
                 duplicate: mdiContentDuplicate,
                 trashCan: mdiTrashCanOutline,
-                newFile: mdiFileDocumentPlusOutline,
+                trashCanDv: mdiTrashCan,
+                newFile: mdiFileDocumentPlus,
                 compare: mdiCompare,
                 revokeshared: mdiAccountMultipleRemoveOutline,
                 cancel: mdiCancel,
@@ -224,6 +242,7 @@ export default defineNuxtPlugin((app) => {
                 saveMove: mdiContentSaveMove,
                 dataImport: mdiDatabaseImportOutline,
                 cloudUpload: mdiCloudUpload,
+                cloudDownload: mdiCloudDownload,
                 read: mdiRead,
                 info: mdiInformation,
                 gestureTap: mdiGestureTapButton,
@@ -232,10 +251,18 @@ export default defineNuxtPlugin((app) => {
                 sortCustom: mdiSort,
                 sortNumAsc: mdiSortNumericAscending,
                 sortNumDesc: mdiSortNumericDescending,
+                sortAlphaAsc: mdiSortAlphabeticalAscending,
+                sortAlphaDesc: mdiSortAlphabeticalDescending,
                 addArray: mdiFormatListGroupPlus,
                 checkboxMark: mdiCheckboxMarked,
                 checkboxBlank: mdiCheckboxBlankOutline,
-                backupRestore: mdiBackupRestore
+                backupRestore: mdiBackupRestore,
+                folder: mdiFolder,
+                folderOpen: mdiFolderOpen,
+                newFolder: mdiFolderPlus,
+                folderNetwork: mdiFolderNetwork,
+                folderMove: mdiFolderMove,
+                jsonRestore: mdiCloudBraces
             },
             sets: {
                 mdi
