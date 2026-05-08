@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## v1.3.0 - 2026-05-08
 
 ### Added
 
@@ -18,7 +18,7 @@ All notable changes to this project will be documented in this file.
 
 - jobs not being processed
 - duplicate headers in CSV export of measurements
-- nginx timeout for CSV exports
+- nginx timeout for large CSV exports
 
 ## v1.2.0 - 2026-01-05
 
