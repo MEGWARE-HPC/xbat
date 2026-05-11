@@ -165,7 +165,7 @@ def roofline_model(
             ridge = plot_roofline(ax, oi, bw, peak_flops, label, color=f"C{i}")
             ridge_points.append(ridge)
         oi[oi >= min_x_peak]
-        label = f"{precision.upper()} Peak FLOPs"
+        label = f"{precision.upper()} Peak FLOPS"
         if performance_ceiling != "scalar":
             label += f" ({performance_ceiling.upper().replace('_', '-')})"
         oi = oi[oi >= min(ridge_points)]
@@ -196,7 +196,7 @@ def roofline_model(
             ax.vlines(x, 0, peak_flops, "grey", linestyles=":", zorder=5)
         ax.set_ylim(bottom=min_performance / 10)
         ax.set_xlabel("Operational Intensity [FLOPs / Byte]")
-        ax.set_ylabel("Performance [FLOPs / s]")
+        ax.set_ylabel("Performance [FLOPS]")
         # TODO Max is a better alias for peak, since it's measured and not theoretical performance
         result_type = "max" if result_type == "peak" else result_type
         ax.set_title(f"Roofline Model ({result_type})")
