@@ -1,3 +1,4 @@
+from collections.abc import Callable
 import importlib
 import json
 from pathlib import Path
@@ -25,6 +26,7 @@ def metric(
     iteration_in_label: bool = True,
     style: list[str] = ["default", "grid"],
     dpi: float = 300,
+    job_id_label_mapping: None | Callable[[str], str | str] = None,
 ) -> Axes:
     if ax is not None and figsize is not None:
         raise ValueError('Parameters "ax" and "figsize" are mutually exclusive.')
@@ -55,18 +57,23 @@ def metric(
             if len(trace["description"]) != 1:
                 raise NotImplementedError()
             description = trace["description"][0]
+            metric = trace["metric"]
             # Support unit-less metrics
             interval = trace["interval"]
             unit = trace.get("unit", "")
             y = trace["values"]
             x = [i * interval for i in range(len(y))]
             label = variant if variant else f"Job {job_id}"
+            if job_id_label_mapping:
+                label = job_id_label_mapping(job_id)
             if iteration_in_label and iteration is not None:
                 label += f" #{iteration}"
             ax.plot(x, y, label=label)
-            ax.set_ylabel(description + (f" [{unit}]" if len(unit) > 0 else ""))
+            ax.set_ylabel(metric + (f" [{unit}]" if len(unit) > 0 else ""))
+            ax.set_title(description)
         ax.set_xlabel("Time [s]")
         ax.legend()
+    fig.tight_layout()
     if output_path:
         plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
     if show:
@@ -85,6 +92,7 @@ def roofline_model(
     figsize: tuple[float, float] | None = None,
     style: list[str] = ["default", "grid"],
     dpi: float = 300,
+    job_id_label_mapping: None | Callable[[str], str | str] = None,
 ) -> Axes:
     data = json.loads(path.read_text())
     node_benchmarks = data["node_benchmarks"]
@@ -105,7 +113,7 @@ def roofline_model(
     for benchmark_data in node_benchmarks.values():
         for k, v in benchmark_data.items():
             roofline_model[k] = min(roofline_model.get(k, v), v)
-    labels = [
+    bw_labels = [
         "BW " + k.split("_")[1].replace("mem", "dram").upper()
         for k in roofline_model.keys()
         if k.startswith("bandwidth")
@@ -147,7 +155,7 @@ def roofline_model(
             fig = plt.figure(figsize=figsize)
             ax = fig.add_subplot(111)
         ridge_points = []
-        for i, (bw, label) in enumerate(zip(bandwidths, labels)):
+        for i, (bw, label) in enumerate(zip(bandwidths, bw_labels)):
             ridge = plot_roofline(ax, oi, bw, peak_flops, label, color=f"C{i}")
             ridge_points.append(ridge)
         oi[oi >= min_x_peak]
@@ -174,7 +182,7 @@ def roofline_model(
                 s=80,
                 marker=marker,
                 zorder=10,
-                label=job,
+                label=job_id_label_mapping(job) if job_id_label_mapping else job,
             )
             job_handles.append(handle)
         for x in ridge_points:
@@ -217,7 +225,7 @@ def roofline_model(
         )
         legend2 = ax.legend(
             job_handles,
-            jobs.keys(),
+            [str(h.get_label()) for h in job_handles],
             loc="lower right",
             fontsize=9,
             title="Jobs",
@@ -228,6 +236,7 @@ def roofline_model(
             frame = legend.get_frame()
             frame.set_facecolor(ax.get_facecolor())  # Match axes background
             frame.set_alpha(1)
+        fig.tight_layout()
         if output_path:
             plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
         if show:

@@ -564,10 +564,31 @@ def plot_metric(
         list[str] | None,
         typer.Option("--style", "-s", help="Matplotlib style(s) to use."),
     ] = None,
+    labels_path: Annotated[
+        Path | None,
+        typer.Option(
+            "--labels",
+            "-l",
+            help="CSV file mapping job to label.",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+        ),
+    ] = None,
 ):
     kwargs: dict[str, list[str]] = dict()
     if style is not None:
         kwargs["style"] = style
+
+    job_labels = {}
+    if labels_path is not None:
+        df = pd.read_csv(labels_path)
+        assert "job" in df.columns and "label" in df.columns, (
+            f"Expected columns job and label in {labels_path}."
+        )
+        job_labels = dict(zip(df["job"].astype(str), df["label"].astype(str)))
+
     plot.metric(
         paths=set(input_paths),  # Deduplicate
         table=table,
@@ -577,6 +598,7 @@ def plot_metric(
         figsize=None,
         iteration_in_label=True,
         dpi=300,
+        job_id_label_mapping=lambda x: job_labels.get(str(x), str(x)),
         **kwargs,
     )
 
@@ -634,10 +656,31 @@ def plot_roofline_model(
         list[str] | None,
         typer.Option("--style", "-s", help="Matplotlib style(s) to use."),
     ] = None,
+    labels_path: Annotated[
+        Path | None,
+        typer.Option(
+            "--labels",
+            "-l",
+            help="CSV file mapping job to label.",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+        ),
+    ] = None,
 ):
     kwargs: dict[str, list[str]] = dict()
     if style is not None:
         kwargs["style"] = style
+
+    job_labels = {}
+    if labels_path is not None:
+        df = pd.read_csv(labels_path)
+        assert "job" in df.columns and "label" in df.columns, (
+            f"Expected columns job and label in {labels_path}."
+        )
+        job_labels = dict(zip(df["job"].astype(str), df["label"].astype(str)))
+
     plot.roofline_model(
         path=input_path,
         precision=precision.value.lower(),
@@ -648,6 +691,7 @@ def plot_roofline_model(
         ax=None,
         figsize=None,
         dpi=300,
+        job_id_label_mapping=lambda x: job_labels.get(str(x), str(x)),
         **kwargs,
     )
 
