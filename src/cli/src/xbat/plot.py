@@ -101,7 +101,7 @@ def roofline_model(
     assert performance_ceiling in ["scalar", "sse", "avx", "avx512"]
     if (
         result_type == "max"
-    ):  # Max is a better alias for peak, since it's measured and not theoretical performance
+    ):  # TODO Max is a better alias for peak, since it's measured and not theoretical performance
         result_type = "peak"
     assert result_type in ["peak", "median", "average", "total"]
     jobs = {k: v["results"][precision][result_type] for k, v in data["jobs"].items()}
@@ -162,6 +162,7 @@ def roofline_model(
         label = f"{precision.upper()} Peak FLOPs"
         if performance_ceiling != "scalar":
             label += f" ({performance_ceiling.upper().replace('_', '-')})"
+        oi = oi[oi >= min(ridge_points)]
         ax.loglog(
             oi,
             np.full_like(oi, peak_flops),
@@ -190,6 +191,8 @@ def roofline_model(
         ax.set_ylim(bottom=min_performance / 10)
         ax.set_xlabel("Operational Intensity [FLOPs / Byte]")
         ax.set_ylabel("Performance [FLOPs / s]")
+        # TODO Max is a better alias for peak, since it's measured and not theoretical performance
+        result_type = "max" if result_type == "peak" else result_type
         ax.set_title(f"Roofline Model ({result_type})")
         ax.set_xscale("log")
         ax.set_yscale("log")
