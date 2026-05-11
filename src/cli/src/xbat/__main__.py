@@ -42,6 +42,7 @@ def warn(*args: Any, category: str = "Warning", **kwargs: Any) -> None:
 
 class App(typer.Typer):
     base_url: str
+    instance_label: str
     local_port: int
     api: Api
     connection: Connection | None = None
@@ -116,6 +117,7 @@ def main(
     ] = None,
 ):
     app.base_url = base_url
+    app.instance_label = app.base_url
     show_help = "-h" in sys.argv or "--help" in sys.argv
     parsed_url = urlparse(app.base_url)
     remote_port = parsed_url.port
@@ -130,7 +132,10 @@ def main(
             app.local_port, remote_port=remote_port, remote_host=remote_host
         )
         app.forward_ctx.enter_context(forward)
-    app.api = Api(app.base_url, api_version, client_id)
+        app.instance_label += (
+            f" ({app.local_port}:{ssh_forwarding_target}:{remote_port})"
+        )
+    app.api = Api(app.instance_label, app.base_url, api_version, client_id)
 
 
 def handle_errors(func: Callable) -> Callable:
@@ -169,7 +174,9 @@ def login(
     user = os.getenv("XBAT_USER")
     password = os.getenv("XBAT_PASS")
     if not ci:
-        print(f"[italic white]setting credentials for {app.base_url}[/italic white]")
+        print(
+            f"[italic white]setting credentials for {app.instance_label}[/italic white]"
+        )
     if ci and (not user or not password):
         raise ValueError(
             " ".join(

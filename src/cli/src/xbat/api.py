@@ -107,10 +107,12 @@ def _localhost_suppress_security_warning(method: F) -> F:
 class Api(object):
     def __init__(
         self,
+        instance_label: str,
         base_url: str,
         version: str,
         client_id: str,
     ) -> None:
+        self.__instance_label = instance_label
         self.__base_url = base_url
         host = urlparse(self.__base_url).hostname
         assert host
@@ -175,7 +177,9 @@ class Api(object):
         access_token = token_response.json()["access_token"]
         if update_keystore:
             try:
-                keyring.set_password(self.__keyring_system, self.__host, access_token)
+                keyring.set_password(
+                    self.__keyring_system, self.__instance_label, access_token
+                )
             except NoKeyringError:
                 raise AccessTokenError("Could not store access token.")
         return access_token
@@ -185,7 +189,9 @@ class Api(object):
         if not access_token:
             # Fall back on keyring
             try:
-                access_token = keyring.get_password(self.__keyring_system, self.__host)
+                access_token = keyring.get_password(
+                    self.__keyring_system, self.__instance_label
+                )
             except NoKeyringError:
                 pass
         if not access_token:

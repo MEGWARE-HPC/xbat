@@ -88,7 +88,9 @@ def roofline_model(
     data = json.loads(path.read_text())
     node_benchmarks = data["node_benchmarks"]
     assert precision in ["sp", "dp"]
-    if result_type == "max": # Max is a better alias for peak, since it's measured and not theoretical performance
+    if (
+        result_type == "max"
+    ):  # Max is a better alias for peak, since it's measured and not theoretical performance
         result_type = "peak"
     assert result_type in ["peak", "median", "average", "total"]
     jobs = {k: v["results"][precision][result_type] for k, v in data["jobs"].items()}
