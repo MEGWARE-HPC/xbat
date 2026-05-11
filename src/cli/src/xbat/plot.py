@@ -77,6 +77,7 @@ def metric(
 def roofline_model(
     path: Path,
     precision: str = "dp",
+    performance_ceiling: str = "scalar",
     result_type: str = "total",
     output_path: Path | str | None = None,
     show: bool = False,
@@ -88,6 +89,8 @@ def roofline_model(
     data = json.loads(path.read_text())
     node_benchmarks = data["node_benchmarks"]
     assert precision in ["sp", "dp"]
+    performance_ceiling = performance_ceiling.lower()
+    assert performance_ceiling in ["scalar", "sse", "avx", "avx512"]
     if (
         result_type == "max"
     ):  # Max is a better alias for peak, since it's measured and not theoretical performance
@@ -108,11 +111,16 @@ def roofline_model(
         if k.startswith("bandwidth")
     ]
     bandwidths = [v for k, v in roofline_model.items() if k.startswith("bandwidth")]
-    peak_flops = roofline_model[
-        "peakflops_avx512_fma" if precision == "dp" else "peakflops_sp_avx512_fma"
-    ]
+    performance_metric = "peakflops"
+    if precision == "sp":
+        performance_metric += "_sp"
+    if performance_ceiling != "scalar":
+        performance_metric += "_" + performance_ceiling
+    peak_flops = roofline_model[performance_metric]
     ridge_points = [peak_flops / bw for bw in bandwidths]
     min_x = min([v["operational_intensity"] for v in jobs.values()])
+    min_x_peak = min(ridge_points)
+    min_x = min(min_x, min_x_peak)
     max_x = max([v["operational_intensity"] for v in jobs.values()] + ridge_points)
     oi = np.logspace(np.log10(min_x / 10), np.log10(max_x * 10), 500)
 
@@ -130,12 +138,6 @@ def roofline_model(
             linestyle=linestyle,
         )
 
-        # Compute segment: right of ridge
-        mask_cp = oi >= oi_ridge
-        ax.loglog(
-            oi[mask_cp], np.full_like(oi[mask_cp], peak_flops), color=color, linewidth=2
-        )
-
         return oi_ridge
 
     with plt.style.context(style):
@@ -148,12 +150,16 @@ def roofline_model(
         for i, (bw, label) in enumerate(zip(bandwidths, labels)):
             ridge = plot_roofline(ax, oi, bw, peak_flops, label, color=f"C{i}")
             ridge_points.append(ridge)
+        oi[oi >= min_x_peak]
+        label = f"{precision.upper()} Peak FLOPs"
+        if performance_ceiling != "scalar":
+            label += f" ({performance_ceiling.upper().replace('_', '-')})"
         ax.loglog(
             oi,
             np.full_like(oi, peak_flops),
             color="k",
             linewidth=2,
-            label=f"{precision.upper()} Peak FLOPs",
+            label=label,
         )
         markers = ["o", "s", "^", "D", "v", "*"]  # Cycle through
         job_handles = []
@@ -176,7 +182,7 @@ def roofline_model(
         ax.set_ylim(bottom=min_performance / 10)
         ax.set_xlabel("Operational Intensity [FLOPs / Byte]")
         ax.set_ylabel("Performance [FLOPs / s]")
-        ax.set_title("Roofline Model")
+        ax.set_title(f"Roofline Model ({result_type})")
         ax.set_xscale("log")
         ax.set_yscale("log")
         ax.grid(True, which="both", linestyle=":", linewidth=0.5)

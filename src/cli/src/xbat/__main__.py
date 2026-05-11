@@ -582,8 +582,16 @@ def plot_metric(
 
 
 class PrecisionType(str, Enum):
-    SP = "SP"
-    DP = "DP"
+    SP = "sp"
+    DP = "dp"
+
+
+class PerformanceCeilingType(str, Enum):
+    SCALAR = "scalar"
+    SSE = "sse"
+    AVX = "avx"
+    AVX512 = "avx512"
+    AVX512_FMA = "avx512_fma"
 
 
 class ResultType(str, Enum):
@@ -610,6 +618,10 @@ def plot_roofline_model(
         PrecisionType,
         typer.Option("--precision", "-p", help="Floating point precision."),
     ] = PrecisionType.DP,
+    performance_ceiling: Annotated[
+        PerformanceCeilingType,
+        typer.Option("--ceiling", "-c", help="Performance ceiling type."),
+    ] = PerformanceCeilingType.SCALAR,
     result_type: Annotated[
         ResultType,
         typer.Option("--type", "-t", help="Perfromance result type."),
@@ -628,8 +640,9 @@ def plot_roofline_model(
         kwargs["style"] = style
     plot.roofline_model(
         path=input_path,
-        precision=precision.lower(),
-        result_type=result_type,
+        precision=precision.value.lower(),
+        performance_ceiling=performance_ceiling.value,
+        result_type=result_type.value,
         output_path=output_path,
         show=output_path is None,
         ax=None,
