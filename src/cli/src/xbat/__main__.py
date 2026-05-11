@@ -564,6 +564,10 @@ def plot_metric(
         list[str] | None,
         typer.Option("--style", "-s", help="Matplotlib style(s) to use."),
     ] = None,
+    figure_scale: Annotated[
+        float,
+        typer.Option("--figure-scale", "-f", help="Uniform figure scaling factor."),
+    ] = 1,
     labels_path: Annotated[
         Path | None,
         typer.Option(
@@ -598,6 +602,7 @@ def plot_metric(
         figsize=None,
         iteration_in_label=True,
         dpi=300,
+        figure_scale=figure_scale,
         job_id_label_mapping=lambda x: job_labels.get(str(x), str(x)),
         **kwargs,
     )
@@ -656,6 +661,10 @@ def plot_roofline_model(
         list[str] | None,
         typer.Option("--style", "-s", help="Matplotlib style(s) to use."),
     ] = None,
+    figure_scale: Annotated[
+        float,
+        typer.Option("--figure-scale", "-f", help="Uniform figure scaling factor."),
+    ] = 1,
     labels_path: Annotated[
         Path | None,
         typer.Option(
@@ -691,6 +700,7 @@ def plot_roofline_model(
         ax=None,
         figsize=None,
         dpi=300,
+        figure_scale=figure_scale,
         job_id_label_mapping=lambda x: job_labels.get(str(x), str(x)),
         **kwargs,
     )

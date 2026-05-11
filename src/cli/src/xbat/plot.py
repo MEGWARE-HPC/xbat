@@ -26,6 +26,7 @@ def metric(
     iteration_in_label: bool = True,
     style: list[str] = ["default", "grid"],
     dpi: float = 300,
+    figure_scale: float = 1,
     job_id_label_mapping: None | Callable[[str], str | str] = None,
 ) -> Axes:
     if ax is not None and figsize is not None:
@@ -73,6 +74,8 @@ def metric(
             ax.set_title(description)
         ax.set_xlabel("Time [s]")
         ax.legend()
+    w, h = fig.get_size_inches()
+    fig.set_size_inches(w * figure_scale, h * figure_scale)
     fig.tight_layout()
     if output_path:
         plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
@@ -92,6 +95,7 @@ def roofline_model(
     figsize: tuple[float, float] | None = None,
     style: list[str] = ["default", "grid"],
     dpi: float = 300,
+    figure_scale: float = 1,
     job_id_label_mapping: None | Callable[[str], str | str] = None,
 ) -> Axes:
     data = json.loads(path.read_text())
@@ -103,6 +107,8 @@ def roofline_model(
         result_type == "max"
     ):  # TODO Max is a better alias for peak, since it's measured and not theoretical performance
         result_type = "peak"
+    if result_type == "mean":
+        result_type = "average"
     assert result_type in ["peak", "median", "average", "total"]
     jobs = {k: v["results"][precision][result_type] for k, v in data["jobs"].items()}
     roofline_model: dict[str, float] = dict()
@@ -239,6 +245,8 @@ def roofline_model(
             frame = legend.get_frame()
             frame.set_facecolor(ax.get_facecolor())  # Match axes background
             frame.set_alpha(1)
+        w, h = fig.get_size_inches()
+        fig.set_size_inches(w * figure_scale, h * figure_scale)
         fig.tight_layout()
         if output_path:
             plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
