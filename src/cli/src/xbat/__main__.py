@@ -572,7 +572,7 @@ def plot_metric(
         Path | None,
         typer.Option(
             "--labels",
-            "-l",
+            "-L",
             help="CSV file mapping job to label.",
             exists=True,
             file_okay=True,
@@ -665,11 +665,27 @@ def plot_roofline_model(
         float,
         typer.Option("--figure-scale", "-f", help="Uniform figure scaling factor."),
     ] = 1,
+    plot_cache_bandwidth: Annotated[
+        bool,
+        typer.Option(
+            "--bandwidth-all",
+            "-b",
+            help="Plot cache bandwidth lines in addition to DRAM.",
+        ),
+    ] = False,
+    use_linear_scale: Annotated[
+        bool,
+        typer.Option(
+            "--linear-scale",
+            "-l",
+            help="Plot using linear instead of logarithmic scale.",
+        ),
+    ] = False,
     labels_path: Annotated[
         Path | None,
         typer.Option(
             "--labels",
-            "-l",
+            "-L",
             help="CSV file mapping job to label.",
             exists=True,
             file_okay=True,
@@ -701,6 +717,8 @@ def plot_roofline_model(
         figsize=None,
         dpi=300,
         figure_scale=figure_scale,
+        plot_cache_bandwidth=plot_cache_bandwidth,
+        use_linear_scale=use_linear_scale,
         job_id_label_mapping=lambda x: job_labels.get(str(x), str(x)),
         **kwargs,
     )
