@@ -227,6 +227,8 @@ def roofline_model(
             return value_fmtd
 
         def format_y_ticks(value, tick_number):
+            if str(value)[0] not in "12346":
+                return "" # Avoid cramped tick labels
             suffixes = [""] + list("kMGTPE")
             for i in range(len(suffixes)):
                 if abs(value) < 1000:
@@ -238,6 +240,7 @@ def roofline_model(
             return f"{value_fmtd}{suffixes[i]}"
 
         ax.xaxis.set_major_formatter(mticker.FuncFormatter(format_x_ticks))
+        ax.yaxis.set_minor_formatter(mticker.FuncFormatter(format_y_ticks))
         ax.yaxis.set_major_formatter(mticker.FuncFormatter(format_y_ticks))
         handles, labels_ = ax.get_legend_handles_labels()
         bw_peak_handles = handles[: len(bandwidths) + 1]
