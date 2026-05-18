@@ -150,7 +150,6 @@ def roofline_model(
         oi = np.linspace(min_x * 0.5, max_x * 1.05, 500)
     else:
         oi = np.logspace(np.log10(min_x / 10), np.log10(max_x * 10), 500)
-    print(min(oi), max(oi))
 
     def plot_roofline(ax, oi, bw_bytes, peak_flops, label, color=None, linestyle="--"):
         # Ridge point (intersection with peak)
