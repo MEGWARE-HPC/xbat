@@ -953,9 +953,9 @@ def export(
             )
 
 
-@app.command(help="Open the xbat web UI.")
+@app.command(help="Open the xbat web GUI.")
 @handle_errors
-def ui(
+def gui(
     run: Annotated[
         int | None, typer.Option("--run", "-r", help="Benchmark run to open.")
     ] = None,

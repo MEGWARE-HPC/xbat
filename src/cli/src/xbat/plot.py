@@ -107,7 +107,7 @@ def roofline_model(
     node_benchmarks = data["node_benchmarks"]
     assert precision in ["sp", "dp"]
     performance_ceiling = performance_ceiling.lower()
-    assert performance_ceiling in ["scalar", "sse", "avx", "avx512"]
+    assert performance_ceiling in ["scalar", "sse", "avx", "avx512", "avx512_fma"]
     if (
         result_type == "max"
     ):  # TODO Max is a better alias for peak, since it's measured and not theoretical performance
