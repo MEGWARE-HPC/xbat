@@ -59,7 +59,7 @@ services:
         expose:
             - 8002
     xbat-mongodb:
-        image: docker.io/mongo:8
+        image: docker.io/mongo:8.0
         restart: unless-stopped
         container_name: xbat-mongodb
         user: "#XBAT_UID#:#XBAT_GID#"
