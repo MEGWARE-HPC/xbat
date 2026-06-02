@@ -28,7 +28,7 @@ RUN mkdir -p ~/rpmbuild/BUILD ~/rpmbuild/BUILDROOT ~/rpmbuild/RPMS ~/rpmbuild/SO
 RUN curl -fsSL -o /etc/yum.repos.d/cuda-rhel8.repo \
         https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo && \
     microdnf -y install \
-        nvidia-driver nvidia-driver-NVML nvidia-driver-devel cuda-nvml-devel-12-2 && \
+        nvidia-driver nvidia-driver-devel cuda-nvml-devel-12-2 && \
     microdnf clean all
 
 # install rocm
