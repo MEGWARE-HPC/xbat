@@ -190,8 +190,9 @@ def register(jobId):
     :return: job settings required for monitoring
     """
 
-    interval = app.config["CONFIG"][
-        "cli_interval"] if "cli_interval" in app.config["CONFIG"] else 10
+    interval = int(
+        app.config["CONFIG"]["general"]["cli_interval"]
+    ) if "cli_interval" in app.config["CONFIG"]["general"] else 10
     enable_monitoring = True
     enable_likwid = True
     hash_missing = False
