@@ -1,0 +1,274 @@
+from collections.abc import Callable
+import importlib
+import json
+from pathlib import Path
+import sys
+from typing import Iterable
+from matplotlib import pyplot as plt
+import matplotlib.ticker as mticker
+from matplotlib.axes import Axes
+import numpy as np
+from rich import print
+
+try:
+    importlib.import_module("scienceplots")
+except ModuleNotFoundError:
+    print("[yellow]Could not import additional styles.[/yellow]", file=sys.stderr)
+
+
+def metric(
+    paths: Iterable[Path],
+    table: str | None = None,
+    output_path: Path | str | None = None,
+    show: bool = False,
+    ax: Axes | None = None,
+    figsize: tuple[float, float] | None = None,
+    iteration_in_label: bool = True,
+    style: list[str] = ["default", "grid"],
+    dpi: float = 300,
+    figure_scale: float = 1,
+    job_id_label_mapping: None | Callable[[str], str | str] = None,
+) -> Axes:
+    if ax is not None and figsize is not None:
+        raise ValueError('Parameters "ax" and "figsize" are mutually exclusive.')
+    description = None
+    with plt.style.context(style):
+        if ax is None:
+            if figsize is None:
+                figsize = (7, 2.5)
+            fig = plt.figure(figsize=figsize)
+            ax = fig.add_subplot(111)
+        for path in paths:
+            data = json.loads(path.read_text())
+            traces = {t["table"]: t for t in data["traces"]}
+            if len(traces) > 1:
+                if not table:
+                    raise ValueError(
+                        f"File contains multiple traces (table must be specified): {path}"
+                    )
+                if table not in traces:
+                    print(
+                        f'[bold yellow]Warning![/bold yellow] No trace for table "{table}" in this file: {path}'
+                    )
+                    continue
+            trace = traces[table] if table else list(traces.values())[0]
+            job_id = trace["jobId"]
+            variant = trace.get("variant")
+            iteration = trace.get("iteration")
+            if len(trace["description"]) != 1:
+                raise NotImplementedError()
+            description = trace["description"][0]
+            metric = trace["metric"]
+            # Support unit-less metrics
+            interval = trace["interval"]
+            unit = trace.get("unit", "")
+            y = trace["values"]
+            x = [i * interval for i in range(len(y))]
+            label = variant if variant else f"Job {job_id}"
+            if job_id_label_mapping:
+                label = job_id_label_mapping(job_id)
+            if iteration_in_label and iteration is not None:
+                label += f" #{iteration}"
+            ax.plot(x, y, label=label)
+            ax.set_ylabel(metric + (f" [{unit}]" if len(unit) > 0 else ""))
+            ax.set_title(description)
+        ax.set_xlabel("Time [s]")
+        ax.legend()
+    w, h = fig.get_size_inches()
+    fig.set_size_inches(w * figure_scale, h * figure_scale)
+    fig.tight_layout()
+    if output_path:
+        plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
+    if show:
+        plt.show()
+    return ax
+
+
+def roofline_model(
+    path: Path,
+    precision: str = "dp",
+    performance_ceiling: str = "scalar",
+    result_type: str = "total",
+    output_path: Path | str | None = None,
+    show: bool = False,
+    ax: Axes | None = None,
+    figsize: tuple[float, float] | None = None,
+    style: list[str] = ["default", "grid"],
+    dpi: float = 300,
+    figure_scale: float = 1,
+    plot_cache_bandwidth: bool = False,
+    use_linear_scale: bool = False,
+    job_id_label_mapping: None | Callable[[str], str | str] = None,
+) -> Axes:
+    assert not use_linear_scale or plot_cache_bandwidth != use_linear_scale, (
+        "Cannot use linear scale when plotting cache bandwidth"
+    )
+    data = json.loads(path.read_text())
+    node_benchmarks = data["node_benchmarks"]
+    assert precision in ["sp", "dp"]
+    performance_ceiling = performance_ceiling.lower()
+    assert performance_ceiling in ["scalar", "sse", "avx", "avx512", "avx512_fma"]
+    if (
+        result_type == "max"
+    ):  # TODO Max is a better alias for peak, since it's measured and not theoretical performance
+        result_type = "peak"
+    if result_type == "mean":
+        result_type = "average"
+    assert result_type in ["peak", "median", "average", "total"]
+    jobs = {k: v["results"][precision][result_type] for k, v in data["jobs"].items()}
+    roofline_model: dict[str, float] = dict()
+    if len(node_benchmarks) > 1:
+        print(
+            "[yellow]Multiple node types used! (Using lowest values for roofline ceiling.)[/yellow]"
+        )
+    for benchmark_data in node_benchmarks.values():
+        for k, v in benchmark_data.items():
+            if k.startswith("bandwidth"):
+                if not (plot_cache_bandwidth or k.endswith("mem")):
+                    continue
+            roofline_model[k] = min(roofline_model.get(k, v), v)
+    bw_labels = [
+        "BW " + k.split("_")[1].replace("mem", "dram").upper()
+        for k in roofline_model.keys()
+        if k.startswith("bandwidth")
+    ]
+    bandwidths = [v for k, v in roofline_model.items() if k.startswith("bandwidth")]
+    performance_metric = "peakflops"
+    if precision == "sp":
+        performance_metric += "_sp"
+    if performance_ceiling != "scalar":
+        performance_metric += "_" + performance_ceiling
+    peak_flops = roofline_model[performance_metric]
+    ridge_points = [peak_flops / bw for bw in bandwidths]
+    min_x = min([v["operational_intensity"] for v in jobs.values()])
+    min_x_peak = min(ridge_points)
+    min_x = min(min_x, min_x_peak)
+    max_x = max([v["operational_intensity"] for v in jobs.values()] + ridge_points)
+
+    oi = None
+    if use_linear_scale:
+        oi = np.linspace(min_x * 0.5, max_x * 1.05, 500)
+    else:
+        oi = np.logspace(np.log10(min_x / 10), np.log10(max_x * 10), 500)
+
+    def plot_roofline(ax, oi, bw_bytes, peak_flops, label, color=None, linestyle="--"):
+        # Ridge point (intersection with peak)
+        oi_ridge = peak_flops / bw_bytes
+
+        # Bandwidth segment: left of ridge
+        mask_bw = oi <= oi_ridge
+        plot = ax.plot if use_linear_scale else ax.loglog
+        plot(
+            oi[mask_bw],
+            bw_bytes * oi[mask_bw],
+            label=label,
+            color=color,
+            linestyle=linestyle,
+        )
+
+        return oi_ridge
+
+    with plt.style.context(style):
+        if ax is None:
+            if figsize is None:
+                figsize = (9, 6)
+            fig = plt.figure(figsize=figsize)
+            ax = fig.add_subplot(111)
+        ridge_points = []
+        for i, (bw, label) in enumerate(zip(bandwidths, bw_labels)):
+            ridge = plot_roofline(ax, oi, bw, peak_flops, label, color=f"C{i}")
+            ridge_points.append(ridge)
+        oi[oi >= min_x_peak]
+        label = f"{precision.upper()} Peak FLOPS"
+        if performance_ceiling != "scalar":
+            label += f" ({performance_ceiling.upper().replace('_', '-')})"
+        oi = oi[oi >= min(ridge_points)]
+        plot = ax.plot if use_linear_scale else ax.loglog
+        plot(
+            oi,
+            np.full_like(oi, peak_flops),
+            color="k",
+            linewidth=2,
+            label=label,
+        )
+        markers = ["o", "s", "^", "D", "v", "*"]  # Cycle through
+        job_handles = []
+        min_performance = np.inf
+        for i, (job, v) in enumerate(jobs.items()):
+            performance = v["performance"] * 1e9  # Convert GFLOPs to FLOPs
+            min_performance = min(min_performance, performance)
+            marker = markers[i % len(markers)]
+            handle = ax.scatter(
+                v["operational_intensity"],
+                performance,
+                s=80,
+                marker=marker,
+                zorder=10,
+                label=job_id_label_mapping(job) if job_id_label_mapping else job,
+            )
+            job_handles.append(handle)
+        for x in ridge_points:
+            ax.vlines(x, 0, peak_flops, "grey", linestyles=":", zorder=5)
+        ax.set_ylim(bottom=min_performance / 10)
+        ax.set_xlabel("Operational Intensity [FLOPs / Byte]")
+        ax.set_ylabel("Performance [FLOPS]")
+        # TODO Max is a better alias for peak, since it's measured and not theoretical performance
+        result_type = "max" if result_type == "peak" else result_type
+        ax.set_title(f"Roofline Model ({result_type})")
+        scale = "linear" if use_linear_scale else "log"
+        ax.set_xscale(scale)
+        ax.set_yscale(scale)
+        ax.grid(True, which="both", linestyle=":", linewidth=0.5)
+
+        def format_x_ticks(value, tick_number):
+            value_fmtd = str(value)
+            if value_fmtd.endswith(".0"):
+                value_fmtd = value_fmtd[:-2]
+            return value_fmtd
+
+        def format_y_ticks(value, tick_number):
+            if str(value)[0] not in "12346":
+                return "" # Avoid cramped tick labels
+            suffixes = [""] + list("kMGTPE")
+            for i in range(len(suffixes)):
+                if abs(value) < 1000:
+                    break
+                value /= 1000
+            value_fmtd = str(value)
+            if value_fmtd.endswith(".0"):
+                value_fmtd = value_fmtd[:-2]
+            return f"{value_fmtd}{suffixes[i]}"
+
+        ax.xaxis.set_major_formatter(mticker.FuncFormatter(format_x_ticks))
+        ax.yaxis.set_minor_formatter(mticker.FuncFormatter(format_y_ticks))
+        ax.yaxis.set_major_formatter(mticker.FuncFormatter(format_y_ticks))
+        handles, labels_ = ax.get_legend_handles_labels()
+        bw_peak_handles = handles[: len(bandwidths) + 1]
+        bw_peak_labels = labels_[: len(bandwidths) + 1]
+        legend1 = ax.legend(
+            bw_peak_handles,
+            bw_peak_labels,
+            loc="upper left",
+            fontsize=9,
+        )
+        legend2 = ax.legend(
+            job_handles,
+            [str(h.get_label()) for h in job_handles],
+            loc="lower right",
+            fontsize=9,
+            title="Jobs",
+        )
+        ax.add_artist(legend1)  # Keep the first legend
+        for legend in [legend1, legend2]:
+            legend.set_frame_on(True)
+            frame = legend.get_frame()
+            frame.set_facecolor(ax.get_facecolor())  # Match axes background
+            frame.set_alpha(1)
+        w, h = fig.get_size_inches()
+        fig.set_size_inches(w * figure_scale, h * figure_scale)
+        fig.tight_layout()
+        if output_path:
+            plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
+        if show:
+            plt.show()
+        return ax
