@@ -1089,7 +1089,8 @@ async def get_roofline(jobIds=None):
         vals = _pick_raw_values(trace)
         unit = (trace.get("unit") or "").strip().lower()
         if unit in ("gb", "gbytes", "gbyte", "gib", "gibibyte"):
-            return [v * 1e9 for v in vals]
+            # 1 gbytes = 1024**3 byte
+            return [v * 1073741824 for v in vals]
         return vals
 
     def _get_interval(*traces):
