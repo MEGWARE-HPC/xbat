@@ -21,6 +21,7 @@ RUN ln -fs /usr/bin/python3.12 /usr/bin/python3 \
     && ln -fs /usr/bin/python3.12 /usr/bin/python
 
 RUN uv pip install --system -r xbatctld/requirements.txt \
+    && python setup.py build_proto \
     && uv pip install --system -e .
 
 WORKDIR /home/xbatctld

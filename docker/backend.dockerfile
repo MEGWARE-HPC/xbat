@@ -32,6 +32,7 @@ RUN uv pip install \
     --trusted-host pypi.org \
     --trusted-host files.pythonhosted.org \
     -r backend/requirements.txt \
+    && python setup.py build_proto \
     && uv pip install --system -e .
 
 EXPOSE 8001
