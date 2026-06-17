@@ -228,7 +228,7 @@ def roofline_model(
 
         def format_y_ticks(value, tick_number):
             if str(value)[0] not in "12346":
-                return "" # Avoid cramped tick labels
+                return ""  # Avoid cramped tick labels
             suffixes = [""] + list("kMGTPE")
             for i in range(len(suffixes)):
                 if abs(value) < 1000:

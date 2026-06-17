@@ -23,6 +23,11 @@ class AccessTokenError(Exception):
         self.no_credentials = no_credentials
 
 
+class InsufficientPermissionsError(Exception):
+    def __init__(self, reason: str = "Insufficient permissions") -> None:
+        super().__init__(reason)
+
+
 class MeasurementLevel(str, Enum):
     job = "job"
     node = "node"
@@ -273,6 +278,11 @@ class Api(object):
             stream=True,
             verify=self.__verify_ssl,
         )
+        if response.status_code == http.HTTPStatus.FORBIDDEN:
+            raise InsufficientPermissionsError(
+                "You don't have permission to export benchmarks.\n"
+                "(Only managers and administrators can export benchmarks.)"
+            )
         if response.status_code == http.HTTPStatus.NO_CONTENT:
             raise FileNotFoundError("No benchmark data available for export.")
         response.raise_for_status()

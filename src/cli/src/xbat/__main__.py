@@ -11,12 +11,13 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlparse
 
-import click
+import click  # type: ignore[import-not-found]
 import pandas as pd
 import questionary
 import typer
 from fabric import Connection  # type: ignore[import-untyped]
 from invoke import Context
+import invoke.exceptions
 from rich import print
 from rich.console import Console
 from rich.progress import Progress
@@ -50,12 +51,23 @@ class App(typer.Typer):
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         try:
-            return super().__call__(*args, **kwargs)
-        finally:
-            if self.forward_ctx:
-                self.forward_ctx.close()
-            if self.connection:
-                self.connection.close()
+            try:
+                return super().__call__(*args, **kwargs)
+            finally:
+                if self.forward_ctx:
+                    self.forward_ctx.close()
+                if self.connection:
+                    self.connection.close()
+        except invoke.exceptions.ThreadException as e:
+            if "Address already in use" in str(e):
+                print(
+                    f"[bold red]Error![/bold red] Local port {app.local_port} is already in use."
+                )
+                print(
+                    "(Close the other application or use a different port: --ssh-forwarding-port <PORT>)"
+                )
+                raise sys.exit(1)
+            raise
 
     def exec_cmd(self, cmd: str) -> tuple[int, str, str]:
         runner = self.connection if self.connection is not None else Context()
