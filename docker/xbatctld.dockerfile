@@ -1,4 +1,4 @@
-FROM almalinux:9.6-minimal
+FROM almalinux:9.8-minimal
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
