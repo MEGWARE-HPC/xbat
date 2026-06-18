@@ -49,5 +49,10 @@ xbatctld = [
     "numpy==2.3.5",
 ]
 
-[tool.setuptools]
-packages = ["backend", "shared", "xbatctld"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "backend*",
+    "shared*",
+    "xbatctld*",
+]
