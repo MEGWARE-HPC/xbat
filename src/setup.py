@@ -1,5 +1,7 @@
-from setuptools import setup, Command
 import subprocess
+import sys
+
+from setuptools import Command, setup
 from setuptools.command.build_py import build_py
 from setuptools.command.develop import develop
 
@@ -18,9 +20,10 @@ class GenerateProtoCommand(Command):
     def run(self):
         directory = "./shared/grpc"
         proto_files = ["xbat.proto"]
+
         for proto_file in proto_files:
             command = [
-                "python",
+                sys.executable,
                 "-m",
                 "grpc_tools.protoc",
                 f"-I{directory}",  # Path where proto files are located
@@ -58,17 +61,8 @@ class CustomDevelop(develop):
         develop.run(self)  # Proceed with the normal develop process
 
 
-setup(
-    name="xbat",
-    version="2.0.0",
-    packages=["xbatctld", "backend", "shared"],
-    cmdclass={
-        "build_proto": GenerateProtoCommand,
-        "build_py": CustomBuild,
-        "develop": CustomDevelop,
-    },
-    install_requires=[
-        "grpcio",
-        "grpcio-tools",
-    ],
-)
+setup(cmdclass={
+    "build_proto": GenerateProtoCommand,
+    "build_py": CustomBuild,
+    "develop": CustomDevelop,
+}, )
