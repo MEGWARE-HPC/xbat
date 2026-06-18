@@ -2,9 +2,10 @@ FROM almalinux:9.8-minimal
 
 # temporary fix for conflict with openssl v3 breaking changes
 ENV NODE_OPTIONS=--openssl-legacy-provider \
-    UV_SYSTEM_PYTHON=1 \
     UV_NO_CACHE=1 \
-    UV_COMPILE_BYTECODE=1
+    UV_COMPILE_BYTECODE=1 \
+    UV_PYTHON_DOWNLOADS=0 \
+    PATH="/home/.venv/bin:$PATH"
 
 COPY --from=ghcr.io/astral-sh/uv:0.11.21 /uv /uvx /usr/local/bin/
 
@@ -17,23 +18,29 @@ RUN microdnf install -y yum-utils && \
     yum-config-manager --add-repo https://packages.clickhouse.com/rpm/clickhouse.repo && \
     microdnf install -y clickhouse-client
 
-COPY ./src/setup.py /home/
-COPY ./src/backend /home/backend
-COPY ./src/shared /home/shared
-COPY ./src/xbatctld /home/xbatctld
+COPY ./src/pyproject.toml ./src/uv.lock /home/
 
 WORKDIR /home/
 
 RUN ln -fs /usr/bin/python3.12 /usr/bin/python3 \
     && ln -fs /usr/bin/python3.12 /usr/bin/python
 
-RUN uv pip install \
-    --system \
-    --trusted-host pypi.org \
-    --trusted-host files.pythonhosted.org \
-    -r backend/requirements.txt \
-    && python setup.py build_proto \
-    && uv pip install --system -e .
+RUN uv sync \
+    --locked \
+    --no-dev \
+    --group backend \
+    --no-install-project
+
+COPY ./src/setup.py /home/
+COPY ./src/backend /home/backend
+COPY ./src/shared /home/shared
+COPY ./src/xbatctld /home/xbatctld
+
+RUN uv sync \
+    --locked \
+    --no-dev \
+    --group backend \
+    --no-editable
 
 EXPOSE 8001
 WORKDIR /home/backend
