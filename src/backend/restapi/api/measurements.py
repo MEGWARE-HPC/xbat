@@ -203,9 +203,11 @@ def _create_query(jobId: int,
     if level != "job" and node:
         filters.append(f"node='{node}'")
     if capture_start:
-        filters.append(f"ts >= '{capture_start.replace(tzinfo=None).isoformat()}'")
+        filters.append(
+            f"ts >= '{capture_start.replace(tzinfo=None).isoformat()}'")
     if capture_end:
-        filters.append(f"ts <= '{capture_end.replace(tzinfo=None).isoformat()}'")
+        filters.append(
+            f"ts <= '{capture_end.replace(tzinfo=None).isoformat()}'")
 
     columns = [f"{value_calculation} as val", "ts"]
     groups = ["ts"]
@@ -286,9 +288,12 @@ async def calculate_metrics(jobId, group, metric, level, node, deciles):
         if level != "job" and node:
             parts.append(f"AND node='{node}'")
         if capture_start:
-            parts.append(f"AND ts >= '{capture_start.replace(tzinfo=None).isoformat()}'")
+            parts.append(
+                f"AND ts >= '{capture_start.replace(tzinfo=None).isoformat()}'"
+            )
         if capture_end:
-            parts.append(f"AND ts <= '{capture_end.replace(tzinfo=None).isoformat()}'")
+            parts.append(
+                f"AND ts <= '{capture_end.replace(tzinfo=None).isoformat()}'")
         queries.append(" ".join(parts))
 
     all_levels = await clickhouse.execute_queries(queries)
@@ -868,9 +873,12 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
 
             time_filters = []
             if capture_start:
-                time_filters.append(f"ts >= '{capture_start.replace(tzinfo=None).isoformat()}'")
+                time_filters.append(
+                    f"ts >= '{capture_start.replace(tzinfo=None).isoformat()}'"
+                )
             if capture_end:
-                time_filters.append(f"ts <= '{capture_end.replace(tzinfo=None).isoformat()}'")
+                time_filters.append(
+                    f"ts <= '{capture_end.replace(tzinfo=None).isoformat()}'")
             time_clause = (" AND " +
                            " AND ".join(time_filters)) if time_filters else ""
 
@@ -932,9 +940,10 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
                     available_min_level = min(
                         [LEVEL_MAPPING[x] for x in available_levels])
                     available[group][metricName] = {
-                        **metricInfo, "metrics":
-                        {k: v
-                         for k, v in metricInfo["metrics"].items()},
+                        **metricInfo, "metrics": {
+                            k: v
+                            for k, v in metricInfo["metrics"].items()
+                        },
                         "level_min":
                         dict_get_key(LEVEL_MAPPING, available_min_level)
                     }
@@ -1070,12 +1079,7 @@ async def get_roofline(jobIds=None):
         vals = trace.get("rawValues")
         if not isinstance(vals, list):
             vals = trace.get("values", [])
-        out = []
-        for v in vals:
-            fv = _safe_float(v)
-            if fv is not None:
-                out.append(fv)
-        return out
+        return [_safe_float(v) for v in vals]
 
     def _pick_volume_raw_values(trace):
         if not trace:
@@ -1085,7 +1089,8 @@ async def get_roofline(jobIds=None):
         vals = _pick_raw_values(trace)
         unit = (trace.get("unit") or "").strip().lower()
         if unit in ("gb", "gbytes", "gbyte", "gib", "gibibyte"):
-            return [v * 1e9 for v in vals]
+            # 1 gbytes = 1024**3 byte
+            return [v * 1073741824 for v in vals]
         return vals
 
     def _get_interval(*traces):
@@ -1124,6 +1129,13 @@ async def get_roofline(jobIds=None):
         for i in range(n):
             f = flop_series[i]  # FLOPS/s
             byt = bytes_series[i]  # bytes per interval
+
+            if f is None or byt is None:
+                continue
+
+            if f <= 0.0 or byt <= 0.0:
+                continue
+
             if f and byt and f > 0.0 and byt > 0.0:
                 y = f / 1e9  # GFLOPS/s
                 flops_i = f * interval_s  # FLOPs in interval
