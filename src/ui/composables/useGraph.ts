@@ -392,12 +392,12 @@ export const useGraph = () => {
                             ? flopItems
                             : []
                         : query.group === "memory"
-                        ? Array.isArray(dramItems)
-                            ? dramItems
-                            : []
-                        : Array.isArray(cacheItems)
-                        ? cacheItems
-                        : [];
+                          ? Array.isArray(dramItems)
+                              ? dramItems
+                              : []
+                          : Array.isArray(cacheItems)
+                            ? cacheItems
+                            : [];
                 return new Set<string>(arr.map((i: any) => i.value));
             })();
 
@@ -458,6 +458,51 @@ export const useGraph = () => {
                     .replace(/\s*[\(\[]\s*×[^)\]]*[\)\]]\s*$/u, "")
                     .replace(/\s*×[0-9.+\-eE]+\s*$/u, "");
 
+            const parsePositiveInt = (value: unknown, fallback = 1): number => {
+                const parsed = Number.parseInt(String(value ?? ""), 10);
+
+                return Number.isFinite(parsed) && parsed > 0
+                    ? parsed
+                    : fallback;
+            };
+
+            const peakLevelDivisor = (
+                level: string,
+                node: {
+                    cpu?: Record<string, unknown>;
+                }
+            ): number => {
+                const cpu = node?.cpu ?? {};
+
+                const sockets = parsePositiveInt(cpu["Socket(s)"]);
+                const coresPerSocket = parsePositiveInt(
+                    cpu["Core(s) per socket"]
+                );
+                const threadsPerCore = parsePositiveInt(
+                    cpu["Thread(s) per core"]
+                );
+                const numaNodes = parsePositiveInt(cpu["NUMA node(s)"]);
+
+                switch (level) {
+                    case "socket":
+                        return sockets;
+
+                    case "numa":
+                        return numaNodes;
+
+                    case "core":
+                        return sockets * coresPerSocket;
+
+                    case "thread":
+                        return sockets * coresPerSocket * threadsPerCore;
+
+                    case "job":
+                    case "node":
+                    default:
+                        return 1;
+                }
+            };
+
             modifiers.systemBenchmarks.forEach((benchmark) => {
                 const jobWithNodes = query.jobIds.find((id) => {
                     const jobNodes = nodes?.[id];
@@ -472,7 +517,7 @@ export const useGraph = () => {
                 const selectedNodeName =
                     query.level === "job"
                         ? nodeNames[0]
-                        : query.node ?? nodeNames[0];
+                        : (query.node ?? nodeNames[0]);
 
                 const node = jobNodes?.[selectedNodeName];
                 let peak = node?.benchmarks?.[benchmark];
