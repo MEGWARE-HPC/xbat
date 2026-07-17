@@ -7,6 +7,7 @@ import { extractNumber } from "~/utils/string";
 import { useGraphBase } from "~/components/graphs/useGraphBase";
 import type { Graph, Trace } from "~/types/graph";
 import type { StoreGraphReturnDefault } from "~/store/graph";
+import type { SystemInfo } from "~/repository/modules/nodes";
 
 const { allTitels: benchmarkTitles } = useNodeBenchmarks();
 
@@ -468,20 +469,20 @@ export const useGraph = () => {
 
             const peakLevelDivisor = (
                 level: string,
-                node: {
-                    cpu?: Record<string, unknown>;
+                node: SystemInfo
+            ): number | null => {
+                if (level === "job" || level === "node") {
+                    return 1;
                 }
-            ): number => {
-                const cpu = node?.cpu ?? {};
 
-                const sockets = parsePositiveInt(cpu["Socket(s)"]);
+                const sockets = parsePositiveInt(node.cpu["Socket(s)"]);
                 const coresPerSocket = parsePositiveInt(
-                    cpu["Core(s) per socket"]
+                    node.cpu["Core(s) per socket"]
                 );
                 const threadsPerCore = parsePositiveInt(
-                    cpu["Thread(s) per core"]
+                    node.cpu["Thread(s) per core"]
                 );
-                const numaNodes = parsePositiveInt(cpu["NUMA node(s)"]);
+                const numaNodes = parsePositiveInt(node.cpu["NUMA node(s)"]);
 
                 switch (level) {
                     case "socket":
