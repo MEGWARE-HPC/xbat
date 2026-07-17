@@ -509,10 +509,12 @@ export const useGraph = () => {
                     const jobNodes = nodes?.[id];
                     return jobNodes && Object.keys(jobNodes).length > 0;
                 });
+
                 if (!jobWithNodes) return;
 
                 const jobNodes = nodes[jobWithNodes]!;
                 const nodeNames = Object.keys(jobNodes);
+
                 if (!nodeNames.length) return;
 
                 const selectedNodeName =
@@ -520,15 +522,43 @@ export const useGraph = () => {
                         ? nodeNames[0]
                         : (query.node ?? nodeNames[0]);
 
-                const node = jobNodes?.[selectedNodeName];
-                let peak = node?.benchmarks?.[benchmark];
-                if (!peak) return;
+                const node = jobNodes[selectedNodeName];
+                const rawPeak = Number(node?.benchmarks?.[benchmark]);
 
-                peak *= modifiers.systemBenchmarksScalingFactor;
+                if (!Number.isFinite(rawPeak)) return;
 
-                if (query.level == "job") peak *= nodeNames.length;
+                const scalingFactorRaw = Number(
+                    modifiers.systemBenchmarksScalingFactor ?? 1
+                );
+
+                const scalingFactor = Number.isFinite(scalingFactorRaw)
+                    ? scalingFactorRaw
+                    : 1;
+
+                let peak = rawPeak;
+
+                switch (query.level) {
+                    case "job":
+                        peak *= scalingFactor * nodeNames.length;
+                        break;
+
+                    case "node":
+                        peak *= scalingFactor;
+                        break;
+
+                    case "socket":
+                    case "numa":
+                    case "core":
+                    case "thread":
+                        peak /= peakLevelDivisor(query.level, node);
+                        break;
+
+                    default:
+                        break;
+                }
 
                 const isBandwidth = benchmark.includes("bandwidth");
+
                 const baseUnit = unit.substring(
                     0,
                     unit.length - (isBandwidth ? "B/s".length : "FLOPS".length)
@@ -536,29 +566,28 @@ export const useGraph = () => {
 
                 const uidNode =
                     query.level === "job" ? nodeNames[0] : query.node;
+
                 const uid = `${uidNode}-peak-${benchmark}`;
                 const paletteColor = palette[traceCount % palette.length];
                 const overrideName = overrides.traces?.[uid]?.name || null;
-                {
-                    const prev = Array.isArray(
-                        storeGraph.settings.value.visible
-                    )
-                        ? storeGraph.settings.value.visible
-                        : [];
-                    if (!prev.includes(uid) && !existUids.has(uid)) {
-                        storeGraph.settings.value = {
-                            ...storeGraph.settings.value,
-                            visible: Array.from(new Set([...prev, uid]))
-                        };
-                    }
+
+                const prev = Array.isArray(storeGraph.settings.value.visible)
+                    ? storeGraph.settings.value.visible
+                    : [];
+
+                if (!prev.includes(uid) && !existUids.has(uid)) {
+                    storeGraph.settings.value = {
+                        ...storeGraph.settings.value,
+                        visible: Array.from(new Set([...prev, uid]))
+                    };
                 }
 
                 const baseName =
                     overrideName || `Peak ${benchmarkTitles.value[benchmark]}`;
-                const nameWithScale = `${stripScaleSuffix(
-                    baseName
-                )}${scaleSuffix}`;
+
+                const nameWithScale = `${stripScaleSuffix(baseName)}${scaleSuffix}`;
                 const scaledPeak = humanSizeFixed(peak, baseUnit);
+
                 traces.push(
                     createTrace({
                         name: nameWithScale,
@@ -572,6 +601,7 @@ export const useGraph = () => {
                         uid
                     })
                 );
+
                 traceCount += 1;
             });
         }
