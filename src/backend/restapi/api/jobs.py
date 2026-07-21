@@ -249,11 +249,13 @@ def register(jobId):
         else:
 
             job_configuration = job["configuration"]
-            interval = int(
-                job_configuration["interval"]
-            )  # int conversion for compatibility with older job configurations
-            enable_monitoring = job_configuration["enableMonitoring"]
-            enable_likwid = job_configuration["enableLikwid"]
+
+            if job_configuration is not None:
+                interval = int(
+                    job_configuration["interval"]
+                )  # int conversion for compatibility with older job configurations
+                enable_monitoring = job_configuration["enableMonitoring"]
+                enable_likwid = job_configuration["enableLikwid"]
 
             # register node to job
             db.updateOne("jobs", {"jobId": jobId}, {
