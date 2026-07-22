@@ -28,6 +28,7 @@ This release contains many breaking changes and improvements. Please refer to th
 
 - improved stability for import and export of large benchmarks
 - interval setting for CLI not being applied correctly
+- scaling of peak values for lower levels (#201)
 
 ## v1.3.0 - 2026-05-08
 
