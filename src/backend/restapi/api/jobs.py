@@ -263,7 +263,7 @@ def register(jobId):
                 }
             }
         })
-        app.logger.debug("Updated registered job: %s", jobId)
+        app.logger.debug("Registered node %s for job %s", hostname, jobId)
 
         # determine whether node must be benchmarked by checking if benchmarks for this particular hash are present
         node = db.getOne("nodes", {"hash": node_hash})
