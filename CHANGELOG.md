@@ -28,6 +28,7 @@ This release contains many breaking changes and improvements. Please refer to th
 
 - improved stability for import and export of large benchmarks
 - interval setting for CLI not being applied correctly
+- an issue with registering jobs submitted via the CLI (#233) and improved the registration workflow
 
 ## v1.3.0 - 2026-05-08
 
