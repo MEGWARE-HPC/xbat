@@ -1,4 +1,5 @@
 import json
+from bson import ObjectId
 import numpy as np
 from datetime import date, datetime
 from flask.json.provider import DefaultJSONProvider
@@ -15,6 +16,8 @@ class CustomEncoder(json.JSONEncoder):
             return obj.tolist()
         if isinstance(obj, (datetime, date)):
             return obj.isoformat()
+        if isinstance(obj, ObjectId):
+            return str(obj)
         return super(CustomEncoder, self).default(obj)
 
 

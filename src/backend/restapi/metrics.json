@@ -464,8 +464,7 @@
         },
         "GPU Power": {
             "metrics": {
-                "gpu_power": "gpu power",
-                "gpu_power_limit": "gpu power limit"
+                "gpu_power": "gpu power"
             },
             "unit": "W",
             "aggregation": "sum",

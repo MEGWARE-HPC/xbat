@@ -16,7 +16,6 @@ from shared import configuration
 from shared.mongodb import MongoDB
 from shared.exceptionHandler import handle_exception
 from shared.helpers import overwrite_log_level, get_service_configuration
-from shared.questdb import questdb_maintenance
 from xbatctld import registration
 from xbatctld.grpc_server import serve
 from xbatctld.pipe import clear_run_files
@@ -73,8 +72,8 @@ def main():
     db.set(db_settings["address"], db_settings["database"],
            db_settings["user"], db_settings["password"])
 
-    if BUILD == "prod":
-        questdb_maintenance()
+    # if BUILD == "prod":
+    #     perform maintenance here
 
     grpc_t = threading.Thread(target=serve, args=(cancelled, ), daemon=True)
 

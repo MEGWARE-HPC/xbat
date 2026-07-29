@@ -37,7 +37,8 @@ const props = withDefaults(
     }
 );
 </script>
-<style scoped lang="scss">
+
+<style lang="scss" scoped>
 .custom-tooltip :deep(.v-overlay__content) {
     background-color: transparent;
 }

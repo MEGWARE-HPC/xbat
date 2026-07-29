@@ -182,15 +182,16 @@ def dir_permissions_match(path, permissions):
     return (mode & 0o777) == permissions
 
 
-def recreate_folder(folder_path):
+def recreate_folder(folder_path, parents=False):
     """
     Create the folder, if it exists, delete it and recreate it.
     :param folder_path: Path to the folder to be recreated
+    :param parents: Whether to create parent directories if they do not exist
     """
     if folder_path.exists():
         shutil.rmtree(folder_path)
 
-    folder_path.mkdir(parents=False, exist_ok=True)
+    folder_path.mkdir(parents=parents, exist_ok=True)
 
 
 def contains_files(folder):
