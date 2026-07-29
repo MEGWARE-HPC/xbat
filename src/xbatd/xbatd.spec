@@ -78,12 +78,10 @@ DESTDIR=%{buildroot} cmake --install build
 
 %post
 systemctl daemon-reload
-systemctl enable xbatd.service
 
 %preun
 if [ $1 -eq 0 ]; then
     systemctl stop xbatd.service
-    systemctl disable xbatd.service
 fi
 
 %postun
