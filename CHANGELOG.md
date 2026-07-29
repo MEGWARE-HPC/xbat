@@ -23,6 +23,7 @@ This release contains many breaking changes and improvements. Please refer to th
 - migrated MongoDB from v5 to v8 (to retain data from the previous database, please follow the migration guide.) (#90)
 - restructured format of exported benchmarks (with compatibility to import old QuestDB-era benchmarks)
 - UI is now served over nginx for improved performance and reduced container count
+- migrated the Python environment from venv/pip to uv for better support (#220)
 
 ### Fixed
 
