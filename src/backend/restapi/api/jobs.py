@@ -193,6 +193,7 @@ def register(jobId):
     interval = int(
         app.config["CONFIG"]["general"]["cli_interval"]
     ) if "cli_interval" in app.config["CONFIG"]["general"] else 10
+
     enable_monitoring = True
     enable_likwid = True
     hash_missing = False
@@ -236,35 +237,33 @@ def register(jobId):
                 "runNr": runNr,
                 "variables": [],
                 "nodes": {},
-                "cli": True,
-                "nodes": {
-                    hostname: {
-                        "hash": node_hash,
-                        "hostname": hostname
-                    }
-                }
+                "cli": True
             }
             db.insertOne("jobs", job_data)
-            app.logger.debug("Registered job: %s", jobId)
+            app.logger.debug("Registered CLI job: %s", jobId)
         else:
 
             job_configuration = job["configuration"]
-            interval = int(
-                job_configuration["interval"]
-            )  # int conversion for compatibility with older job configurations
-            enable_monitoring = job_configuration["enableMonitoring"]
-            enable_likwid = job_configuration["enableLikwid"]
 
-            # register node to job
-            db.updateOne("jobs", {"jobId": jobId}, {
-                "$set": {
-                    f"nodes.{hostname}": {
-                        "hash": node_hash,
-                        "hostname": hostname
-                    }
+            if job_configuration is not None:
+                # int conversion for compatibility with older job configurations
+                interval = int(job_configuration["interval"])
+                enable_monitoring = job_configuration["enableMonitoring"]
+                enable_likwid = job_configuration["enableLikwid"]
+
+        # Register the current node for every job type:
+        # - first node of a new CLI job
+        # - subsequent nodes of a CLI job
+        # - nodes of a REST API / GUI job
+        db.updateOne("jobs", {"jobId": jobId}, {
+            "$set": {
+                f"nodes.{hostname}": {
+                    "hash": node_hash,
+                    "hostname": hostname
                 }
-            })
-            app.logger.debug("Updated registered job: %s", jobId)
+            }
+        })
+        app.logger.debug("Registered node %s for job %s", hostname, jobId)
 
         # determine whether node must be benchmarked by checking if benchmarks for this particular hash are present
         node = db.getOne("nodes", {"hash": node_hash})
