@@ -49,6 +49,11 @@ VERSION=$1
 
 echo "Building Version $VERSION Release $RELEASE for $DISTRO"
 
+if git submodule status --recursive | grep -qE '^[-+]'; then
+    echo "Initializing git submodules..."
+    git submodule update --init --recursive || { echo "Failed to initialize git submodules"; exit 1; }
+fi
+
 $EXECUTOR build --build-arg "VERSION=$VERSION" --platform=linux/amd64 --build-arg "RELEASE=$RELEASE" -t "xbatd:${DISTRO}" -f "xbatd.${DISTRO}.dockerfile" .
 
 if [ $? -ne 0 ]; then

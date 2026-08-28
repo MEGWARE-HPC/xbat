@@ -1,5 +1,5 @@
 [databases]
-questdb = host=#HOST# port=#PORT# dbname=#DATABASE# user=#USER# password=#PASSWORD#
+clickhouse = host=#HOST# port=#PORT# dbname=#DATABASE# user=#USER# password=#PASSWORD#
 
 [pgbouncer]
 listen_addr = 0.0.0.0
@@ -7,9 +7,12 @@ listen_port = 6432
 auth_type = md5
 auth_file = /etc/pgbouncer/userlists.txt
 
+# Disable TLS for server connections (internal docker network)
+server_tls_sslmode = disable
+
 # Connection Pooling Settings
 pool_mode = transaction
-max_client_conn = 256
+max_client_conn = 512
 default_pool_size = 16
 min_pool_size = 8
 

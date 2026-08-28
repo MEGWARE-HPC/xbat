@@ -26,6 +26,7 @@ export type Configuration = {
     enableMonitoring: boolean;
     interval: number;
     configurationName: string;
+    folderId: string;
     sharedProjects: string[];
 };
 

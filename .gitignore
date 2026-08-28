@@ -9,6 +9,7 @@
 __pycache__/
 *.pyc
 venv
+.venv/
 
 # Node.js
 node_modules

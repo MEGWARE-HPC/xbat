@@ -1,6 +1,7 @@
 import datetime
 
 DATEFORMAT = "%Y-%m-%dT%H:%M:%SZ"
+FILENAME_DATEFORMAT = "%Y-%m-%d_%H-%M-%SZ"
 
 
 def seconds_to_time(s):
@@ -24,6 +25,10 @@ def get_current_timestamp():
 
 def get_current_datetime_str():
     return get_current_datetime().isoformat()
+
+
+def get_current_filename_datetime_str():
+    return get_current_datetime().strftime(FILENAME_DATEFORMAT)
 
 
 def unix_ts_to_datetime(ts):

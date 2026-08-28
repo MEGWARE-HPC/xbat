@@ -28,7 +28,7 @@ RUN mkdir -p ~/rpmbuild/BUILD ~/rpmbuild/BUILDROOT ~/rpmbuild/RPMS ~/rpmbuild/SO
 RUN curl -fsSL -o /etc/yum.repos.d/cuda-rhel8.repo \
         https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo && \
     microdnf -y install \
-        nvidia-driver nvidia-driver-NVML nvidia-driver-devel cuda-nvml-devel-13-1 && \
+        nvidia-driver nvidia-driver-devel cuda-nvml-devel-12-2 && \
     microdnf clean all
 
 # install rocm
@@ -41,13 +41,6 @@ RUN printf '%s\n' \
 > /etc/yum.repos.d/rocm.repo
 
 RUN microdnf -y install amd-smi-lib && microdnf clean all
-
-ENV CQUESTDB_VERSION=4.0.5
-# install questdb client
-RUN git clone --depth 1 --branch "${CQUESTDB_VERSION}" https://github.com/questdb/c-questdb-client.git && \
-    cd c-questdb-client && \
-    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
-    cmake --build build
 
 # install LIKWID
 ENV LIKWID_VERSION="v5.5.1"

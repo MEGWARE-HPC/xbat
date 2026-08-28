@@ -7,6 +7,7 @@ import { extractNumber } from "~/utils/string";
 import { useGraphBase } from "~/components/graphs/useGraphBase";
 import type { Graph, Trace } from "~/types/graph";
 import type { StoreGraphReturnDefault } from "~/store/graph";
+import type { SystemInfo } from "~/repository/modules/nodes";
 
 const { allTitels: benchmarkTitles } = useNodeBenchmarks();
 
@@ -392,12 +393,12 @@ export const useGraph = () => {
                             ? flopItems
                             : []
                         : query.group === "memory"
-                        ? Array.isArray(dramItems)
-                            ? dramItems
-                            : []
-                        : Array.isArray(cacheItems)
-                        ? cacheItems
-                        : [];
+                          ? Array.isArray(dramItems)
+                              ? dramItems
+                              : []
+                          : Array.isArray(cacheItems)
+                            ? cacheItems
+                            : [];
                 return new Set<string>(arr.map((i: any) => i.value));
             })();
 
@@ -458,31 +459,106 @@ export const useGraph = () => {
                     .replace(/\s*[\(\[]\s*×[^)\]]*[\)\]]\s*$/u, "")
                     .replace(/\s*×[0-9.+\-eE]+\s*$/u, "");
 
+            const parsePositiveInt = (value: unknown, fallback = 1): number => {
+                const parsed = Number.parseInt(String(value ?? ""), 10);
+
+                return Number.isFinite(parsed) && parsed > 0
+                    ? parsed
+                    : fallback;
+            };
+
+            const peakLevelDivisor = (
+                level: string,
+                node: SystemInfo
+            ): number | null => {
+                if (level === "job" || level === "node") {
+                    return 1;
+                }
+
+                const sockets = parsePositiveInt(node.cpu["Socket(s)"]);
+                const coresPerSocket = parsePositiveInt(
+                    node.cpu["Core(s) per socket"]
+                );
+                const threadsPerCore = parsePositiveInt(
+                    node.cpu["Thread(s) per core"]
+                );
+                const numaNodes = parsePositiveInt(node.cpu["NUMA node(s)"]);
+
+                switch (level) {
+                    case "socket":
+                        return sockets;
+
+                    case "numa":
+                        return numaNodes;
+
+                    case "core":
+                        return sockets * coresPerSocket;
+
+                    case "thread":
+                        return sockets * coresPerSocket * threadsPerCore;
+
+                    case "job":
+                    case "node":
+                    default:
+                        return 1;
+                }
+            };
+
             modifiers.systemBenchmarks.forEach((benchmark) => {
                 const jobWithNodes = query.jobIds.find((id) => {
                     const jobNodes = nodes?.[id];
                     return jobNodes && Object.keys(jobNodes).length > 0;
                 });
+
                 if (!jobWithNodes) return;
 
                 const jobNodes = nodes[jobWithNodes]!;
                 const nodeNames = Object.keys(jobNodes);
+
                 if (!nodeNames.length) return;
 
                 const selectedNodeName =
                     query.level === "job"
                         ? nodeNames[0]
-                        : query.node ?? nodeNames[0];
+                        : (query.node ?? nodeNames[0]);
 
-                const node = jobNodes?.[selectedNodeName];
-                let peak = node?.benchmarks?.[benchmark];
-                if (!peak) return;
+                const node = jobNodes[selectedNodeName];
+                const rawPeak = Number(node?.benchmarks?.[benchmark]);
 
-                peak *= modifiers.systemBenchmarksScalingFactor;
+                if (!Number.isFinite(rawPeak)) return;
 
-                if (query.level == "job") peak *= nodeNames.length;
+                const scalingFactorRaw = Number(
+                    modifiers.systemBenchmarksScalingFactor ?? 1
+                );
+
+                const scalingFactor = Number.isFinite(scalingFactorRaw)
+                    ? scalingFactorRaw
+                    : 1;
+
+                let peak = rawPeak;
+
+                switch (query.level) {
+                    case "job":
+                        peak *= scalingFactor * nodeNames.length;
+                        break;
+
+                    case "node":
+                        peak *= scalingFactor;
+                        break;
+
+                    case "socket":
+                    case "numa":
+                    case "core":
+                    case "thread":
+                        peak /= peakLevelDivisor(query.level, node);
+                        break;
+
+                    default:
+                        break;
+                }
 
                 const isBandwidth = benchmark.includes("bandwidth");
+
                 const baseUnit = unit.substring(
                     0,
                     unit.length - (isBandwidth ? "B/s".length : "FLOPS".length)
@@ -490,29 +566,28 @@ export const useGraph = () => {
 
                 const uidNode =
                     query.level === "job" ? nodeNames[0] : query.node;
+
                 const uid = `${uidNode}-peak-${benchmark}`;
                 const paletteColor = palette[traceCount % palette.length];
                 const overrideName = overrides.traces?.[uid]?.name || null;
-                {
-                    const prev = Array.isArray(
-                        storeGraph.settings.value.visible
-                    )
-                        ? storeGraph.settings.value.visible
-                        : [];
-                    if (!prev.includes(uid) && !existUids.has(uid)) {
-                        storeGraph.settings.value = {
-                            ...storeGraph.settings.value,
-                            visible: Array.from(new Set([...prev, uid]))
-                        };
-                    }
+
+                const prev = Array.isArray(storeGraph.settings.value.visible)
+                    ? storeGraph.settings.value.visible
+                    : [];
+
+                if (!prev.includes(uid) && !existUids.has(uid)) {
+                    storeGraph.settings.value = {
+                        ...storeGraph.settings.value,
+                        visible: Array.from(new Set([...prev, uid]))
+                    };
                 }
 
                 const baseName =
                     overrideName || `Peak ${benchmarkTitles.value[benchmark]}`;
-                const nameWithScale = `${stripScaleSuffix(
-                    baseName
-                )}${scaleSuffix}`;
+
+                const nameWithScale = `${stripScaleSuffix(baseName)}${scaleSuffix}`;
                 const scaledPeak = humanSizeFixed(peak, baseUnit);
+
                 traces.push(
                     createTrace({
                         name: nameWithScale,
@@ -526,6 +601,7 @@ export const useGraph = () => {
                         uid
                     })
                 );
+
                 traceCount += 1;
             });
         }

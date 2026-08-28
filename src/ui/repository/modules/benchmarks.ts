@@ -39,14 +39,52 @@ type BenchmarkImportPayload = {
     updateColl: boolean;
 };
 
+type BenchmarkGetOptions = {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    ownedOnly?: boolean;
+    project?: string | null;
+    sortBy?: string;
+    sortOrder?: "asc" | "desc";
+};
+
+export type BenchmarkPage = {
+    data: Benchmark[];
+    total: number;
+    page: number;
+    pageSize: number;
+};
+
 class BenchmarkModule extends FetchFactory {
     private RESOURCE = "/benchmarks";
 
-    async get(id: null | number = null) {
+    async get(id: null | number = null, options?: BenchmarkGetOptions) {
         let queryParam = "";
-        if (Array.isArray(id)) queryParam += `?runNrs=${id}`;
-        else if (id !== null) queryParam += `/${id}`;
-        return this.call<Benchmark[] | Benchmark>(
+        if (Array.isArray(id)) {
+            queryParam += `?runNrs=${id}`;
+        } else if (id !== null) {
+            queryParam += `/${id}`;
+        } else if (options) {
+            const params = new URLSearchParams();
+            if (options.page !== undefined)
+                params.set("page", String(options.page));
+            if (options.pageSize !== undefined)
+                params.set("pageSize", String(options.pageSize));
+            if (options.search !== undefined && options.search !== "")
+                params.set("search", options.search);
+            if (options.ownedOnly)
+                params.set("ownedOnly", "true");
+            if (options.project)
+                params.set("project", options.project);
+            if (options.sortBy !== undefined)
+                params.set("sortBy", options.sortBy);
+            if (options.sortOrder !== undefined)
+                params.set("sortOrder", options.sortOrder);
+            const qs = params.toString();
+            if (qs) queryParam = `?${qs}`;
+        }
+        return this.call<{ data: Benchmark[] | Benchmark; total?: number; page?: number; pageSize?: number }>(
             "GET",
             `${this.RESOURCE}${queryParam}`,
             undefined // body
@@ -109,10 +147,6 @@ class BenchmarkModule extends FetchFactory {
             return null;
         }
         return response;
-    }
-
-    async purge() {
-        return this.call<void>("POST", `${this.RESOURCE}/purge`, undefined);
     }
 }
 
