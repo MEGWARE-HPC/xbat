@@ -33,9 +33,9 @@ RUN curl -fsSL -o /etc/yum.repos.d/cuda-rhel9.repo \
 
 # install rocm
 RUN printf '%s\n' \
-'[ROCm-7.2]' \
-'name=ROCm 7.2' \
-'baseurl=https://repo.radeon.com/rocm/rhel9/7.2/main/' \
+'[ROCm-7.2.4]' \
+'name=ROCm 7.2.4' \
+'baseurl=https://repo.radeon.com/rocm/rhel9/7.2.4/main/' \
 'enabled=1' \
 'gpgcheck=0' \
 > /etc/yum.repos.d/rocm.repo
