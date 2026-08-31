@@ -47,6 +47,16 @@ fi
 
 VERSION=$1
 
+case "$DISTRO" in
+    el8|el9|el10)
+        ;;
+    *)
+        echo "Unsupported distro: $DISTRO"
+        echo "Supported distros: el8, el9, el10"
+        exit 1
+        ;;
+esac
+
 echo "Building Version $VERSION Release $RELEASE for $DISTRO"
 
 if git submodule status --recursive | grep -qE '^[-+]'; then
