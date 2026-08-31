@@ -33,21 +33,14 @@ RUN curl -fsSL -o /etc/yum.repos.d/cuda-rhel10.repo \
 
 # install rocm
 RUN printf '%s\n' \
-'[ROCm-7.2]' \
-'name=ROCm 7.2' \
-'baseurl=https://repo.radeon.com/rocm/rhel10/7.2/main/' \
+'[ROCm-7.2.4]' \
+'name=ROCm 7.2.4' \
+'baseurl=https://repo.radeon.com/rocm/rhel10/7.2.4/main/' \
 'enabled=1' \
 'gpgcheck=0' \
 > /etc/yum.repos.d/rocm.repo
 
 RUN microdnf -y install amd-smi-lib && microdnf clean all
-
-ENV CQUESTDB_VERSION=4.0.5
-# install questdb client
-RUN git clone --depth 1 --branch "${CQUESTDB_VERSION}" https://github.com/questdb/c-questdb-client.git && \
-    cd c-questdb-client && \
-    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
-    cmake --build build
 
 # install LIKWID
 ENV LIKWID_VERSION="v5.5.1"

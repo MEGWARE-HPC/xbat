@@ -67,9 +67,6 @@ cmake -B build -S . \
 
 cmake --build build --parallel %{?_smp_mflags}
 
-cp -r /c-questdb-client/include/* %{INCLUDE}/
-cp -a /c-questdb-client/build/libquestdb_client.* %{LIB}/
-
 cp -a /usr/lib64/libnvidia-ml.* %{LIB64}/ || true
 ln -sf %{LIB64}/libnvidia-ml.so.1 %{LIB64}/libnvidia-ml.so || true
 
