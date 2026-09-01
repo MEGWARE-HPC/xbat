@@ -43,7 +43,7 @@ RUN printf '%s\n' \
 RUN microdnf -y install amd-smi-lib && microdnf clean all
 
 # install LIKWID
-ENV LIKWID_VERSION="v5.5.1"
+ENV LIKWID_VERSION="v5.5.2"
 RUN git clone --depth 1 --branch "${LIKWID_VERSION}" https://github.com/RRZE-HPC/likwid.git && \
     cd likwid && \
     sed -i -e 's!PREFIX ?= /usr/local#NO SPACE!PREFIX ?= /usr/local/share/xbatd#NO SPACE!g' config.mk && \
