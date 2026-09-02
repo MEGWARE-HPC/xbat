@@ -33,7 +33,7 @@ xbat daemon
 %setup
 
 %build
-%define BASE /usr/local/share/xbatd/
+%define BASE /usr/local/share/xbatd
 %define LIB %{BASE}/lib
 %define LIB64 %{BASE}/lib64
 %define INCLUDE %{BASE}/include
@@ -43,9 +43,6 @@ xbat daemon
 %define SYSTEMD %{buildroot}/etc/systemd/system
 %define LOG %{buildroot}/var/log/xbatd
 %define LDSOCONF %{buildroot}/etc/ld.so.conf.d
-
-%build
-make clean
 
 mkdir -p %{LIB} %{LIB64} %{INCLUDE}
 
@@ -66,18 +63,6 @@ cmake -B build -S . \
   -DCMAKE_INSTALL_PREFIX=/usr/local
 
 cmake --build build --parallel %{?_smp_mflags}
-
-cp -a /usr/lib64/libnvidia-ml.* %{LIB64}/ || true
-ln -sf %{LIB64}/libnvidia-ml.so.1 %{LIB64}/libnvidia-ml.so || true
-
-for f in $(ls -1 /opt/rocm*/lib*/libamd_smi.so* 2>/dev/null | sort -u); do
-  cp -a "$f" %{LIB}/
-done
-
-make %{?_smp_mflags} \
-  INCLUDE_PATH=%{INCLUDE} \
-  LIB_PATH=%{LIB} \
-  LIB64_PATH=%{LIB64}
 
 %install
 rm -rf %{buildroot}
