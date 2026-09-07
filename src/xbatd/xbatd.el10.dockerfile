@@ -25,10 +25,11 @@ RUN microdnf -y update && \
 RUN mkdir -p ~/rpmbuild/BUILD ~/rpmbuild/BUILDROOT ~/rpmbuild/RPMS ~/rpmbuild/SOURCES ~/rpmbuild/SPECS ~/rpmbuild/SRPMS /usr/local/share/xbatd
 
 # install nvml
+## Use `nvidia-driver-cuda` on EL10 instead of the `nvidia-driver` + `devel` combination. If validated, align EL8 and EL9 with the same setup in the future.
 RUN curl -fsSL -o /etc/yum.repos.d/cuda-rhel10.repo \
-    https://developer.download.nvidia.com/compute/cuda/repos/rhel10/x86_64/cuda-rhel10.repo && \
+        https://developer.download.nvidia.com/compute/cuda/repos/rhel10/x86_64/cuda-rhel10.repo && \
     microdnf -y install \
-    nvidia-driver nvidia-driver-NVML nvidia-driver-devel cuda-nvml-devel-13-1 && \
+        nvidia-driver-cuda cuda-nvml-devel-13-3 && \
     microdnf clean all
 
 # install rocm
@@ -43,7 +44,7 @@ RUN printf '%s\n' \
 RUN microdnf -y install amd-smi-lib && microdnf clean all
 
 # install LIKWID
-ENV LIKWID_VERSION="v5.5.1"
+ENV LIKWID_VERSION="v5.5.2"
 RUN git clone --depth 1 --branch "${LIKWID_VERSION}" https://github.com/RRZE-HPC/likwid.git && \
     cd likwid && \
     sed -i -e 's!PREFIX ?= /usr/local#NO SPACE!PREFIX ?= /usr/local/share/xbatd#NO SPACE!g' config.mk && \
