@@ -33,9 +33,9 @@ RUN curl -fsSL -o /etc/yum.repos.d/cuda-rhel8.repo \
 
 # install rocm
 RUN printf '%s\n' \
-'[ROCm-7.2]' \
-'name=ROCm 7.2' \
-'baseurl=https://repo.radeon.com/rocm/rhel8/7.2/main/' \
+'[ROCm-7.2.4]' \
+'name=ROCm 7.2.4' \
+'baseurl=https://repo.radeon.com/rocm/rhel8/7.2.4/main/' \
 'enabled=1' \
 'gpgcheck=0' \
 > /etc/yum.repos.d/rocm.repo
@@ -43,7 +43,7 @@ RUN printf '%s\n' \
 RUN microdnf -y install amd-smi-lib && microdnf clean all
 
 # install LIKWID
-ENV LIKWID_VERSION="v5.5.1"
+ENV LIKWID_VERSION="v5.5.2"
 RUN git clone --depth 1 --branch "${LIKWID_VERSION}" https://github.com/RRZE-HPC/likwid.git && \
     cd likwid && \
     sed -i -e 's!PREFIX ?= /usr/local#NO SPACE!PREFIX ?= /usr/local/share/xbatd#NO SPACE!g' config.mk && \
