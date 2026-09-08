@@ -1,4 +1,4 @@
-FROM almalinux:9.7-minimal
+FROM almalinux:9.8-minimal
 
 # require crb for ninja-build
 RUN microdnf -y update && \
