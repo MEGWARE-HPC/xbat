@@ -109,3 +109,8 @@ fi
 
 %clean
 rm -rf %{buildroot}
+
+%changelog
+* Wed Sep 02 2026 xbatd <xbat@megware.com> - %{VERSION}-%{RELEASE}
+- Build xbatd v2.0.0
+- Add Enterprise Linux 10 support
