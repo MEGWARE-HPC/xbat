@@ -26,6 +26,7 @@ This release contains many breaking changes and improvements. Please refer to th
 - UI is now served over nginx for improved performance and reduced container count
 - migrated the Python environment from venv/pip to uv for better support (#220)
 - improved xbatd for el8 and el9
+- upgraded LIKWID to v5.5.2 (#247)
 
 ### Fixed
 
@@ -44,7 +45,6 @@ This release contains many breaking changes and improvements. Please refer to th
 
 - unified font usage across browsers in the documentation (#184) and switched to Source Sans 3
 - upgraded xbat font from Source Sans Pro to Source Sans 3
-- improved xbatd for el8 and el9
 
 ### Fixed
 

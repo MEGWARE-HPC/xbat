@@ -77,17 +77,11 @@ cp -r /usr/local/share/xbatd/* %{BUILD_SHARE}
 
 DESTDIR=%{buildroot} cmake --install build
 
-printf '%s\n' \
-  '/usr/local/share/xbatd/lib' \
-  '/usr/local/share/xbatd/lib64' \
-  > %{LDSOCONF}/xbatd.conf
-
 %files
 %defattr(-,root,root,-)
 /usr/local/bin/xbatd
 /usr/local/share/xbatd
 /etc/systemd/system/xbatd.service
-/etc/ld.so.conf.d/xbatd.conf
 %dir /var/log/xbatd
 
 %post
