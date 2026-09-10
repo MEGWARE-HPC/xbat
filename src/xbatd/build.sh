@@ -41,11 +41,21 @@ done
 set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
 
 if [[ -z $1 || "$HELP" = true ]] ; then
-    echo "$0 <version> [--distro (el8|el9)] [--release <release>] [--executor (docker|podman)] [--help]"
+    echo "$0 <version> [--distro (el8|el9|el10)] [--release <release>] [--executor (docker|podman)] [--help]"
     exit 1
 fi
 
 VERSION=$1
+
+case "$DISTRO" in
+    el8|el9|el10)
+        ;;
+    *)
+        echo "Unsupported distro: $DISTRO"
+        echo "Supported distros: el8, el9, el10"
+        exit 1
+        ;;
+esac
 
 echo "Building Version $VERSION Release $RELEASE for $DISTRO"
 

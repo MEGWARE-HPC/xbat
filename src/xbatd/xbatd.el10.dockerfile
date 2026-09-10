@@ -1,6 +1,6 @@
-FROM almalinux:8.10-minimal
+FROM almalinux:10.2-minimal
 
-# require powertools for ninja-build
+# require crb for ninja-build
 RUN microdnf -y update && \
     microdnf -y install \
         epel-release \
@@ -17,7 +17,7 @@ RUN microdnf -y update && \
         boost-devel \
         libcurl-devel \
         openssl-devel && \
-    microdnf -y install --enablerepo=powertools \
+    microdnf -y install --enablerepo=crb \
         ninja-build \
         python3-wheel && \
     microdnf clean all
@@ -25,17 +25,18 @@ RUN microdnf -y update && \
 RUN mkdir -p ~/rpmbuild/BUILD ~/rpmbuild/BUILDROOT ~/rpmbuild/RPMS ~/rpmbuild/SOURCES ~/rpmbuild/SPECS ~/rpmbuild/SRPMS /usr/local/share/xbatd
 
 # install nvml
-RUN curl -fsSL -o /etc/yum.repos.d/cuda-rhel8.repo \
-        https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo && \
+## Use `nvidia-driver-cuda` on EL10 instead of the `nvidia-driver` + `devel` combination. If validated, align EL8 and EL9 with the same setup in the future.
+RUN curl -fsSL -o /etc/yum.repos.d/cuda-rhel10.repo \
+        https://developer.download.nvidia.com/compute/cuda/repos/rhel10/x86_64/cuda-rhel10.repo && \
     microdnf -y install \
-        nvidia-driver nvidia-driver-devel cuda-nvml-devel-12-2 && \
+        nvidia-driver-cuda cuda-nvml-devel-13-3 && \
     microdnf clean all
 
 # install rocm
 RUN printf '%s\n' \
 '[ROCm-7.2.4]' \
 'name=ROCm 7.2.4' \
-'baseurl=https://repo.radeon.com/rocm/rhel8/7.2.4/main/' \
+'baseurl=https://repo.radeon.com/rocm/rhel10/7.2.4/main/' \
 'enabled=1' \
 'gpgcheck=0' \
 > /etc/yum.repos.d/rocm.repo

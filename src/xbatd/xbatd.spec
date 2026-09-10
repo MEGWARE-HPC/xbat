@@ -33,7 +33,7 @@ xbat daemon
 %setup
 
 %build
-%define BASE /usr/local/share/xbatd/
+%define BASE /usr/local/share/xbatd
 %define LIB %{BASE}/lib
 %define LIB64 %{BASE}/lib64
 %define INCLUDE %{BASE}/include
@@ -41,33 +41,41 @@ xbat daemon
 %define BUILD_BIN %{buildroot}/usr/local/bin
 %define BUILD_SHARE %{buildroot}/usr/local/share/xbatd
 %define SYSTEMD %{buildroot}/etc/systemd/system
-%define LOG %{buildroot}/var/log/xbatd/
+%define LOG %{buildroot}/var/log/xbatd
+%define LDSOCONF %{buildroot}/etc/ld.so.conf.d
 
 mkdir -p %{LIB} %{LIB64} %{INCLUDE}
 
 cp metrics.json %{BASE}
 cp pci_devices.sh %{BASE}
-cp -r /usr/lib64/libnvidia-ml.* %{LIB64}
-ln -s %{LIB64}/libnvidia-ml.so.1 %{LIB64}/libnvidia-ml.so
-cp -r /opt/rocm/lib/libamd_smi.* %{LIB}
-# LIKWID is already installed at %{LIB} location, no need to copy
+
+cp -a /usr/lib64/libnvidia-ml.so* %{LIB64}/
+ln -sf libnvidia-ml.so.1 %{LIB64}/libnvidia-ml.so
+
+cp -a /opt/rocm/lib/libamd_smi.so* %{LIB}/
 
 # Clean any existing build directory
 rm -rf build
 
 cmake -B build -S . \
-  -DCMAKE_CXX_FLAGS="-I/opt/rocm/include -I/usr/local/cuda/include" \
-  -DCMAKE_EXE_LINKER_FLAGS="-L/opt/rocm/lib -L/usr/lib64 -L%{LIB} -L%{LIB64}" \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX=/usr/local
 
-cmake --build build --parallel %{?_smp_mflags}
+cmake --build build --parallel
 
-%install 
-mkdir -p %{BUILD_SHARE} %{BUILD_BIN} %{SYSTEMD} %{LOG}
+%install
+rm -rf %{buildroot}
+
+mkdir -p \
+  %{BUILD_SHARE} \
+  %{BUILD_BIN} \
+  %{SYSTEMD} \
+  %{LOG} \
+  %{LDSOCONF}
+
 cp -r /usr/local/share/xbatd/* %{BUILD_SHARE}
 
-DESTDIR=%{buildroot} cmake --install build 
+DESTDIR=%{buildroot} cmake --install build
 
 %files
 %defattr(-,root,root,-)
@@ -77,6 +85,7 @@ DESTDIR=%{buildroot} cmake --install build
 %dir /var/log/xbatd
 
 %post
+/sbin/ldconfig || /usr/sbin/ldconfig || true
 systemctl daemon-reload
 
 %preun
@@ -85,10 +94,17 @@ if [ $1 -eq 0 ]; then
 fi
 
 %postun
+/sbin/ldconfig || /usr/sbin/ldconfig || true
 systemctl daemon-reload
+
 if [ $1 -eq 0 ]; then
     rm -rf /var/log/xbatd
 fi
 
 %clean
 rm -rf %{buildroot}
+
+%changelog
+* Wed Sep 02 2026 xbatd <xbat@megware.com> - %{VERSION}-%{RELEASE}
+- Build xbatd v2.0.0
+- Add Enterprise Linux 10 support
