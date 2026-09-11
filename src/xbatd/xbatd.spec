@@ -61,7 +61,7 @@ cmake -B build -S . \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX=/usr/local
 
-cmake --build build --parallel
+cmake --build build -- %{?_smp_mflags}
 
 %install
 rm -rf %{buildroot}
