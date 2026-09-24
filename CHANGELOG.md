@@ -12,6 +12,7 @@ This release contains many breaking changes and improvements. Please refer to th
 - database migrations via `./setup.sh migrate` for ClickHouse
 - configuration for xbatd can be generated with `./setup.sh generate-xbatd-conf [--stdout]`
 - script to export and import all benchmarks
+- xbatd support for el10 and optimized build process
 
 ### Changed
 
@@ -24,6 +25,8 @@ This release contains many breaking changes and improvements. Please refer to th
 - restructured format of exported benchmarks (with compatibility to import old QuestDB-era benchmarks)
 - UI is now served over nginx for improved performance and reduced container count
 - migrated the Python environment from venv/pip to uv for better support (#220)
+- improved xbatd for el8 and el9
+- upgraded LIKWID to v5.5.2 (#247)
 
 ### Fixed
 

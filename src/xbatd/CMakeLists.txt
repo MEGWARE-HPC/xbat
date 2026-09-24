@@ -41,6 +41,34 @@ set(SOURCES
 # Add executable
 add_executable(${PROJECT_NAME} ${SOURCES})
 
+# Third-party libraries bundled with xbatd
+set(XBAT_ROOT_DIR "/usr/local/share/xbatd")
+set(XBAT_LIB_DIR "${XBAT_ROOT_DIR}/lib")
+set(XBAT_LIB64_DIR "${XBAT_ROOT_DIR}/lib64")
+
+# LIKWID provides its own CMake package configuration
+set(LIKWID_ROOT_DIR "${XBAT_ROOT_DIR}" CACHE PATH "Path to LIKWID installation")
+
+find_package(likwid CONFIG REQUIRED
+  COMPONENTS hwloc lua
+  PATHS "${XBAT_ROOT_DIR}/share/likwid"
+  NO_DEFAULT_PATH
+)
+
+# Find NVML headers from the installed CUDA version.
+file(GLOB CUDA_INCLUDE_DIRS
+  "/usr/local/cuda*/targets/x86_64-linux/include"
+  "/usr/local/cuda*/include"
+)
+
+find_path(NVML_INCLUDE_DIR
+  NAMES nvml.h
+  PATHS ${CUDA_INCLUDE_DIRS}
+  REQUIRED
+)
+
+message(STATUS "Found NVML headers: ${NVML_INCLUDE_DIR}")
+
 # Include directories
 target_include_directories(${PROJECT_NAME} PRIVATE
   src
@@ -49,25 +77,13 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   src/external/nlohmann-json/include
   src/external/clipp/include
   /usr/local/share/xbatd/include
-  /usr/local/cuda-12.2/targets/x86_64-linux/include
-  /opt/rocm-6.4.1/include
+  /opt/rocm/include
+  ${NVML_INCLUDE_DIR}
+  ${LIKWID_INCLUDE_DIRS}
 )
 
 # TODO find better way of suppressing warnings for clickhouse-cpp submodule
 set_source_files_properties(src/ClickHouseWriter.cpp PROPERTIES COMPILE_FLAGS "-w")
-
-# Define library paths based on environment (RPM build vs local development)
-set(XBAT_LIB_DIR "/usr/local/share/xbatd/lib")
-set(XBAT_LIB64_DIR "/usr/local/share/xbatd/lib64")
-
-# Add library search paths
-link_directories(
-  ${XBAT_LIB_DIR}
-  ${XBAT_LIB64_DIR}
-  /opt/rocm/lib
-  /usr/lib64
-  /usr/local/lib
-)
 
 # Find Boost
 # Boost.Log on older distros (e.g. el8/Boost 1.66) requires BOOST_ALL_DYN_LINK
@@ -95,9 +111,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 # Use full paths to libraries since they are copied to specific locations in RPM build
 target_link_libraries(${PROJECT_NAME} PRIVATE
+  likwid::likwid
   ${XBAT_LIB64_DIR}/libnvidia-ml.so
   ${XBAT_LIB_DIR}/libamd_smi.so
-  ${XBAT_LIB_DIR}/liblikwid.so
 )
 
 # Install target (optional)

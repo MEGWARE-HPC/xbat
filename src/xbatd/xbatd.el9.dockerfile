@@ -1,4 +1,4 @@
-FROM almalinux:9.7-minimal
+FROM almalinux:9.8-minimal
 
 # require crb for ninja-build
 RUN microdnf -y update && \
@@ -33,9 +33,9 @@ RUN curl -fsSL -o /etc/yum.repos.d/cuda-rhel9.repo \
 
 # install rocm
 RUN printf '%s\n' \
-'[ROCm-6.4.4]' \
-'name=ROCm 6.4.4' \
-'baseurl=https://repo.radeon.com/rocm/rhel9/6.4.4/main/' \
+'[ROCm-7.2.4]' \
+'name=ROCm 7.2.4' \
+'baseurl=https://repo.radeon.com/rocm/rhel9/7.2.4/main/' \
 'enabled=1' \
 'gpgcheck=0' \
 > /etc/yum.repos.d/rocm.repo
@@ -43,12 +43,12 @@ RUN printf '%s\n' \
 RUN microdnf -y install amd-smi-lib && microdnf clean all
 
 # install LIKWID
-ENV LIKWID_VERSION="v5.5.1"
+ENV LIKWID_VERSION="v5.5.2"
 RUN git clone --depth 1 --branch "${LIKWID_VERSION}" https://github.com/RRZE-HPC/likwid.git && \
     cd likwid && \
-    sed -i -e 's!PREFIX ?= /usr/local#NO SPACE!PREFIX ?= /usr/local/share/xbatd/#NO SPACE!g' config.mk && \
+    sed -i -e 's!PREFIX ?= /usr/local#NO SPACE!PREFIX ?= /usr/local/share/xbatd#NO SPACE!g' config.mk && \
     sed -i -e 's!MAX_NUM_THREADS = 512!MAX_NUM_THREADS = 1024!g' config.mk && \
-    make -j "$(nproc)" && \
+    make -j "$(nproc)" RPATHS= && \
     make install
 
 ARG VERSION
