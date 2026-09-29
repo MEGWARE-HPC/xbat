@@ -38,7 +38,6 @@ xbat daemon
 %define LIB64 %{BASE}/lib64
 %define INCLUDE %{BASE}/include
 
-%define BUILD_BIN %{buildroot}/usr/local/bin
 %define BUILD_SHARE %{buildroot}/usr/local/share/xbatd
 %define SYSTEMD %{buildroot}/etc/systemd/system
 %define LOG %{buildroot}/var/log/xbatd
@@ -68,7 +67,6 @@ rm -rf %{buildroot}
 
 mkdir -p \
   %{BUILD_SHARE} \
-  %{BUILD_BIN} \
   %{SYSTEMD} \
   %{LOG} \
   %{LDSOCONF}
@@ -79,7 +77,7 @@ DESTDIR=%{buildroot} cmake --install build
 
 %files
 %defattr(-,root,root,-)
-/usr/local/bin/xbatd
+%{_libexecdir}/xbatd
 /usr/local/share/xbatd
 /etc/systemd/system/xbatd.service
 %dir /var/log/xbatd

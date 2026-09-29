@@ -27,6 +27,7 @@ This release contains many breaking changes and improvements. Please refer to th
 - migrated the Python environment from venv/pip to uv for better support (#220)
 - improved xbatd for el8 and el9
 - upgraded LIKWID to v5.5.2 (#247)
+- relocated the xbatd binary to avoid accidental direct execution by users (#185)
 
 ### Fixed
 
