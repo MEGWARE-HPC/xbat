@@ -105,7 +105,7 @@
                                 >
                                 </v-autocomplete>
                                 <v-tooltip
-                                    v-show="projects.length"
+                                    v-if="projects.length"
                                     location="bottom"
                                 >
                                     <template v-slot:activator="{ props }">
