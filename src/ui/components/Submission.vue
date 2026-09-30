@@ -104,7 +104,10 @@
                                     label="Share with Project (optional)"
                                 >
                                 </v-autocomplete>
-                                <v-tooltip location="bottom">
+                                <v-tooltip
+                                    v-show="projects.length"
+                                    location="bottom"
+                                >
                                     <template v-slot:activator="{ props }">
                                         <v-icon
                                             color="primary-light"
