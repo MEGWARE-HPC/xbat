@@ -35,6 +35,7 @@
                                             v-bind="props"
                                             append-icon="$cogs"
                                             :title="item?.raw?.title"
+                                            :subtitle="item?.raw?.subtitle"
                                             :value="item?.raw?.value"
                                         >
                                             <template #append>
@@ -44,8 +45,9 @@
                                                         size="small"
                                                         color="primary-light"
                                                         icon="$share"
-                                                    ></v-icon></div
-                                            ></template>
+                                                    ></v-icon>
+                                                </div>
+                                            </template>
                                         </v-list-item>
                                     </template>
                                 </v-autocomplete>
@@ -145,6 +147,8 @@
     </v-dialog>
 </template>
 <script lang="ts" setup>
+import { buildConfigurationFolderPathMap } from "~/composables/useConfigurationFolderPaths";
+
 const shareExplanation =
     "Shared benchmarks are visible to all other members of the selected project";
 
@@ -165,16 +169,41 @@ const form = reactive({
 const { data: configurations } = await useAsyncData(
     `configurations-${$authStore.user?.user_name}`,
     () => $api.configurations.get(),
-    { lazy: true, transform: (v) => v?.data || [] }
+    {
+        lazy: true,
+        transform: (v) => v?.data || []
+    }
+);
+
+const { data: folderTree } = await useAsyncData(
+    `submission-configuration-folders-${$authStore.user?.user_name}`,
+    () => $api.configurationFolders.get(),
+    {
+        lazy: true,
+        transform: (v) => v?.data || []
+    }
+);
+
+const folderPathById = computed(() =>
+    buildConfigurationFolderPathMap(
+        folderTree.value || [],
+        $authStore.user?.user_name || ""
+    )
 );
 
 const configurationItems = computed(() => {
     if (!configurations.value) return [];
-    return Object.values(configurations.value).map((x) => ({
-        title: x.configuration.configurationName,
-        value: x._id,
-        shared: !!x.configuration?.sharedProjects?.length
-    }));
+
+    return Object.values(configurations.value).map((x) => {
+        const folderId = String(x.configuration?.folderId || "");
+
+        return {
+            title: x.configuration.configurationName,
+            subtitle: folderId ? folderPathById.value.get(folderId) : undefined,
+            value: x._id,
+            shared: !!x.configuration?.sharedProjects?.length
+        };
+    });
 });
 
 const configurationsById = computed(() =>
