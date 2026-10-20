@@ -1,13 +1,12 @@
 import { ref, computed, type Ref, type ComputedRef } from "vue";
 
-type TreeNode = {
-    id?: string;
-    name?: string;
-    misc?: {
-        owner?: string;
-    };
-    children?: TreeNode[];
-};
+import {
+    buildConfigurationFolderPathMap,
+    findUserHomeTree,
+    type ConfigurationFolderNode
+} from "./useConfigurationFolderPaths";
+
+type TreeNode = ConfigurationFolderNode;
 
 type EditorState = {
     currentEdit: string;
@@ -97,34 +96,9 @@ export function useConfigurationEditor({
         state.showCloseDialog = true;
     };
 
-    const folderPathById = computed(() => {
-        const map = new Map<string, string>();
-        const roots = folderTree.value || [];
-        const ownHome =
-            roots.find(
-                (n) => n?.name === userName && n?.misc?.owner === userName
-            ) ||
-            roots.find((n) => n?.name === userName) ||
-            null;
-
-        const walk = (node: TreeNode, parts: string[] = []) => {
-            if (!node?.id) return;
-
-            const isHome = ownHome && String(node.id) === String(ownHome.id);
-            const nextParts = isHome
-                ? ["home"]
-                : [...parts, String(node.name || "")];
-
-            map.set(String(node.id), nextParts.join("/"));
-
-            for (const child of node.children || []) {
-                walk(child, nextParts);
-            }
-        };
-
-        if (ownHome) walk(ownHome, []);
-        return map;
-    });
+    const folderPathById = computed(() =>
+        buildConfigurationFolderPathMap(folderTree.value || [], userName)
+    );
 
     const editorFolderPath = computed(() => {
         const fid = String(form.value?.folderId || "");
@@ -152,21 +126,6 @@ export function useConfigurationEditor({
         }
 
         return result;
-    };
-
-    const findUserHomeTree = (
-        treeNodes: TreeNode[] = [],
-        currentUserName: string
-    ) => {
-        return (
-            treeNodes.find(
-                (n) =>
-                    n?.name === currentUserName &&
-                    n?.misc?.owner === currentUserName
-            ) ||
-            treeNodes.find((n) => n?.name === currentUserName) ||
-            null
-        );
     };
 
     const openFolderPicker = () => {

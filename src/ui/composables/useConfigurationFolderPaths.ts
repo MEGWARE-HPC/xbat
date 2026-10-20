@@ -10,33 +10,27 @@ export type ConfigurationFolderNode = {
 export const findUserHomeTree = (
     treeNodes: ConfigurationFolderNode[] = [],
     userName: string
-) => {
-    return (
-        treeNodes.find(
-            (node) => node?.name === userName && node?.misc?.owner === userName
-        ) ||
-        treeNodes.find((node) => node?.name === userName) ||
-        null
-    );
-};
+): ConfigurationFolderNode | null =>
+    treeNodes.find(
+        (node) => node?.name === userName && node?.misc?.owner === userName
+    ) ||
+    treeNodes.find((node) => node?.name === userName) ||
+    null;
 
 export const buildConfigurationFolderPathMap = (
     treeNodes: ConfigurationFolderNode[] = [],
     userName: string
-) => {
-    const map = new Map<string, string>();
-
+): Map<string, string> => {
+    const paths = new Map<string, string>();
     const ownHome = findUserHomeTree(treeNodes, userName);
 
-    const walk = (node: ConfigurationFolderNode, parts: string[] = []) => {
+    const walk = (node: ConfigurationFolderNode, parts: string[]) => {
         if (!node?.id) return;
 
-        const nextParts = [...parts, String(node.name || "")].filter(Boolean);
-
-        map.set(String(node.id), nextParts.join("/"));
+        paths.set(String(node.id), parts.join("/"));
 
         for (const child of node.children || []) {
-            walk(child, nextParts);
+            walk(child, [...parts, String(child.name || "")].filter(Boolean));
         }
     };
 
@@ -44,17 +38,11 @@ export const buildConfigurationFolderPathMap = (
         if (!root?.id) continue;
 
         const isOwnHome = ownHome && String(root.id) === String(ownHome.id);
+        const rootName = isOwnHome ? "home" : String(root.name || "");
+        if (!rootName) continue;
 
-        if (isOwnHome) {
-            map.set(String(root.id), "home");
-
-            for (const child of root.children || []) {
-                walk(child, ["home"]);
-            }
-        } else {
-            walk(root);
-        }
+        walk(root, [rootName]);
     }
 
-    return map;
+    return paths;
 };
