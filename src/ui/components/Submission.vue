@@ -196,10 +196,20 @@ const configurationItems = computed(() => {
 
     return Object.values(configurations.value).map((x) => {
         const folderId = String(x.configuration?.folderId || "");
+        const folderPath = folderId
+            ? folderPathById.value.get(folderId)
+            : undefined;
+        const owner = x.misc?.owner;
+        const sharedFromAnotherUser =
+            owner && owner !== $authStore.user?.user_name;
 
         return {
             title: x.configuration.configurationName,
-            subtitle: folderId ? folderPathById.value.get(folderId) : undefined,
+            subtitle:
+                folderPath ||
+                (sharedFromAnotherUser
+                    ? `Shared by ${owner} (project path)`
+                    : undefined),
             value: x._id,
             shared: !!x.configuration?.sharedProjects?.length
         };
