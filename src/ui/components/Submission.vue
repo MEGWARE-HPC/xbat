@@ -56,6 +56,20 @@
                                             </template>
                                         </v-list-item>
                                     </template>
+                                    <template v-slot:selection="{ item }">
+                                        <v-icon
+                                            :icon="
+                                                item?.raw?.isShared
+                                                    ? '$share'
+                                                    : '$textBox'
+                                            "
+                                            color="primary-light"
+                                            size="small"
+                                            class="mr-2"
+                                        ></v-icon>
+
+                                        <span>{{ item?.raw?.title }}</span>
+                                    </template>
                                 </v-autocomplete>
                                 <v-menu
                                     :close-on-content-click="false"
@@ -238,16 +252,20 @@ const configurationItems = computed(() => {
             )
         ];
 
-        const sharedFallback = [
-            `Shared by ${owner || "another user"}`,
-            sharedProjectNames.length
-                ? `Project: ${sharedProjectNames.join(", ")}`
-                : "Project unavailable"
-        ].join(" · ");
+        const projectLabel = sharedProjectNames.length
+            ? `Project: ${sharedProjectNames.join(", ")}`
+            : "Project unavailable";
+
+        const subtitle = isShared
+            ? [
+                  folderPath || `Shared by ${owner || "another user"}`,
+                  projectLabel
+              ].join(" · ")
+            : folderPath;
 
         return {
             title: x.configuration.configurationName,
-            subtitle: folderPath || (isShared ? sharedFallback : undefined),
+            subtitle,
             value: x._id,
             isShared
         };
