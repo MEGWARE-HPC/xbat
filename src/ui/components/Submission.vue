@@ -38,15 +38,21 @@
                                             :subtitle="item?.raw?.subtitle"
                                             :value="item?.raw?.value"
                                         >
-                                            <template #append>
-                                                <div v-if="item?.raw?.shared">
-                                                    <v-icon
-                                                        title="This is a shared configuration"
-                                                        size="small"
-                                                        color="primary-light"
-                                                        icon="$share"
-                                                    ></v-icon>
-                                                </div>
+                                            <template #prepend>
+                                                <v-icon
+                                                    :icon="
+                                                        item?.raw?.isShared
+                                                            ? '$share'
+                                                            : '$textBox'
+                                                    "
+                                                    :title="
+                                                        item?.raw?.isShared
+                                                            ? 'Shared configuration'
+                                                            : 'My configuration'
+                                                    "
+                                                    color="primary-light"
+                                                    size="small"
+                                                ></v-icon>
                                             </template>
                                         </v-list-item>
                                     </template>
@@ -158,6 +164,16 @@ const { vNotEmpty } = useFormValidation();
 
 const projects = computed(() => $authStore.user?.projects || []);
 
+const projectNamesById = computed(
+    () =>
+        new Map<string, string>(
+            projects.value.map(
+                (project) =>
+                    [String(project._id), String(project.name)] as const
+            )
+        )
+);
+
 const dialog = ref(false);
 
 const form = reactive({
@@ -195,23 +211,45 @@ const configurationItems = computed(() => {
     if (!configurations.value) return [];
 
     return Object.values(configurations.value).map((x) => {
+        const owner = x.misc?.owner;
+        const isShared = !!owner && owner !== $authStore.user?.user_name;
+
         const folderId = String(x.configuration?.folderId || "");
         const folderPath = folderId
             ? folderPathById.value.get(folderId)
             : undefined;
-        const owner = x.misc?.owner;
-        const sharedFromAnotherUser =
-            owner && owner !== $authStore.user?.user_name;
+
+        const sharedProjectNames = [
+            ...new Set(
+                (x.configuration?.sharedProjects || [])
+                    .map((projectRef: unknown) => {
+                        const projectId =
+                            typeof projectRef === "string"
+                                ? projectRef
+                                : projectRef &&
+                                    typeof projectRef === "object" &&
+                                    "_id" in projectRef
+                                  ? String(projectRef._id)
+                                  : "";
+
+                        return projectNamesById.value.get(projectId);
+                    })
+                    .filter((name): name is string => !!name)
+            )
+        ];
+
+        const sharedFallback = [
+            `Shared by ${owner || "another user"}`,
+            sharedProjectNames.length
+                ? `Project: ${sharedProjectNames.join(", ")}`
+                : "Project unavailable"
+        ].join(" · ");
 
         return {
             title: x.configuration.configurationName,
-            subtitle:
-                folderPath ||
-                (sharedFromAnotherUser
-                    ? `Shared by ${owner} (project path)`
-                    : undefined),
+            subtitle: folderPath || (isShared ? sharedFallback : undefined),
             value: x._id,
-            shared: !!x.configuration?.sharedProjects?.length
+            isShared
         };
     });
 });
