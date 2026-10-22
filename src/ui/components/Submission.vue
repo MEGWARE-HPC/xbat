@@ -1,9 +1,7 @@
 <template>
     <v-dialog max-width="600px" v-model="dialog">
         <template v-slot:activator="{ props: activatorProps }">
-            <div v-bind="activatorProps">
-                <slot></slot>
-            </div>
+            <slot :activator="activatorProps"></slot>
         </template>
         <template v-slot:default="{ isActive }">
             <v-card>
