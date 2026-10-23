@@ -1,9 +1,7 @@
 <template>
     <v-dialog max-width="600px" v-model="dialog">
         <template v-slot:activator="{ props: activatorProps }">
-            <div v-bind="activatorProps">
-                <slot></slot>
-            </div>
+            <slot :activator="activatorProps"></slot>
         </template>
         <template v-slot:default="{ isActive }">
             <v-card>
@@ -158,9 +156,10 @@
                     <v-btn
                         color="primary-light"
                         variant="text"
-                        type="submit"
+                        type="button"
                         @click="submit"
-                        :disabled="!formValid"
+                        :loading="isSubmitting"
+                        :disabled="!formValid || isSubmitting"
                     >
                         Submit
                     </v-btn>
@@ -293,12 +292,21 @@ watch(
 );
 
 const formValid = ref(false);
+const isSubmitting = ref(false);
 
 const emit = defineEmits<{
     (e: "submit"): void;
 }>();
 
 const submit = async () => {
+    // Prevent unauthorized or duplicate submissions.
+    if (
+        $authStore.userLevel === $authStore.UserLevelEnum.guest ||
+        $authStore.userLevel === $authStore.UserLevelEnum.admin ||
+        isSubmitting.value
+    )
+        return;
+
     if ($store.demo) {
         $snackbar.show($store.demoMessage);
         dialog.value = false;
@@ -308,28 +316,35 @@ const submit = async () => {
     // check of form.name and form.configId for ts
     if (!formValid.value || !form.name || !form.configId) return;
 
-    const businessVars = Array.isArray(variableForm.value[form.configId])
-        ? variableForm.value[form.configId].map((v: any) => ({
-              key: v.key,
-              values: v.values,
-              selected: v.selected,
-              input: v.input
-          }))
-        : [];
+    isSubmitting.value = true;
 
-    await $api.benchmarks.submit({
-        name: form.name,
-        configId: form.configId,
-        sharedProjects: form.sharedProjects,
-        variables: businessVars
-    });
+    try {
+        const businessVars = Array.isArray(variableForm.value[form.configId])
+            ? variableForm.value[form.configId].map((v: any) => ({
+                  key: v.key,
+                  values: v.values,
+                  selected: v.selected,
+                  input: v.input
+              }))
+            : [];
 
-    if (!$store.error) {
-        $snackbar.show(
-            "Benchmark submitted - it may take a few seconds until the benchmark is displayed"
-        );
-        emit("submit");
-        dialog.value = false;
+        await $api.benchmarks.submit({
+            name: form.name,
+            configId: form.configId,
+            sharedProjects: form.sharedProjects,
+            variables: businessVars
+        });
+
+        if (!$store.error) {
+            $snackbar.show(
+                "Benchmark submitted - it may take a few seconds until the benchmark is displayed"
+            );
+
+            emit("submit");
+            dialog.value = false;
+        }
+    } finally {
+        isSubmitting.value = false;
     }
 };
 </script>

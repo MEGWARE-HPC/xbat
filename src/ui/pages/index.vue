@@ -4,18 +4,21 @@
             <v-card-title>
                 <div class="d-flex align-center gap-20">
                     <Submission @submit="setRefresh">
-                        <v-btn
-                            color="primary"
-                            title="Start Benchmark"
-                            :disabled="
-                                $authStore.userLevel ==
-                                    $authStore.UserLevelEnum.guest ||
-                                $authStore.userLevel ==
-                                    $authStore.UserLevelEnum.admin
-                            "
-                        >
-                            Start Benchmark
-                        </v-btn>
+                        <template #default="{ activator }">
+                            <v-btn
+                                v-bind="activator"
+                                color="primary"
+                                title="Start Benchmark"
+                                :disabled="
+                                    $authStore.userLevel ==
+                                        $authStore.UserLevelEnum.guest ||
+                                    $authStore.userLevel ==
+                                        $authStore.UserLevelEnum.admin
+                                "
+                            >
+                                Start Benchmark
+                            </v-btn>
+                        </template>
                     </Submission>
                     <v-btn
                         value="share"
@@ -85,10 +88,16 @@
                     :page="pagination.page"
                     :sort-by="pagination.sortBy"
                     must-sort
-                    :row-props="({ item }) => ({
-                        onMouseenter: () => { hoveredRunNr = item.runNr },
-                        onMouseleave: () => { hoveredRunNr = null }
-                    })"
+                    :row-props="
+                        ({ item }) => ({
+                            onMouseenter: () => {
+                                hoveredRunNr = item.runNr;
+                            },
+                            onMouseleave: () => {
+                                hoveredRunNr = null;
+                            }
+                        })
+                    "
                 >
                     <template v-slot:[`item.startTime`]="{ item }">
                         <ClientOnly>
@@ -96,7 +105,7 @@
                         </ClientOnly>
                     </template>
                     <template v-slot:[`item.jobIds`]="{ item }">
-                        <div style="position: relative;">
+                        <div style="position: relative">
                             <div class="job-ids">
                                 {{
                                     encodeBraceNotation(item.jobIds, ", ").join(
@@ -104,13 +113,17 @@
                                     )
                                 }}
                             </div>
-                            <div class="job-hover-info" v-if="hoveredRunNr === item.runNr">
+                            <div
+                                class="job-hover-info"
+                                v-if="hoveredRunNr === item.runNr"
+                            >
                                 <Tooltip location="bottom" custom>
                                     <v-card>
                                         <v-card-text>
                                             <JobOverviewTable
                                                 :jobs="
-                                                    jobsByRunNr[item.runNr] || []
+                                                    jobsByRunNr[item.runNr] ||
+                                                    []
                                                 "
                                             ></JobOverviewTable>
                                         </v-card-text>
@@ -280,7 +293,8 @@ const { data, refresh, pending } = await useAsyncData(
         }
         if (debouncedSearch.value) opts.search = debouncedSearch.value;
         if (hideShared.value && isRegularUser) opts.ownedOnly = true;
-        if (!hideShared.value && projectFilter.value) opts.project = projectFilter.value;
+        if (!hideShared.value && projectFilter.value)
+            opts.project = projectFilter.value;
 
         const [b, j] = await Promise.all([
             $api.benchmarks.get(null, opts),
@@ -334,10 +348,7 @@ watch(
     { immediate: true }
 );
 
-watch(
-    () => state.search,
-    applyDebouncedSearch
-);
+watch(() => state.search, applyDebouncedSearch);
 
 // Reset to page 1 when filters change and re-fetch
 watch([hideShared, projectFilter], () => {
@@ -345,12 +356,9 @@ watch([hideShared, projectFilter], () => {
     refresh();
 });
 
-const onUpdateOptions = ({
-    page,
-    itemsPerPage,
-    sortBy
-}) => {
-    const sortChanged = JSON.stringify(sortBy) !== JSON.stringify(pagination.sortBy);
+const onUpdateOptions = ({ page, itemsPerPage, sortBy }) => {
+    const sortChanged =
+        JSON.stringify(sortBy) !== JSON.stringify(pagination.sortBy);
     overviewItemsPerPage.value = itemsPerPage;
     pagination.itemsPerPage = itemsPerPage;
     pagination.sortBy = sortBy;
