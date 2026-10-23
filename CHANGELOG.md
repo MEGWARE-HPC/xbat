@@ -32,6 +32,7 @@ This release contains many breaking changes and improvements. Please refer to th
 - interval setting for CLI not being applied correctly
 - scaling of peak values for lower levels (#201)
 - an issue with registering jobs submitted via the CLI (#233) and improved the registration workflow
+- the project-sharing hint remaining visible when no projects are configured (#182)
 - improved benchmark submission experience and fix disabled activator (#253)
 
 ## v1.3.0 - 2026-05-08
