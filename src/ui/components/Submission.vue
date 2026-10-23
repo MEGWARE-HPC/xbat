@@ -35,18 +35,40 @@
                                             v-bind="props"
                                             append-icon="$cogs"
                                             :title="item?.raw?.title"
+                                            :subtitle="item?.raw?.subtitle"
                                             :value="item?.raw?.value"
                                         >
-                                            <template #append>
-                                                <div v-if="item?.raw?.shared">
-                                                    <v-icon
-                                                        title="This is a shared configuration"
-                                                        size="small"
-                                                        color="primary-light"
-                                                        icon="$share"
-                                                    ></v-icon></div
-                                            ></template>
+                                            <template #prepend>
+                                                <v-icon
+                                                    :icon="
+                                                        item?.raw?.isShared
+                                                            ? '$share'
+                                                            : '$textBox'
+                                                    "
+                                                    :title="
+                                                        item?.raw?.isShared
+                                                            ? 'Shared configuration'
+                                                            : 'My configuration'
+                                                    "
+                                                    color="primary-light"
+                                                    size="small"
+                                                ></v-icon>
+                                            </template>
                                         </v-list-item>
+                                    </template>
+                                    <template v-slot:selection="{ item }">
+                                        <v-icon
+                                            :icon="
+                                                item?.raw?.isShared
+                                                    ? '$share'
+                                                    : '$textBox'
+                                            "
+                                            color="primary-light"
+                                            size="small"
+                                            class="mr-2"
+                                        ></v-icon>
+
+                                        <span>{{ item?.raw?.title }}</span>
                                     </template>
                                 </v-autocomplete>
                                 <v-menu
@@ -148,6 +170,8 @@
     </v-dialog>
 </template>
 <script lang="ts" setup>
+import { buildConfigurationFolderPathMap } from "~/composables/useConfigurationFolderPaths";
+
 const shareExplanation =
     "Shared benchmarks are visible to all other members of the selected project";
 
@@ -156,6 +180,16 @@ const { $api, $authStore, $store, $snackbar } = useNuxtApp();
 const { vNotEmpty } = useFormValidation();
 
 const projects = computed(() => $authStore.user?.projects || []);
+
+const projectNamesById = computed(
+    () =>
+        new Map<string, string>(
+            projects.value.map(
+                (project) =>
+                    [String(project._id), String(project.name)] as const
+            )
+        )
+);
 
 const dialog = ref(false);
 
@@ -168,16 +202,77 @@ const form = reactive({
 const { data: configurations } = await useAsyncData(
     `configurations-${$authStore.user?.user_name}`,
     () => $api.configurations.get(),
-    { lazy: true, transform: (v) => v?.data || [] }
+    {
+        lazy: true,
+        transform: (v) => v?.data || []
+    }
+);
+
+const { data: folderTree } = await useAsyncData(
+    `submission-configuration-folders-${$authStore.user?.user_name}`,
+    () => $api.configurationFolders.get(),
+    {
+        lazy: true,
+        transform: (v) => v?.data || []
+    }
+);
+
+const folderPathById = computed(() =>
+    buildConfigurationFolderPathMap(
+        folderTree.value || [],
+        $authStore.user?.user_name || ""
+    )
 );
 
 const configurationItems = computed(() => {
     if (!configurations.value) return [];
-    return Object.values(configurations.value).map((x) => ({
-        title: x.configuration.configurationName,
-        value: x._id,
-        shared: !!x.configuration?.sharedProjects?.length
-    }));
+
+    return Object.values(configurations.value).map((x) => {
+        const owner = x.misc?.owner;
+        const isShared = !!owner && owner !== $authStore.user?.user_name;
+
+        const folderId = String(x.configuration?.folderId || "");
+        const folderPath = folderId
+            ? folderPathById.value.get(folderId)
+            : undefined;
+
+        const sharedProjectNames = [
+            ...new Set(
+                (x.configuration?.sharedProjects || [])
+                    .map((projectRef: unknown) => {
+                        const projectId =
+                            typeof projectRef === "string"
+                                ? projectRef
+                                : projectRef &&
+                                    typeof projectRef === "object" &&
+                                    "_id" in projectRef
+                                  ? String(projectRef._id)
+                                  : "";
+
+                        return projectNamesById.value.get(projectId);
+                    })
+                    .filter((name): name is string => !!name)
+            )
+        ];
+
+        const projectLabel = sharedProjectNames.length
+            ? `Project: ${sharedProjectNames.join(", ")}`
+            : "Project unavailable";
+
+        const subtitle = isShared
+            ? [
+                  folderPath || `Shared by ${owner || "another user"}`,
+                  projectLabel
+              ].join(" · ")
+            : folderPath;
+
+        return {
+            title: x.configuration.configurationName,
+            subtitle,
+            value: x._id,
+            isShared
+        };
+    });
 });
 
 const configurationsById = computed(() =>

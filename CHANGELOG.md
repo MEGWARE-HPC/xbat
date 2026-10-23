@@ -24,6 +24,7 @@ This release contains many breaking changes and improvements. Please refer to th
 - restructured format of exported benchmarks (with compatibility to import old QuestDB-era benchmarks)
 - UI is now served over nginx for improved performance and reduced container count
 - migrated the Python environment from venv/pip to uv for better support (#220)
+- improved the configuration selection in benchmark submission by displaying folder paths, shared project information, and distinct icons for personal and shared configurations (#217)
 
 ### Fixed
 
