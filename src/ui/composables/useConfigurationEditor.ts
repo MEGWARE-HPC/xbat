@@ -1,6 +1,7 @@
 import { ref, computed, type Ref, type ComputedRef } from "vue";
 
 import {
+    HOME_FOLDER_LABEL,
     buildConfigurationFolderPathMap,
     findUserHomeTree,
     type ConfigurationFolderNode
@@ -106,16 +107,16 @@ export function useConfigurationEditor({
         return folderPathById.value.get(fid) || "";
     });
 
-    const buildMoveTree = (nodes: TreeNode[] = [], parentPath = "home") => {
+    const buildMoveTree = (
+        nodes: TreeNode[] = [],
+        parentPath = HOME_FOLDER_LABEL
+    ) => {
         const result: any[] = [];
 
         for (const node of nodes || []) {
             if (!node?.id) continue;
 
-            const currentPath =
-                parentPath === "home"
-                    ? `home/${node.name}`
-                    : `${parentPath}/${node.name}`;
+            const currentPath = `${parentPath}/${node.name}`;
 
             result.push({
                 id: String(node.id),
