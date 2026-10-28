@@ -142,9 +142,12 @@ export function useConfigurationEditor({
         editorFolderTree.value = [
             {
                 id: String(myHome.id),
-                name: "home",
-                path: "home",
-                children: buildMoveTree(myHome.children || [], "home")
+                name: HOME_FOLDER_LABEL,
+                path: HOME_FOLDER_LABEL,
+                children: buildMoveTree(
+                    myHome.children || [],
+                    HOME_FOLDER_LABEL
+                )
             }
         ];
 
