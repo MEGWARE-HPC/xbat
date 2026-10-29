@@ -1,5 +1,7 @@
 import { computed, ref, watch } from "vue";
 
+import { HOME_FOLDER_LABEL } from "./useConfigurationFolderPaths";
+
 export function useFolderBrowser(props: any, emit: any) {
     const { $api, $snackbar, $store } = useNuxtApp();
 
@@ -154,11 +156,11 @@ export function useFolderBrowser(props: any, emit: any) {
 
     const backupScopeItems = computed(() => {
         if (!isPrivileged.value) {
-            return [{ title: "My configurations", value: "self" }];
+            return [{ title: "My Configurations", value: "self" }];
         }
 
         return [
-            { title: "My configurations", value: "self" },
+            { title: "My Configurations", value: "self" },
             { title: "Specific user", value: "owner" },
             { title: "All users (preserve owners)", value: "all" }
         ];
@@ -179,7 +181,7 @@ export function useFolderBrowser(props: any, emit: any) {
         if (isSharedView.value) return props.folder?.name || "";
         if (folderId.value === "__all__") return props.folder?.name || "";
 
-        if (isMyRoot.value) return "Home";
+        if (isMyRoot.value) return HOME_FOLDER_LABEL;
 
         return props.folder?.name || "";
     });
@@ -719,16 +721,13 @@ export function useFolderBrowser(props: any, emit: any) {
         }
     };
 
-    const buildMoveTree = (nodes: any, parentPath = "home") => {
+    const buildMoveTree = (nodes: any, parentPath = HOME_FOLDER_LABEL) => {
         const result = [];
 
         for (const node of nodes || []) {
             if (!node?.id) continue;
 
-            const currentPath =
-                parentPath === "home"
-                    ? `home/${node.name}`
-                    : `${parentPath}/${node.name}`;
+            const currentPath = `${parentPath}/${node.name}`;
 
             result.push({
                 id: String(node.id),
@@ -769,9 +768,12 @@ export function useFolderBrowser(props: any, emit: any) {
         moveFolderTree.value = [
             {
                 id: String(myHome.id),
-                name: "home",
-                path: "home",
-                children: buildMoveTree(myHome.children || [], "home")
+                name: HOME_FOLDER_LABEL,
+                path: HOME_FOLDER_LABEL,
+                children: buildMoveTree(
+                    myHome.children || [],
+                    HOME_FOLDER_LABEL
+                )
             }
         ];
     };
