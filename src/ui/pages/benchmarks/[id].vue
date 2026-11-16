@@ -239,7 +239,7 @@
     </div>
 </template>
 <script setup>
-import { range } from "~/utils/misc";
+import { getJobState, range } from "~/utils/misc";
 const { $api, $store, $graphStore } = useNuxtApp();
 
 definePageMeta({
@@ -279,9 +279,8 @@ useSeoMeta({
     description: "xbat benchmark results"
 });
 
-const metrics = ref({});
-const metricsCache = ref({}); // cache raw api responses for metrics call
-const runNr = computed(() => parseInt(route.params.id) || 0);
+const runNr = ref(Number.parseInt(route.params.id, 10) || 0);
+let disposed = false;
 const defaultGraphs = ref([]);
 
 const setDefaultGraphs = (_metrics) => {
@@ -309,20 +308,24 @@ const setDefaultGraphs = (_metrics) => {
     }
 };
 
-const { data, refresh: refreshData } = await useAsyncData(
-    async () => {
-        const [b, j] = await Promise.all([
-            $api.benchmarks.get(runNr.value),
-            $api.jobs.get(runNr.value)
-        ]);
-        return {
-            benchmark: b.data,
-            jobs: j?.data ?? []
-        };
-    },
+const {
+    data,
+    error: refreshDataError,
+    refresh: refreshData
+} = await useAsyncData(`benchmark-data:${runNr.value}`, async () => {
+    const [benchmarkResult, jobsResult] = await Promise.allSettled([
+        $api.benchmarks.get(runNr.value),
+        $api.jobs.get(runNr.value)
+    ]);
 
-    { watch: [runNr] }
-);
+    if (benchmarkResult.status === "rejected") throw benchmarkResult.reason;
+    if (jobsResult.status === "rejected") throw jobsResult.reason;
+
+    return {
+        benchmark: benchmarkResult.value?.data,
+        jobs: jobsResult.value?.data ?? []
+    };
+});
 
 if (
     !data.value?.benchmark ||
@@ -335,49 +338,80 @@ if (
     });
 }
 
-if (data.value.jobs.length && !state.refreshHandler)
-    state.selectedJob = data.value.jobs[0].jobId;
+const benchmark = computed((previous) => data.value?.benchmark ?? previous);
+const jobs = computed((previous) => data.value?.jobs ?? previous ?? []);
+const terminalStates = new Set([
+    "done",
+    "failed",
+    "canceled",
+    "cancelled",
+    "timeout",
+    "deadline"
+]);
+const jobLifecycles = shallowReactive({});
 
-const { data: jobMetrics, refresh: refreshMetrics } = await useAsyncData(
-    async () => {
-        if (!state.selectedJob) return {};
-
-        // if already loaded and not in refresh mode return cached data
-        if (
-            state.selectedJob in metricsCache.value &&
-            Object.keys(metricsCache.value[state.selectedJob]).length &&
-            !state.refreshHandler
-        ) {
-            return metricsCache.value[state.selectedJob];
-        }
-
-        return await $api.metrics.get(state.selectedJob);
-    },
-    { watch: [() => state.selectedJob] }
-);
+const getJobPhase = (job) => {
+    const states = job.jobInfo?.jobState ?? [];
+    if (states.includes("PENDING") || states.includes("RUNNING"))
+        return "active";
+    if (terminalStates.has(getJobState(states).value)) return "terminal";
+    return null;
+};
 
 watch(
-    jobMetrics,
-    (v) => {
-        if (!Object.keys(v).length) {
-            state.noData = true;
-            return;
+    jobs,
+    (items) => {
+        for (const job of items) {
+            const id = Number(job.jobId);
+            const phase = getJobPhase(job);
+            if (!id || !phase) continue;
+
+            const previous = jobLifecycles[id];
+            if (previous?.phase === phase) continue;
+
+            // Change the cache revision on completion or requeue.
+            const revision = previous
+                ? previous.revision + 1
+                : Number(phase === "terminal");
+            jobLifecycles[id] = { phase, revision };
         }
-
-        metricsCache.value[state.selectedJob] = v;
-        metrics.value[state.selectedJob] = v.metrics;
-        state.noData = !Object.keys(v.metrics).length || !v.nodes.length;
-
-        // set default graphs if not in refresh mode
-        if (!state.refreshHandler || !defaultGraphs.value.length)
-            setDefaultGraphs(v.metrics);
-
-        // nextTick(() => {
-        //     fetchPower(state.selectedJob, job);
-        // });
     },
-    { immediate: true, deep: true }
+    { immediate: true, flush: "sync" }
 );
+
+const getDetailsRevision = (id) => jobLifecycles[id]?.revision ?? 0;
+const selectedDetailsRevision = computed(() =>
+    getDetailsRevision(Number(state.selectedJob))
+);
+
+if (jobs.value.length) {
+    state.selectedJob =
+        benchmark.value.jobIds?.toSorted((a, b) => a - b)[0] ??
+        jobs.value[0].jobId;
+}
+
+const metricsCache = useJobResourceCache(
+    (id) => $api.metrics.get(id),
+    (id, revision) => {
+        if (!disposed && getDetailsRevision(id) === revision) {
+            $graphStore.bustCache([id]);
+        }
+    }
+);
+
+const currentMetrics = computed(
+    () => metricsCache.entries[Number(state.selectedJob)]?.value?.metrics ?? {}
+);
+watch(currentMetrics, setDefaultGraphs, { immediate: true });
+
+const initialJobId = Number(state.selectedJob);
+if (initialJobId) {
+    await metricsCache
+        .load(initialJobId, selectedDetailsRevision.value)
+        .catch((error) =>
+            console.error("Failed to load initial job metrics:", error)
+        );
+}
 
 // TODO maybe load at later stage and cut down on data
 // lazy currently does not work as benchmark data is needed right away
@@ -397,9 +431,6 @@ const currentJob = computed(() => {
     return jobsById.value[state.selectedJob] || {};
 });
 
-const benchmark = computed(() => data.value.benchmark);
-const jobs = computed(() => data.value.jobs);
-
 const { invalidBenchmark } = useBenchmarks({
     runNr,
     benchmarks: generalData.value.benchmarks
@@ -411,7 +442,7 @@ const { jobItems, jobsById, jobIds } = useJobs({
     itemOrder: "asc"
 });
 
-const { jobState, jobId, jobRunning } = useJob(currentJob, benchmark);
+const { jobId, jobRunning } = useJob(currentJob, benchmark);
 
 const { nodeInfo } = useNodes({
     jobs,
@@ -485,8 +516,6 @@ const refreshAll = async () => {
 
     $graphStore.bustCache([jobId.value]);
 };
-
-const terminalStates = ["done", "failed", "canceled", "cancelled", "timeout"];
 
 watch(
     [() => jobState.value?.value, () => benchmark.value?.state],
