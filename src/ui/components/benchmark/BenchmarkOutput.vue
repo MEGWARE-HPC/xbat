@@ -2,53 +2,66 @@
 import type { Job, JobOutput } from "@/repository/modules/jobs";
 
 const props = defineProps<{
-    job: Job; // currently selected job
+    job: Job;
     visible: boolean;
+    detailsRevision: number;
 }>();
 
-const jobId = computed(() => props.job.jobId);
+const jobId = computed(() => Number(props.job.jobId) || 0);
+const { $api } = useNuxtApp();
+
+const outputCache = useJobResourceCache<JobOutput | null>(
+    async (id) => (await $api.jobs.getOutput(id)) ?? null
+);
+const output = computed(() => outputCache.entries[jobId.value]?.value);
+const pending = computed(
+    () => outputCache.pending[jobId.value]?.revision === props.detailsRevision
+);
+
+type OutputTabKey = "standardOutput" | "standardError";
+type OutputTab = { title: string; value: OutputTabKey };
 
 const defaultTabs: OutputTab[] = [
     { title: "StdOut & StdErr", value: "standardOutput" }
 ];
 
-type OutputTabKey = "standardOutput" | "standardError";
-type OutputTab = { title: string; value: OutputTabKey };
-
-// determine tabs based on whether stdout and stderr are combined
 const outputTabs = computed<OutputTab[]>(() => {
-    if (!jobId.value || !outputs.value[jobId.value]) return defaultTabs;
-
-    const output = outputs.value[jobId.value];
-
-    if (output?.standardOutput !== null)
-        if (output?.standardError !== null)
-            return [
-                { title: "StdOut", value: "standardOutput" },
-                { title: "StdErr", value: "standardError" }
-            ];
+    if (
+        output.value &&
+        output.value.standardOutput !== null &&
+        output.value.standardError !== null
+    ) {
+        return [
+            { title: "StdOut", value: "standardOutput" },
+            { title: "StdErr", value: "standardError" }
+        ];
+    }
 
     return defaultTabs;
 });
 
-const outputs: Ref<Record<string, JobOutput | null>> = ref({});
-const pending = ref(false);
+const refresh = async (id: number, revision: number) => {
+    if (
+        !props.visible ||
+        !id ||
+        id !== jobId.value ||
+        revision !== props.detailsRevision
+    )
+        return;
 
-const { $api } = useNuxtApp();
-const refresh = async () => {
-    if (!jobId.value) return;
-
-    pending.value = true;
-    outputs.value[jobId.value] =
-        (await $api.jobs.getOutput(jobId.value)) || null;
-    pending.value = false;
+    await outputCache.load(id, revision, true);
 };
 
+defineExpose({ refresh });
+
 watch(
-    [jobId, () => props.visible],
-    async ([id, shown]) => {
-        if (!shown || id in outputs.value) return;
-        await refresh();
+    [jobId, () => props.detailsRevision, () => props.visible],
+    ([id, revision, shown]) => {
+        if (!id || !shown) return;
+
+        void outputCache.load(id, revision).catch((error) => {
+            console.error(`Failed to load output for job ${id}:`, error);
+        });
     },
     { immediate: true }
 );
