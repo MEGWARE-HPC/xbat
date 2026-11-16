@@ -463,102 +463,123 @@ const showRoofline = () => {
     });
 };
 
-const energy = ref({});
+const energyCache = useJobDetailCache((id) => $api.measurements.getEnergy(id));
+const energy = computed(() => {
+    const value = energyCache.entries[jobId.value]?.value;
+    return value ? { [jobId.value]: value } : {};
+});
 
-const fetchEnergy = async (jobId) => {
-    const energyData = await $api.measurements.getEnergy(jobId);
-    energy.value[jobId] = energyData;
-};
-
-// reset selection and visited jobs
 watch(
     jobItems,
-    (v) => {
-        if (!v.length || state.refreshHandler) return;
-        state.visitedJobs = [];
-        state.selectedJob = v[0].value;
-    },
-    {
-        immediate: true
-    }
-);
+    (items) => {
+        if (!items.length) return;
 
-watch(
-    () => state.selectedJob,
-    (v) => {
-        if (!state.visitedJobs.includes(v) && v) {
-            fetchEnergy(v);
-            state.visitedJobs.push(v);
-        }
-    },
-    {
-        immediate: true
-    }
-);
-
-watch(
-    runNr,
-    () => {
-        $store.benchmarkNr = runNr.value;
+        const selected = items.find(
+            ({ value }) => Number(value) === Number(state.selectedJob)
+        );
+        state.selectedJob = selected?.value ?? items[0].value;
     },
     { immediate: true }
 );
 
 const benchmarkOutputRef = ref(null);
 
-const refreshAll = async () => {
-    let handlers = [refreshData(), refreshMetrics(), fetchEnergy(jobId.value)];
+const loadJobDetails = (id, revision, force = false) => {
+    const reportError = (resource) => (error) =>
+        console.error(`Failed to load ${resource} for job ${id}:`, error);
 
-    if (benchmarkOutputRef.value)
-        handlers.push(benchmarkOutputRef.value.refresh());
+    void metricsCache.load(id, revision, force).catch(reportError("metrics"));
+    void energyCache.load(id, revision, force).catch(reportError("energy"));
 
-    await Promise.all(handlers);
-
-    $graphStore.bustCache([jobId.value]);
+    if (force && benchmarkOutputRef.value) {
+        void benchmarkOutputRef.value
+            .refresh(id, revision)
+            .catch(reportError("output"));
+    }
 };
 
 watch(
-    [() => jobState.value?.value, () => benchmark.value?.state],
-    ([newJobState, newBenchmarkState]) => {
-        if (
-            terminalStates.includes(newJobState) &&
-            terminalStates.includes(newBenchmarkState)
-        ) {
-            clearInterval(state.refreshHandler);
-            state.refreshHandler = null;
-            if (newJobState == "done") refreshAll();
-
-            return;
-        }
+    [jobId, selectedDetailsRevision],
+    ([id, revision]) => {
+        if (id) loadJobDetails(id, revision);
     },
     { immediate: true }
 );
+
+const REFRESH_INTERVAL = 30_000;
+const shouldPollJob = computed(() =>
+    Boolean(jobId.value && jobRunning.value && !refreshPaused.value)
+);
+const shouldPoll = computed(
+    () =>
+        ["pending", "running"].includes(benchmark.value?.state) ||
+        shouldPollJob.value
+);
+
+let metadataRefresh = null;
+
+const refreshBenchmark = async (poll = false) => {
+    if (poll && metadataRefresh) return;
+
+    // A sidebar edit needs a fresh read after any older request.
+    while (metadataRefresh) await metadataRefresh;
+    if (disposed) return;
+
+    metadataRefresh = (async () => {
+        try {
+            await refreshData();
+            if (refreshDataError.value) throw refreshDataError.value;
+            await nextTick();
+
+            if (!disposed && poll && shouldPollJob.value) {
+                loadJobDetails(
+                    jobId.value,
+                    selectedDetailsRevision.value,
+                    true
+                );
+            }
+        } catch (error) {
+            console.error("Failed to refresh benchmark:", error);
+        }
+    })();
+
+    try {
+        await metadataRefresh;
+    } finally {
+        metadataRefresh = null;
+    }
+};
+
+const stopPolling = () => {
+    if (state.refreshHandler === null) return;
+    clearInterval(state.refreshHandler);
+    state.refreshHandler = null;
+};
 
 watch(
-    [jobId, refreshPaused],
-    async () => {
-        if (process.server) return;
+    shouldPoll,
+    (enabled) => {
+        if (import.meta.server) return;
 
-        if (!jobRunning.value || refreshPaused.value) {
-            if (state.refreshHandler) {
-                clearInterval(state.refreshHandler);
-                state.refreshHandler = null;
-            }
-            return;
-        }
-        if (!state.refreshHandler) {
-            state.refreshHandler = setInterval(async () => {
-                await refreshAll();
-            }, 30000);
+        if (!enabled) {
+            stopPolling();
+        } else if (state.refreshHandler === null) {
+            state.refreshHandler = setInterval(
+                () => void refreshBenchmark(true),
+                REFRESH_INTERVAL
+            );
         }
     },
     { immediate: true }
 );
 
-onBeforeRouteLeave((to, from, next) => {
-    $store.benchmarkNr = null;
-    // $graphStore.cacheClearEvent.reset();
-    if (state.refreshHandler) clearInterval(state.refreshHandler);
-    next();
+onMounted(() => {
+    $store.benchmarkNr = runNr.value;
+});
+
+onBeforeUnmount(() => {
+    disposed = true;
+    stopPolling();
+    if ($store.benchmarkNr === runNr.value) $store.benchmarkNr = null;
 });
 </script>
