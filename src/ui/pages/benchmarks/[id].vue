@@ -13,7 +13,7 @@
                     : null
             "
             :refreshPaused="refreshPaused"
-            @refresh="refreshData"
+            @refresh="refreshBenchmark()"
         ></BenchmarkSidebar>
         <v-container fluid>
             <!-- TODO using v-main here causes hydration mismatch -->
@@ -134,6 +134,7 @@
                     <BenchmarkOutput
                         ref="benchmarkOutputRef"
                         :job="currentJob"
+                        :detailsRevision="selectedDetailsRevision"
                         :visible="state.showOutput"
                     ></BenchmarkOutput>
                 </div>
@@ -182,7 +183,7 @@
                                 >
                                     <GraphWrapper
                                         :jobIds="[jobId]"
-                                        :metrics="metrics?.[jobId] || {}"
+                                        :metrics="currentMetrics"
                                         :nodes="nodeInfo"
                                         :defaultGroup="
                                             defaultGraphs?.[id]?.['group']
@@ -463,7 +464,9 @@ const showRoofline = () => {
     });
 };
 
-const energyCache = useJobDetailCache((id) => $api.measurements.getEnergy(id));
+const energyCache = useJobResourceCache((id) =>
+    $api.measurements.getEnergy(id)
+);
 const energy = computed(() => {
     const value = energyCache.entries[jobId.value]?.value;
     return value ? { [jobId.value]: value } : {};
