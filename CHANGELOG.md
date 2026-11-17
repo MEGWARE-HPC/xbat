@@ -25,6 +25,7 @@ This release contains many breaking changes and improvements. Please refer to th
 - restructured format of exported benchmarks (with compatibility to import old QuestDB-era benchmarks)
 - UI is now served over nginx for improved performance and reduced container count
 - migrated the Python environment from venv/pip to uv for better support (#220)
+- improved the configuration selection in benchmark submission by displaying folder paths, shared project information, and distinct icons for personal and shared configurations (#217)
 - improved xbatd for el8 and el9
 - upgraded LIKWID to v5.5.2 (#247)
 
@@ -34,6 +35,8 @@ This release contains many breaking changes and improvements. Please refer to th
 - interval setting for CLI not being applied correctly
 - scaling of peak values for lower levels (#201)
 - an issue with registering jobs submitted via the CLI (#233) and improved the registration workflow
+- the project-sharing hint remaining visible when no projects are configured (#182)
+- improved benchmark submission experience and fix disabled activator (#253)
 
 ## v1.3.0 - 2026-05-08
 

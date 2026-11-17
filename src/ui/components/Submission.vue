@@ -1,9 +1,7 @@
 <template>
     <v-dialog max-width="600px" v-model="dialog">
         <template v-slot:activator="{ props: activatorProps }">
-            <div v-bind="activatorProps">
-                <slot></slot>
-            </div>
+            <slot :activator="activatorProps"></slot>
         </template>
         <template v-slot:default="{ isActive }">
             <v-card>
@@ -35,18 +33,40 @@
                                             v-bind="props"
                                             append-icon="$cogs"
                                             :title="item?.raw?.title"
+                                            :subtitle="item?.raw?.subtitle"
                                             :value="item?.raw?.value"
                                         >
-                                            <template #append>
-                                                <div v-if="item?.raw?.shared">
-                                                    <v-icon
-                                                        title="This is a shared configuration"
-                                                        size="small"
-                                                        color="primary-light"
-                                                        icon="$share"
-                                                    ></v-icon></div
-                                            ></template>
+                                            <template #prepend>
+                                                <v-icon
+                                                    :icon="
+                                                        item?.raw?.isShared
+                                                            ? '$share'
+                                                            : '$textBox'
+                                                    "
+                                                    :title="
+                                                        item?.raw?.isShared
+                                                            ? 'Shared configuration'
+                                                            : 'My configuration'
+                                                    "
+                                                    color="primary-light"
+                                                    size="small"
+                                                ></v-icon>
+                                            </template>
                                         </v-list-item>
+                                    </template>
+                                    <template v-slot:selection="{ item }">
+                                        <v-icon
+                                            :icon="
+                                                item?.raw?.isShared
+                                                    ? '$share'
+                                                    : '$textBox'
+                                            "
+                                            color="primary-light"
+                                            size="small"
+                                            class="mr-2"
+                                        ></v-icon>
+
+                                        <span>{{ item?.raw?.title }}</span>
                                     </template>
                                 </v-autocomplete>
                                 <v-menu
@@ -104,7 +124,10 @@
                                     label="Share with Project (optional)"
                                 >
                                 </v-autocomplete>
-                                <v-tooltip location="bottom">
+                                <v-tooltip
+                                    v-if="projects.length"
+                                    location="bottom"
+                                >
                                     <template v-slot:activator="{ props }">
                                         <v-icon
                                             color="primary-light"
@@ -133,9 +156,10 @@
                     <v-btn
                         color="primary-light"
                         variant="text"
-                        type="submit"
+                        type="button"
                         @click="submit"
-                        :disabled="!formValid"
+                        :loading="isSubmitting"
+                        :disabled="!formValid || isSubmitting"
                     >
                         Submit
                     </v-btn>
@@ -145,6 +169,8 @@
     </v-dialog>
 </template>
 <script lang="ts" setup>
+import { buildConfigurationFolderPathMap } from "~/composables/useConfigurationFolderPaths";
+
 const shareExplanation =
     "Shared benchmarks are visible to all other members of the selected project";
 
@@ -153,6 +179,16 @@ const { $api, $authStore, $store, $snackbar } = useNuxtApp();
 const { vNotEmpty } = useFormValidation();
 
 const projects = computed(() => $authStore.user?.projects || []);
+
+const projectNamesById = computed(
+    () =>
+        new Map<string, string>(
+            projects.value.map(
+                (project) =>
+                    [String(project._id), String(project.name)] as const
+            )
+        )
+);
 
 const dialog = ref(false);
 
@@ -165,16 +201,77 @@ const form = reactive({
 const { data: configurations } = await useAsyncData(
     `configurations-${$authStore.user?.user_name}`,
     () => $api.configurations.get(),
-    { lazy: true, transform: (v) => v?.data || [] }
+    {
+        lazy: true,
+        transform: (v) => v?.data || []
+    }
+);
+
+const { data: folderTree } = await useAsyncData(
+    `submission-configuration-folders-${$authStore.user?.user_name}`,
+    () => $api.configurationFolders.get(),
+    {
+        lazy: true,
+        transform: (v) => v?.data || []
+    }
+);
+
+const folderPathById = computed(() =>
+    buildConfigurationFolderPathMap(
+        folderTree.value || [],
+        $authStore.user?.user_name || ""
+    )
 );
 
 const configurationItems = computed(() => {
     if (!configurations.value) return [];
-    return Object.values(configurations.value).map((x) => ({
-        title: x.configuration.configurationName,
-        value: x._id,
-        shared: !!x.configuration?.sharedProjects?.length
-    }));
+
+    return Object.values(configurations.value).map((x) => {
+        const owner = x.misc?.owner;
+        const isShared = !!owner && owner !== $authStore.user?.user_name;
+
+        const folderId = String(x.configuration?.folderId || "");
+        const folderPath = folderId
+            ? folderPathById.value.get(folderId)
+            : undefined;
+
+        const sharedProjectNames = [
+            ...new Set(
+                (x.configuration?.sharedProjects || [])
+                    .map((projectRef: unknown) => {
+                        const projectId =
+                            typeof projectRef === "string"
+                                ? projectRef
+                                : projectRef &&
+                                    typeof projectRef === "object" &&
+                                    "_id" in projectRef
+                                  ? String(projectRef._id)
+                                  : "";
+
+                        return projectNamesById.value.get(projectId);
+                    })
+                    .filter((name): name is string => !!name)
+            )
+        ];
+
+        const projectLabel = sharedProjectNames.length
+            ? `Project: ${sharedProjectNames.join(", ")}`
+            : "Project unavailable";
+
+        const subtitle = isShared
+            ? [
+                  folderPath || `Shared by ${owner || "another user"}`,
+                  projectLabel
+              ].join(" · ")
+            : folderPath;
+
+        return {
+            title: x.configuration.configurationName,
+            subtitle,
+            value: x._id,
+            isShared
+        };
+    });
 });
 
 const configurationsById = computed(() =>
@@ -195,12 +292,21 @@ watch(
 );
 
 const formValid = ref(false);
+const isSubmitting = ref(false);
 
 const emit = defineEmits<{
     (e: "submit"): void;
 }>();
 
 const submit = async () => {
+    // Prevent unauthorized or duplicate submissions.
+    if (
+        $authStore.userLevel === $authStore.UserLevelEnum.guest ||
+        $authStore.userLevel === $authStore.UserLevelEnum.admin ||
+        isSubmitting.value
+    )
+        return;
+
     if ($store.demo) {
         $snackbar.show($store.demoMessage);
         dialog.value = false;
@@ -210,28 +316,35 @@ const submit = async () => {
     // check of form.name and form.configId for ts
     if (!formValid.value || !form.name || !form.configId) return;
 
-    const businessVars = Array.isArray(variableForm.value[form.configId])
-        ? variableForm.value[form.configId].map((v: any) => ({
-              key: v.key,
-              values: v.values,
-              selected: v.selected,
-              input: v.input
-          }))
-        : [];
+    isSubmitting.value = true;
 
-    await $api.benchmarks.submit({
-        name: form.name,
-        configId: form.configId,
-        sharedProjects: form.sharedProjects,
-        variables: businessVars
-    });
+    try {
+        const businessVars = Array.isArray(variableForm.value[form.configId])
+            ? variableForm.value[form.configId].map((v: any) => ({
+                  key: v.key,
+                  values: v.values,
+                  selected: v.selected,
+                  input: v.input
+              }))
+            : [];
 
-    if (!$store.error) {
-        $snackbar.show(
-            "Benchmark submitted - it may take a few seconds until the benchmark is displayed"
-        );
-        emit("submit");
-        dialog.value = false;
+        await $api.benchmarks.submit({
+            name: form.name,
+            configId: form.configId,
+            sharedProjects: form.sharedProjects,
+            variables: businessVars
+        });
+
+        if (!$store.error) {
+            $snackbar.show(
+                "Benchmark submitted - it may take a few seconds until the benchmark is displayed"
+            );
+
+            emit("submit");
+            dialog.value = false;
+        }
+    } finally {
+        isSubmitting.value = false;
     }
 };
 </script>
