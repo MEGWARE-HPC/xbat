@@ -12,7 +12,7 @@ This release contains many breaking changes and improvements. Please refer to th
 - database migrations via `./setup.sh migrate` for ClickHouse
 - configuration for xbatd can be generated with `./setup.sh generate-xbatd-conf [--stdout]`
 - script to export and import all benchmarks
-- xbatd support for el10 and optimized build process
+- xbatd support for el10 (#178) and optimized build process
 
 ### Changed
 
