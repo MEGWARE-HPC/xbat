@@ -802,6 +802,8 @@ paths:
             application/json:
               schema:
                 type: object
+        "503":
+          description: Measurement data could not be read from ClickHouse
       security:
         - oauth2:
             - benchmarks_r
@@ -963,6 +965,8 @@ paths:
             application/json:
               schema:
                 type: object
+        "503":
+          description: Measurement data could not be read from ClickHouse
       security:
         - oauth2:
             - benchmarks_r
