@@ -58,10 +58,7 @@ export const useGraph = () => {
             ) {
                 prefix = `${overrides.prefixes[jobId]} `;
             }
-            const measurements = $graphStore.getMeasurements({
-                ...query,
-                jobIds: [jobId]
-            });
+            const measurements = storeGraph.raw.value[jobId];
 
             if (!measurements?.traces?.length) continue;
 
@@ -190,14 +187,8 @@ export const useGraph = () => {
         unifiedBaseUnit: string;
         unifiedUnitIndex: number;
     }) => {
-        const { $graphStore } = useNuxtApp();
-
         const query = storeGraph.query.value;
-
-        const result = $graphStore.getMeasurements({
-            ...query,
-            jobIds: [jobId]
-        });
+        const result = storeGraph.raw.value[jobId];
 
         const preferences = storeGraph.preferences.value;
 

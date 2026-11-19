@@ -101,26 +101,22 @@
             </v-card-title>
             <v-card-text>
                 <ReactiveGraph
+                    v-if="storeGraph.graph.value"
                     :style="`height: ${props.height}px;`"
                     :graphId="props.graphId"
-                    ref="graphRef"
                     :graph="storeGraph.graph"
                     @relayout="emit('relayout', $event)"
                     type="default"
                     :relayoutData="props.relayoutData"
-                    @rendered="storeGraph.loading.value = false"
                     :loading="storeGraph.loading.value"
-                    v-if="
-                        Object.keys(metrics.value || {}).length || !props.noData
-                    "
                 ></ReactiveGraph>
-                <!-- graph already displays annotation stating the same issues but graph is never rendered when there are no metics - use this as fallback -->
                 <div
                     v-else
-                    class="d-flex justify-center no-data"
+                    class="d-flex justify-center align-center no-data"
                     :style="`height: ${props.height}px;`"
+                    role="status"
                 >
-                    <div style="margin-top: 160px">no data available</div>
+                    {{ graphMessage }}
                 </div>
             </v-card-text>
         </v-card>
@@ -145,13 +141,13 @@ interface Props {
     nodes?: Record<string, NodeMap>;
     relayoutData?: RelayoutData;
     height?: number;
-    noData?: boolean;
     defaultGroup?: string;
     defaultMetric?: string;
     defaultLevel?: string;
     flat?: boolean;
     fullscreen?: boolean;
     comparisonMode?: boolean;
+    metricsStatus?: "loading" | "ready" | "error";
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -159,7 +155,7 @@ const props = withDefaults(defineProps<Props>(), {
     nodes: () => ({}),
     relayoutData: () => ({}),
     height: 360,
-    noData: false,
+    metricsStatus: "ready",
     defaultGroup: "",
     defaultMetric: "",
     defaultLevel: "",
@@ -177,6 +173,17 @@ const theme = useCookie("xbat_theme");
 const { form, metricGroups, metricLevels, metricItems } = useGraphForm(metrics);
 
 watch(
+    storeGraph.query,
+    (query) => {
+        form.group = query.group || null;
+        form.metric = query.metric || null;
+        form.level = query.level || null;
+        form.node = query.node || null;
+    },
+    { immediate: true }
+);
+
+watch(
     [
         () => props.defaultGroup,
         () => props.defaultMetric,
@@ -184,7 +191,7 @@ watch(
     ],
     () => {
         // do not set defaults if fullscreen or group/metric/level is already set to prevent overwrite
-        if (props.fullscreen || form.group || form.metric || form.level) return;
+        if (props.fullscreen || form.group || form.metric) return;
 
         form.group = props.defaultGroup;
         form.metric = props.defaultMetric;
@@ -197,36 +204,46 @@ const nodeNames = computed(() =>
     props.jobIds.length ? Object.keys(props.nodes[props.jobIds[0]] || {}) : []
 );
 
-watch(
-    [() => props.jobIds, ...Object.keys(form).map((x) => () => form[x])],
-    () => {
-        if (!props.graphId || !form.group || !form.metric || !form.level)
-            return;
-
-        if (
-            metrics.value?.[form.group] &&
-            !(form.metric in metrics.value[form.group])
-        )
-            return;
-
-        const q = $graphStore.createQuery(
-            props.jobIds,
-            form.group,
-            form.metric,
-            form.level as GraphLevel,
-            form.node || ""
-        );
-
-        if (Object.keys(q).length) storeGraph.query.value = q;
-    },
-    { immediate: true }
+const metricAvailable = computed(
+    () =>
+        props.metricsStatus === "ready" &&
+        !!metrics.value?.[form.group ?? ""]?.[form.metric ?? ""]
 );
 
-watchEffect(() => {
-    form.group = storeGraph.query.value.group || null;
-    form.metric = storeGraph.query.value.metric || null;
-    form.level = storeGraph.query.value.level || null;
-    form.node = storeGraph.query.value.node || null;
+const query = computed(() => {
+    const level = (
+        props.comparisonMode ||
+        (metricAvailable.value &&
+            !metricLevels.value.includes(form.level ?? ""))
+            ? "job"
+            : form.level || "job"
+    ) as GraphLevel;
+
+    const currentNode = form.node ?? "";
+    const node = nodeNames.value.includes(currentNode)
+        ? currentNode
+        : (nodeNames.value[0] ?? "");
+
+    return $graphStore.createQuery(
+        metricAvailable.value ? props.jobIds : [],
+        form.group ?? "",
+        form.metric ?? "",
+        level,
+        node
+    );
+});
+
+watch(query, (value) => (storeGraph.query.value = value), { immediate: true });
+
+const graphMessage = computed(() => {
+    if (props.metricsStatus === "loading") return "Loading available metrics…";
+    if (props.metricsStatus === "error")
+        return "Unable to load available metrics.";
+    if (!metricAvailable.value && form.metric)
+        return "This metric is not available for the selected job.";
+    if (storeGraph.loading.value) return "Loading measurements…";
+    if (storeGraph.dataError.value) return "Unable to load measurements.";
+    return "No data available.";
 });
 
 const multiNode = computed(
@@ -245,10 +262,6 @@ watch(
     { immediate: true, deep: true }
 );
 
-watchEffect(() => {
-    if (props.comparisonMode) form.level = "job";
-});
-
 // use delay for updating graph colors as useGraph:getColors may otherwise still return old colors
 watch(
     theme,
@@ -259,18 +272,6 @@ watch(
     },
     { deep: true }
 );
-
-const unsubscribe = ref<(() => void) | null>(null);
-
-onMounted(() => {
-    unsubscribe.value = $graphStore.cacheClearEvent.on(
-        async () => await storeGraph.updateData(true)
-    );
-});
-
-onUnmounted(() => {
-    if (unsubscribe.value !== null) unsubscribe.value();
-});
 </script>
 
 <style lang="scss" scoped>

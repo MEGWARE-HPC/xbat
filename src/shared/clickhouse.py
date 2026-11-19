@@ -10,6 +10,10 @@ CONCURRENT_QUERY_LIMIT = 16  # Limit concurrent queries to prevent exhausting th
 logger = logging.getLogger(get_logger())
 
 
+class ClickHouseQueryError(RuntimeError):
+    """A database query failed instead of returning an empty result."""
+
+
 class ClickHouse:
     """Async wrapper for psycopg/pgbouncer to query ClickHouse"""
 
@@ -30,36 +34,43 @@ class ClickHouse:
             f"dbname=clickhouse host={pgbouncer_config['host']} port={pgbouncer_config['port']} user={pgbouncer_config['user']} password={pgbouncer_config['password']}"
         )
 
-    async def _execute(self, query):
+    async def _execute(self, query, *, strict=False):
         """Execute query with connection from pgbouncer"""
 
         result = []
         try:
             async with await pg.AsyncConnection.connect(
                     self.conninfo,
-                    autocommit=
-                    True,  # For ClickHouse compatibility to prevent "Expected TRANSACTION" errors
+                    autocommit=True,
             ) as conn:
                 async with conn.cursor(row_factory=dict_row) as cursor:
                     logger.debug(query)
                     await cursor.execute(query)
-                    result = await cursor.fetchall()
-        except pg.OperationalError as e:
-            logger.error("Connection error: %s", format_error(e))
-        except pg.ProgrammingError as e:
-            # no result present, e.g. no returning statement
-            pass
-        except pg.DatabaseError as e:
-            logger.error("Database error: %s | SQL: %s", format_error(e),
-                         query[:512])
-        except pg.Error as e:
-            logger.error(format_error(e))
+                    if strict or cursor.description is not None:
+                        result = await cursor.fetchall()
+        except pg.Error as exc:
+            if strict:
+                logger.error("ClickHouse query failed: %s | SQL: %s",
+                             format_error(exc), query[:512])
+                raise ClickHouseQueryError("ClickHouse query failed") from exc
+
+            if isinstance(exc, pg.OperationalError):
+                logger.error("Connection error: %s", format_error(exc))
+            elif isinstance(exc, pg.ProgrammingError):
+                pass
+            elif isinstance(exc, pg.DatabaseError):
+                logger.error("Database error: %s | SQL: %s", format_error(exc),
+                             query[:512])
+            else:
+                logger.error(format_error(exc))
 
         return result
 
     async def execute_queries(self,
                               queries,
-                              concurrency=CONCURRENT_QUERY_LIMIT):
+                              concurrency=CONCURRENT_QUERY_LIMIT,
+                              *,
+                              strict=False):
         """Execute multiple queries (with concurrency limit)"""
         self.setup()
 
@@ -67,7 +78,7 @@ class ClickHouse:
 
         async def _execute_concurrent(query):
             async with semaphore:
-                return await self._execute(query)
+                return await self._execute(query, strict=strict)
 
         results = []
         for i in range(0, len(queries), concurrency):

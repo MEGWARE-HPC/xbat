@@ -10,7 +10,6 @@ import type {
     GraphModifiers,
     GraphLevel
 } from "~/types/graph";
-import { useEventBus } from "@vueuse/core";
 import { deepEqual } from "~/utils/misc";
 import type { NodeMap } from "~/repository/modules/nodes";
 import { Mutex } from "async-mutex";
@@ -37,6 +36,7 @@ export interface StoreGraph extends StoreBaseGraph {
     modifiers: GraphModifiers;
     raw: { [key: string]: GraphRawData }; // save by jobId due to multi-job graphs
     settings: GraphSettings;
+    dataError: boolean;
 }
 
 export type GraphQueryRoofline = {
@@ -115,6 +115,7 @@ export interface StoreGraphReturnDefault extends StoreGraphReturnBase {
     metrics: Ref<Metrics>;
     modifiers: Ref<GraphModifiers>;
     settings: Ref<GraphSettings>;
+    dataError: Ref<boolean>;
 }
 
 export interface StoreGraphReturnRoofline extends StoreGraphReturnBase {
@@ -134,50 +135,76 @@ export const useGraphStore = defineStore("graph", () => {
     const { generateGraph } = useGraph();
     const { generateRooflineGraph } = useGraphRoofline();
 
-    const cacheClearEvent = useEventBus<string>("graph-cache-clear");
+    const pendingMeasurements = new Map<string, Promise<GraphRawData | null>>();
+    const defaultRequests = new WeakMap<StoreGraph, symbol>();
 
-    const addMeasurements = (
+    const loadMeasurements = (
         query: GraphQuery,
-        payload: GraphRawData
-    ): void => {
-        measurements.set(createAccessString(query), payload);
+        refresh = false
+    ): Promise<GraphRawData | null> => {
+        if (process.server || !query.metric || !query.level)
+            return Promise.resolve(null);
+
+        const key = createAccessString(query);
+
+        const pending = pendingMeasurements.get(key);
+        if (pending) return pending;
+
+        const cached = measurements.get(key);
+        if (!refresh && cached) return Promise.resolve(cached);
+
+        const { $api } = useNuxtApp();
+        const request = Promise.resolve()
+            .then(() => $api.measurements.get(query))
+            .then((result) => {
+                if (pendingMeasurements.get(key) !== request || !result)
+                    return null;
+
+                measurements.set(key, result);
+                return result;
+            })
+            .finally(() => {
+                if (pendingMeasurements.get(key) === request)
+                    pendingMeasurements.delete(key);
+            });
+
+        pendingMeasurements.set(key, request);
+        return request;
     };
 
     const fetchMeasurements = async (
         query: GraphQuery,
-        refresh: boolean = false
+        refresh = false
     ): Promise<boolean> => {
-        // graphs are client-only and should not be fetched on the server
-        // as this can lead to errors since NuxtInstance might not be available yet
-        if (process.server) return false;
-
-        const { $api } = useNuxtApp();
-
-        if (!query.metric || !query.level) return false;
-
-        // check if data is already cached (unless refresh is forced)
-        if (
-            !refresh &&
-            measurements.get(createAccessString(query)) !== undefined
-        )
+        if (process.server || !query.metric || !query.level) return false;
+        if (!refresh && measurements.has(createAccessString(query)))
             return true;
-
-        const result = await $api.measurements.get(query);
-        if (!result) return false;
-
-        addMeasurements(query, result);
-
-        return !!result.traces?.length;
+        return !!(await loadMeasurements(query, refresh))?.traces?.length;
     };
 
     const bustCache = (jobIds: number[]) => {
-        measurements.forEach((_value, key) => {
-            if (jobIds.some((jobId) => key.startsWith(`${jobId}.`))) {
-                measurements.delete(key);
+        const matches = (key: string) =>
+            jobIds.some((jobId) => key.startsWith(`${jobId}.`));
+
+        for (const key of measurements.keys()) {
+            if (matches(key)) measurements.delete(key);
+        }
+
+        for (const key of pendingMeasurements.keys()) {
+            if (matches(key)) pendingMeasurements.delete(key);
+        }
+
+        // Let the accepted metrics update reach the graph query first.
+        void nextTick(() => {
+            for (const [id, graph] of Object.entries(graphs.value)) {
+                if (
+                    graph.type === "default" &&
+                    graph.query.jobIds.some((jobId) => jobIds.includes(jobId))
+                ) {
+                    void updateDefaultData(id, graph);
+                }
             }
         });
-
-        cacheClearEvent.emit("graph-cache-clear", jobIds);
     };
 
     const getMeasurements = (query: GraphQuery): GraphRawData | null => {
@@ -222,7 +249,8 @@ export const useGraphStore = defineStore("graph", () => {
                 },
                 nodes: {},
                 noData: false,
-                loading: false
+                loading: false,
+                dataError: false
             };
         else {
             graphs.value[id] = {
@@ -286,6 +314,55 @@ export const useGraphStore = defineStore("graph", () => {
         updateAllGraphs();
     };
 
+    const updateDefaultData = async (
+        id: string,
+        graph: StoreGraph,
+        refresh = false
+    ) => {
+        if (process.server || !graph?.query.jobIds.length) return;
+
+        const query = { ...graph.query, jobIds: [...graph.query.jobIds] };
+        const request = Symbol();
+
+        defaultRequests.set(graph, request);
+
+        const isCurrent = () =>
+            graphs.value[id] === graph &&
+            defaultRequests.get(graph) === request;
+
+        graph.loading = true;
+        graph.dataError = false;
+
+        try {
+            const payloads = await Promise.all(
+                query.jobIds.map(async (jobId) => {
+                    const payload = await loadMeasurements(
+                        { ...query, jobIds: [jobId] },
+                        refresh
+                    );
+                    if (!payload) throw new Error("Measurements unavailable");
+                    return [jobId, payload] as const;
+                })
+            );
+
+            if (!isCurrent()) return;
+
+            graph.raw = Object.fromEntries(payloads);
+            graph.graph = payloads.some(([, payload]) => payload.traces?.length)
+                ? generateGraph(id)
+                : null;
+        } catch (error) {
+            if (!isCurrent()) return;
+
+            console.error("Failed to load graph measurements:", error);
+            graph.raw = {};
+            graph.graph = null;
+            graph.dataError = true;
+        } finally {
+            if (isCurrent()) graph.loading = false;
+        }
+    };
+
     function useStoreGraph(
         id: string,
         type: "default"
@@ -306,11 +383,17 @@ export const useGraphStore = defineStore("graph", () => {
         const graphRef = computed(() => graphs.value[id]);
 
         const updateGraph = () => {
-            if (!graphRef.value) registerGraph(id, type);
-            graphRef.value.loading = true;
-            if (type === "default") graphRef.value.graph = generateGraph(id);
-            else graphRef.value.graph = generateRooflineGraph(id);
-            // loading state is reset when graph is rendered
+            const graph = graphRef.value;
+            if (!graph) return;
+
+            if (graph.type === "default") {
+                if (graph.graph) graph.graph = generateGraph(id);
+                return;
+            }
+
+            graph.loading = true;
+            graph.graph = generateRooflineGraph(id);
+            // Roofline loading state is reset when its graph is rendered.
         };
 
         watch(
@@ -324,89 +407,52 @@ export const useGraphStore = defineStore("graph", () => {
             id: string,
             graphRef: Ref<StoreGraph>
         ) => {
-            const updateData = async (refresh = false) => {
-                if (!graphRef.value) registerGraph(id, type);
+            const updateData = (refresh = false) =>
+                updateDefaultData(id, graphRef.value, refresh);
 
-                graphRef.value.loading = true;
-                let res: boolean[] = [];
-                const jobIds = graphRef.value.query.jobIds;
-                // Use mutex as updateData might be triggered multiple times.
-                // This prevents duplicate API calls as it ensures that the second request uses the cache instead of firing again.
-                // Since this mutex is specific to this graph, it does not prevent duplicate requests from other graphs
-                await mutex.runExclusive(async () => {
-                    res = await Promise.all(
-                        jobIds.map((x) =>
-                            fetchMeasurements(
-                                {
-                                    ...graphRef.value.query,
-                                    jobIds: [x]
-                                },
-                                refresh
-                            )
-                        )
-                    );
-                });
-
-                if (res?.includes(false)) {
-                    graphs.value[id].loading = false;
-                    return;
-                }
-
-                let raw: { [key: string]: GraphRawData } = {};
-
-                // save raw data for export as JSON/CSV
-                jobIds.forEach((x) => {
-                    const m = getMeasurements({
-                        ...graphRef.value.query,
-                        jobIds: [x]
-                    });
-                    if (!m) return;
-                    raw[x] = m;
-                });
-
-                graphRef.value.raw = raw;
-                updateGraph();
-            };
             return {
                 query: computed({
                     get: () => graphRef.value?.query || {},
                     set: (value: GraphQuery) => {
-                        if (deepEqual(graphRef.value.query, value)) {
-                            return;
-                        }
+                        const graph = graphRef.value;
+                        if (!graph || deepEqual(graph.query, value)) return;
 
-                        const prevQuery = graphRef.value.query;
-                        graphRef.value.raw = {};
-                        graphRef.value.query = value;
-
-                        // Determine previously visible tables to (partially) preserve metric selection when only level changes
+                        const previous = graph.query;
                         const onlyLevelChange =
-                            prevQuery.group === value.group &&
-                            prevQuery.metric === value.metric;
-                        const traces = graphRef.value.graph?.traces;
-                        const visibleTables: string[] =
-                            traces
-                                ?.map((trace) =>
-                                    graphRef.value.settings.visible.includes(
-                                        trace.uid
-                                    )
-                                        ? trace.table
-                                        : undefined
-                                )
-                                .filter((v): v is string => v !== undefined) ??
-                            [];
+                            value.jobIds.length > 0 &&
+                            deepEqual(previous.jobIds, value.jobIds) &&
+                            previous.group === value.group &&
+                            previous.metric === value.metric &&
+                            previous.level !== value.level &&
+                            previous.deciles === value.deciles &&
+                            (previous.node === value.node ||
+                                previous.level === "job" ||
+                                value.level === "job");
 
-                        graphRef.value.settings = {
+                        const visibleTables = onlyLevelChange
+                            ? (graph.graph?.traces ?? [])
+                                  .filter((trace) =>
+                                      graph.settings.visible.includes(trace.uid)
+                                  )
+                                  .map((trace) => trace.table)
+                            : [];
+
+                        defaultRequests.delete(graph);
+
+                        graph.query = { ...value, jobIds: [...value.jobIds] };
+                        graph.graph = null;
+                        graph.raw = {};
+                        graph.loading = false;
+                        graph.dataError = false;
+                        graph.settings = {
                             ...defaultSettings,
-                            prevVisibleTables:
-                                onlyLevelChange && visibleTables.length
-                                    ? Array.from(new Set(visibleTables))
-                                    : []
+                            prevVisibleTables: [...new Set(visibleTables)]
                         };
 
-                        updateData();
+                        if (value.jobIds.length) void updateData();
                     }
                 }),
+                dataError: computed(() => graphRef.value?.dataError ?? false),
                 raw: computed({
                     get: () => graphRef.value?.raw || {},
                     set: (value: { [key: string]: GraphRawData }) => {
@@ -592,7 +638,6 @@ export const useGraphStore = defineStore("graph", () => {
         fetchMeasurements,
         getMeasurements,
         bustCache,
-        cacheClearEvent,
         createQuery,
         //
         preferences,

@@ -4,10 +4,12 @@ import re
 import logging
 import asyncio
 import numpy as np
+import json
 from io import StringIO
 from datetime import datetime
 from flask import request, Response, jsonify
 from pathlib import Path
+from werkzeug.exceptions import ServiceUnavailable
 from shared import httpErrors
 from shared import clickhouse as cdb
 from shared.mongodb import MongoDB
@@ -27,6 +29,7 @@ logger = logging.getLogger(get_logger())
 METRICS_PATH = Path().absolute() / "restapi" / "metrics.json"
 METRICS = read_file_to_dict(METRICS_PATH)
 MAX_QUERY_COUNT = 8
+GRAPH_CACHE_NAMESPACE = "xbat:graph:v2"
 
 LEVEL_MAPPING = {
     "thread": 0,
@@ -203,9 +206,11 @@ def _create_query(jobId: int,
     if level != "job" and node:
         filters.append(f"node='{node}'")
     if capture_start:
-        filters.append(f"ts >= '{capture_start.replace(tzinfo=None).isoformat()}'")
+        filters.append(
+            f"ts >= '{capture_start.replace(tzinfo=None).isoformat()}'")
     if capture_end:
-        filters.append(f"ts <= '{capture_end.replace(tzinfo=None).isoformat()}'")
+        filters.append(
+            f"ts <= '{capture_end.replace(tzinfo=None).isoformat()}'")
 
     columns = [f"{value_calculation} as val", "ts"]
     groups = ["ts"]
@@ -237,7 +242,32 @@ def _sanitize_uid(s):
     return re.sub(r'[\s\[\]/\(\)]', '_', s).lower()
 
 
-async def calculate_metrics(jobId, group, metric, level, node, deciles):
+def _graph_cache_key(resource, *parameters):
+    encoded = json.dumps(parameters, separators=(",", ":"))
+    return f"{GRAPH_CACHE_NAMESPACE}:{resource}:{encoded}"
+
+
+async def _read_graph_queries(queries):
+    try:
+        return await clickhouse.execute_queries(queries, strict=True)
+    except cdb.ClickHouseQueryError as exc:
+        raise ServiceUnavailable(
+            "Measurement data is temporarily unavailable.") from exc
+
+
+async def _get_graph_tables():
+    rows = (await _read_graph_queries(["SHOW TABLES"]))[0]
+    return {row["name"] for row in rows}
+
+
+async def calculate_metrics(jobId,
+                            group,
+                            metric,
+                            level,
+                            node,
+                            deciles,
+                            *,
+                            strict=False):
     """
     Retrieves and calculates metrics based on the provided parameters.
 
@@ -274,7 +304,15 @@ async def calculate_metrics(jobId, group, metric, level, node, deciles):
 
     # TODO check that requested level is not smaller than minimum level!
 
-    metric_tables = metricMeta["metrics"].keys()
+    metric_tables = list(metricMeta["metrics"])
+    run_queries = _read_graph_queries if strict else clickhouse.execute_queries
+
+    if strict:
+        # A table not installed on this instance is not a failed read.
+        available_tables = await _get_graph_tables()
+        metric_tables = [
+            table for table in metric_tables if table in available_tables
+        ]
 
     queries = []
     # check which aggregation levels are available
@@ -286,12 +324,15 @@ async def calculate_metrics(jobId, group, metric, level, node, deciles):
         if level != "job" and node:
             parts.append(f"AND node='{node}'")
         if capture_start:
-            parts.append(f"AND ts >= '{capture_start.replace(tzinfo=None).isoformat()}'")
+            parts.append(
+                f"AND ts >= '{capture_start.replace(tzinfo=None).isoformat()}'"
+            )
         if capture_end:
-            parts.append(f"AND ts <= '{capture_end.replace(tzinfo=None).isoformat()}'")
+            parts.append(
+                f"AND ts <= '{capture_end.replace(tzinfo=None).isoformat()}'")
         queries.append(" ".join(parts))
 
-    all_levels = await clickhouse.execute_queries(queries)
+    all_levels = await run_queries(queries)
 
     queries = []
     available_metric_tables = []
@@ -322,7 +363,7 @@ async def calculate_metrics(jobId, group, metric, level, node, deciles):
         logger.debug("Unable to find entries for %s", metric)
         return {"traces": [], "statistics": {}}
 
-    all_records = await clickhouse.execute_queries(queries)
+    all_records = await run_queries(queries)
 
     unit = metricMeta["unit"] if "unit" in metricMeta else ""
 
@@ -533,19 +574,29 @@ async def get_measurements(jobId,
     :param level: aggregation level
     :param node: node
     """
-    valkey_key = get_request_uri()
-    cache = valkey.get(valkey_key)
+    node = node or ""
+    deciles = bool(deciles) and level in ("thread", "core")
 
+    valkey_key = _graph_cache_key("measurements", jobId, group, metric, level,
+                                  node, deciles)
+    cache = valkey.get(valkey_key)
     if cache is not None:
         return cache, 200
 
-    result = await calculate_metrics(jobId, group, metric, level, node,
-                                     deciles)
+    # Do not cache a read that started before the job reached a terminal state.
+    cacheable = jobs_cacheable([jobId])
+    result = await calculate_metrics(jobId,
+                                     group,
+                                     metric,
+                                     level,
+                                     node,
+                                     deciles,
+                                     strict=True)
 
-    if result is None: raise httpErrors.NotFound()
+    if result is None:
+        raise httpErrors.NotFound()
 
-    # prevent caching of unfinished jobs
-    if jobs_cacheable([jobId]):
+    if cacheable:
         valkey.set(valkey_key, result)
 
     return result, 200
@@ -831,24 +882,17 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
     if not jobId and not jobIds:
         return METRICS, 200
 
-    valkey_key = get_request_uri()
-    cache = valkey.get(valkey_key)
+    jobIds = list(jobIds) if jobIds else [jobId]
+    intersect = bool(intersect) and len(jobIds) > 1
 
+    valkey_key = _graph_cache_key("metrics", jobIds, intersect)
+    cache = valkey.get(valkey_key)
     if cache is not None:
         return cache, 200
 
-    jobIds = jobIds if jobIds else [jobId]
-
-    # prevent caching of unfinished jobs
+    # Prevent caching of unfinished jobs.
     cacheable = jobs_cacheable(jobIds)
-
-    available_tables = []
-
-    # check which tables are currently present (may change during runtime as additional may be added)
-    res = await clickhouse.execute_query("SHOW TABLES")
-
-    for table in res:
-        available_tables.append(table["name"])
+    available_tables = await _get_graph_tables()
 
     result = []
     for jobId in jobIds:
@@ -868,9 +912,12 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
 
             time_filters = []
             if capture_start:
-                time_filters.append(f"ts >= '{capture_start.replace(tzinfo=None).isoformat()}'")
+                time_filters.append(
+                    f"ts >= '{capture_start.replace(tzinfo=None).isoformat()}'"
+                )
             if capture_end:
-                time_filters.append(f"ts <= '{capture_end.replace(tzinfo=None).isoformat()}'")
+                time_filters.append(
+                    f"ts <= '{capture_end.replace(tzinfo=None).isoformat()}'")
             time_clause = (" AND " +
                            " AND ".join(time_filters)) if time_filters else ""
 
@@ -889,7 +936,7 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
 
         logger.debug(f"QUERIES: {queries}")
 
-        jobResult = await clickhouse.execute_queries(queries)
+        jobResult = await _read_graph_queries(queries)
 
         result.append([x for xs in jobResult for x in xs])
 
@@ -932,9 +979,10 @@ async def get_available_metrics(jobId=None, jobIds=None, intersect=False):
                     available_min_level = min(
                         [LEVEL_MAPPING[x] for x in available_levels])
                     available[group][metricName] = {
-                        **metricInfo, "metrics":
-                        {k: v
-                         for k, v in metricInfo["metrics"].items()},
+                        **metricInfo, "metrics": {
+                            k: v
+                            for k, v in metricInfo["metrics"].items()
+                        },
                         "level_min":
                         dict_get_key(LEVEL_MAPPING, available_min_level)
                     }

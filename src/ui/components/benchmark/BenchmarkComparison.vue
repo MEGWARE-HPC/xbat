@@ -91,6 +91,7 @@
                                 title="Comparison - Modify Graph"
                                 :job-ids="state.selected"
                                 :metrics="metrics"
+                                :metrics-status="metricsStatus"
                                 :nodes="nodes"
                                 default-level="job"
                                 default-group="cpu"
@@ -190,40 +191,58 @@ watch(
 );
 
 watch(
-    [() => state.selected, () => props.modelValue],
+    [() => [...state.selected], () => props.modelValue],
+    async ([ids, visible], _previous, onCleanup) => {
+        let obsolete = false;
+        onCleanup(() => {
+            obsolete = true;
+        });
 
-    async ([v, m]) => {
-        if (!v.length) {
+        if (!ids.length) {
             metrics.value = {};
+            metricsStatus.value = "ready";
             nodes.value = {};
             state.missing = [];
             state.noData = false;
             return;
         }
 
-        if (!m) return;
+        if (!visible) return;
+
+        metricsStatus.value = "loading";
+        metrics.value = {};
+        nodes.value = {};
+        state.missing = [];
+        state.noData = false;
 
         try {
-            const nodesPromises = v.map((jobId) => $api.jobs.getNodes(jobId));
-            const nodesResults = await Promise.all(nodesPromises);
-
-            const nodesByJobAndName = {};
-            v.forEach((jobId, index) => {
-                nodesByJobAndName[jobId] = nodesResults[index];
-            });
-            nodes.value = nodesByJobAndName;
-        } catch (error) {
-            console.error(
-                "Error fetching nodes by job IDs for comparison:",
-                error
+            const results = await Promise.all(
+                ids.map((id) => $api.jobs.getNodes(id))
             );
+            if (obsolete) return;
+
+            nodes.value = Object.fromEntries(
+                ids.map((id, i) => [id, results[i]])
+            );
+        } catch (error) {
+            if (obsolete) return;
+            console.error("Error fetching comparison nodes:", error);
         }
 
-        const metricsRes = await $api.metrics.get(v, true);
-        metrics.value = metricsRes.metrics;
+        try {
+            const result = await $api.metrics.get(ids, true);
+            if (obsolete) return;
+            if (!result) throw new Error("Comparison metrics unavailable");
 
-        state.noData = !Object.keys(metricsRes.metrics).length;
-        state.missing = metricsRes.missing || [];
+            metrics.value = result.metrics ?? {};
+            state.noData = !Object.keys(metrics.value).length;
+            state.missing = result.missing ?? [];
+            metricsStatus.value = "ready";
+        } catch (error) {
+            if (obsolete) return;
+            metricsStatus.value = "error";
+            console.error("Error fetching comparison metrics:", error);
+        }
     },
     { immediate: true }
 );
