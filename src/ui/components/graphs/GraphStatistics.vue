@@ -27,7 +27,8 @@
                     density="comfortable"
                     variant="outlined"
                     rounded="sm"
-                    :disabled="!canExport"
+                    :disabled="!canExport || isExporting"
+                    :loading="isExporting"
                     @click="exportStatisticsCsv"
                 />
             </div>
@@ -62,6 +63,8 @@ const state = reactive({
 });
 
 const storeGraph = $graphStore.useStoreGraph(props.graphId, "default");
+
+const isExporting = ref(false);
 
 const headers = computed(() => {
     const level = storeGraph.query.value?.level;
