@@ -7,6 +7,8 @@ export type ConfigurationFolderNode = {
     children?: ConfigurationFolderNode[];
 };
 
+export const HOME_FOLDER_LABEL = "Home";
+
 export const findUserHomeTree = (
     treeNodes: ConfigurationFolderNode[] = [],
     userName: string
@@ -38,7 +40,9 @@ export const buildConfigurationFolderPathMap = (
         if (!root?.id) continue;
 
         const isOwnHome = ownHome && String(root.id) === String(ownHome.id);
-        const rootName = isOwnHome ? "home" : String(root.name || "");
+        const rootName = isOwnHome
+            ? HOME_FOLDER_LABEL
+            : String(root.name || "");
         if (!rootName) continue;
 
         walk(root, [rootName]);
