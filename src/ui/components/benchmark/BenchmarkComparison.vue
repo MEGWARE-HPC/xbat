@@ -137,6 +137,7 @@ const state = reactive({
 });
 
 const metrics = ref({});
+const metricsStatus = ref("ready");
 const nodes = ref({});
 const benchmarks = ref([]);
 const jobs = ref([]);
