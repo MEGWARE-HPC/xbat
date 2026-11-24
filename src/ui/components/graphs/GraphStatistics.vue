@@ -115,35 +115,49 @@ const exportStatisticsCsv = async () => {
 
     isExporting.value = true;
 
-    const responseBlob = await $api.measurements.exportStatistics(query);
+    try {
+        const responseBlob = await $api.measurements.exportStatistics(query);
 
-    if (!responseBlob || responseBlob.size === 0) {
-        $snackbar.show("No statistics data available for export", "warning");
-        return;
+        if (!responseBlob || responseBlob.size === 0) {
+            $snackbar.show(
+                "No statistics data available for export",
+                "warning"
+            );
+            return;
+        }
+
+        const jobIds = [...new Set(query.jobIds)];
+
+        const jobPrefix =
+            jobIds.length === 1 ? String(jobIds[0]) : `${jobIds.length}_jobs`;
+
+        const filename = `${jobPrefix}_${query.group}_${query.metric}_${query.level}_statistics.csv`;
+
+        const url = window.URL.createObjectURL(responseBlob);
+        const link = document.createElement("a");
+
+        try {
+            link.href = url;
+            link.download = filename;
+
+            document.body.appendChild(link);
+            link.click();
+        } finally {
+            link.remove();
+
+            window.setTimeout(() => {
+                window.URL.revokeObjectURL(url);
+            }, 1000);
+        }
+    } catch (error) {
+        console.error("Failed to export statistics CSV:", error);
+
+        $snackbar.show(
+            "Failed to export statistics CSV. Please try again.",
+            "error"
+        );
+    } finally {
+        isExporting.value = false;
     }
-
-    const jobIds = [...new Set(query.jobIds)];
-
-    const jobPrefix =
-        jobIds.length === 1 ? String(jobIds[0]) : `${jobIds.length}_jobs`;
-
-    const filename = `${jobPrefix}_${query.group}_${query.metric}_${query.level}_statistics.csv`;
-
-    const url = window.URL.createObjectURL(responseBlob);
-    const link = document.createElement("a");
-
-    link.href = url;
-    link.download = filename;
-
-    document.body.appendChild(link);
-    link.click();
-
-    link.remove();
-
-    window.setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-    }, 1000);
-
-    isExporting.value = false;
 };
 </script>
