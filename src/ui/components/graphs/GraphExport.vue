@@ -11,6 +11,7 @@
                         :modelValue="exportJSON"
                         height="700"
                         language="json"
+                        :filename="`${exportFilename}.json`"
                     ></Editor
                 ></v-window-item>
                 <v-window-item value="csv" class="mt-2" eager>
@@ -34,6 +35,7 @@
                         height="700"
                         no-wrap
                         language="csv"
+                        :filename="`${exportFilename}.csv`"
                     ></Editor>
                 </v-window-item>
                 <v-window-item value="image" class="mt-2">
@@ -450,6 +452,20 @@ watch(
     }
 );
 
+const exportFilename = computed(() => {
+    const query = $graphStore.getQuery(props.graphId);
+
+    if (!query?.group || !query?.metric || !query?.level) {
+        return "graph";
+    }
+
+    const jobIds = Object.keys(storeGraph.raw.value || {}).join("_") || "graph";
+
+    return `${jobIds}_${query.group}_${query.metric}_${query.level}${
+        query.level != "job" ? `_${query.node}` : ""
+    }`;
+});
+
 const exportJSON = computed(() =>
     JSON.stringify(storeGraph.raw.value, null, 2)
 );
@@ -499,12 +515,8 @@ const imgExportSettings = computed(() => {
 });
 
 const exportGraph = async () => {
-    const query = $graphStore.getQuery(props.graphId);
-    const name = `${Object.keys(storeGraph.raw.value).join("_")}_${
-        query.group
-    }_${query.metric}_${query.level}${
-        query.level != "job" ? `_${query.node}` : ""
-    }`;
+    const name = exportFilename.value;
+
     if (state.tab == "json") download(name + ".json", exportJSON.value);
     else if (state.tab == "csv") download(name + ".csv", exportCSV.value.value);
     else {
