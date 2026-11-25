@@ -27,7 +27,8 @@
                     density="comfortable"
                     variant="outlined"
                     rounded="sm"
-                    :disabled="!canExport"
+                    :disabled="!canExport || isExporting"
+                    :loading="isExporting"
                     @click="exportStatisticsCsv"
                 />
             </div>
@@ -63,6 +64,8 @@ const state = reactive({
 
 const storeGraph = $graphStore.useStoreGraph(props.graphId, "default");
 
+const isExporting = ref(false);
+
 const headers = computed(() => {
     const level = storeGraph.query.value?.level;
 
@@ -97,25 +100,64 @@ const tableItems = computed(() => {
 const canExport = computed(() => {
     return !!storeGraph.graph.value?.traces?.length;
 });
-const exportStatisticsCsv = async () => {
-    const query = storeGraph.query.value;
-    if (!query) return;
 
-    const responseBlob = await $api.measurements.exportStatistics(query);
-    if (!responseBlob || responseBlob.size === 0) {
-        $snackbar.show("No statistics data available for export");
+const exportStatisticsCsv = async () => {
+    const currentQuery = storeGraph.query.value;
+
+    if (!currentQuery || !currentQuery.jobIds.length || isExporting.value) {
         return;
     }
-    const url = window.URL.createObjectURL(responseBlob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${query.jobIds[0]}_${query.group}_${query.metric}_${query.level}_statistics.csv`;
-    document.body.appendChild(link);
-    link.click();
 
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(link);
+    const query = {
+        ...currentQuery,
+        jobIds: [...currentQuery.jobIds]
+    };
 
-    return;
+    isExporting.value = true;
+
+    try {
+        const responseBlob = await $api.measurements.exportStatistics(query);
+
+        if (!responseBlob || responseBlob.size === 0) {
+            $snackbar.show(
+                "No statistics data available for export",
+                "warning"
+            );
+            return;
+        }
+
+        const jobIds = [...new Set(query.jobIds)];
+
+        const jobPrefix =
+            jobIds.length === 1 ? String(jobIds[0]) : `${jobIds.length}_jobs`;
+
+        const filename = `${jobPrefix}_${query.group}_${query.metric}_${query.level}_statistics.csv`;
+
+        const url = window.URL.createObjectURL(responseBlob);
+        const link = document.createElement("a");
+
+        try {
+            link.href = url;
+            link.download = filename;
+
+            document.body.appendChild(link);
+            link.click();
+        } finally {
+            link.remove();
+
+            window.setTimeout(() => {
+                window.URL.revokeObjectURL(url);
+            }, 1000);
+        }
+    } catch (error) {
+        console.error("Failed to export statistics CSV:", error);
+
+        $snackbar.show(
+            "Failed to export statistics CSV. Please try again.",
+            "error"
+        );
+    } finally {
+        isExporting.value = false;
+    }
 };
 </script>

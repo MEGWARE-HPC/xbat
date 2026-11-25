@@ -28,6 +28,7 @@ This release contains many breaking changes and improvements. Please refer to th
 - improved the configuration selection in benchmark submission by displaying folder paths, shared project information, and distinct icons for personal and shared configurations (#217)
 - improved xbatd for el8 and el9
 - upgraded LIKWID to v5.5.2 (#247)
+- improved CSV/JSON export filenames to follow the existing graph export naming convention (#270)
 
 ### Fixed
 
@@ -38,6 +39,7 @@ This release contains many breaking changes and improvements. Please refer to th
 - the project-sharing hint remaining visible when no projects are configured (#182)
 - improved benchmark submission experience and fix disabled activator (#253)
 - standardized Home folder naming and labels in the folder system (#225)
+- multi-job statistics CSV exports to correctly include data from all selected jobs (#189)
 
 ## v1.3.0 - 2026-05-08
 

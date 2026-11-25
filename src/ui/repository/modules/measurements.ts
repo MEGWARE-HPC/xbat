@@ -30,16 +30,96 @@ class MeasurementModule extends FetchFactory {
     }
 
     async exportStatistics(query: GraphQuery) {
-        const response = await this.call<Blob>(
-            "GET",
-            `${this.RESOURCE}/${query.jobIds[0]}/statistics/csv?group=${query.group}&metric=${query.metric}&level=${query.level}&node=${query.node}`,
-            undefined,
-            { responseType: "blob" }
-        );
-        if (response && response.size === 0) {
+        const jobIds = [...new Set(query.jobIds)];
+
+        if (jobIds.length === 0) {
             return null;
         }
-        return response;
+
+        const params = new URLSearchParams({
+            group: query.group,
+            metric: query.metric,
+            level: query.level,
+            node: query.node || ""
+        });
+
+        // Fetch statistics for all selected jobs
+        const responses = await Promise.all(
+            jobIds.map((jobId) =>
+                this.call<Blob>(
+                    "GET",
+                    `${this.RESOURCE}/${jobId}/statistics/csv?${params.toString()}`,
+                    undefined,
+                    { responseType: "blob" }
+                )
+            )
+        );
+
+        const blobs: Blob[] = [];
+
+        for (let index = 0; index < responses.length; index++) {
+            const response = responses[index];
+
+            if (!response || response.size === 0) {
+                if (jobIds.length === 1) {
+                    return null;
+                }
+
+                throw new Error(
+                    `No statistics data available for job ${jobIds[index]}`
+                );
+            }
+
+            blobs.push(response);
+        }
+
+        if (blobs.length === 1) {
+            return blobs[0];
+        }
+
+        // Read CSV contents
+        const contents = await Promise.all(blobs.map((blob) => blob.text()));
+
+        const parts = contents.map((content, index) => {
+            const headerEnd = content.indexOf("\n");
+
+            if (headerEnd === -1) {
+                throw new Error(
+                    `Invalid statistics CSV for job ${jobIds[index]}`
+                );
+            }
+
+            const header = content
+                .slice(0, headerEnd)
+                .replace(/^\uFEFF/, "")
+                .replace(/\r$/, "");
+
+            const body = content.slice(headerEnd + 1);
+
+            if (!body.trim()) {
+                throw new Error(
+                    `No statistics rows available for job ${jobIds[index]}`
+                );
+            }
+
+            return { header, body };
+        });
+
+        const header = parts[0].header;
+
+        if (parts.some((part) => part.header !== header)) {
+            throw new Error("Inconsistent statistics CSV headers");
+        }
+
+        return new Blob(
+            [
+                `${header}\r\n`,
+                ...parts.map((part) =>
+                    part.body.endsWith("\n") ? part.body : `${part.body}\r\n`
+                )
+            ],
+            { type: "text/csv;charset=utf-8" }
+        );
     }
 }
 
