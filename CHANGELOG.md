@@ -28,6 +28,7 @@ This release contains many breaking changes and improvements. Please refer to th
 - improved the configuration selection in benchmark submission by displaying folder paths, shared project information, and distinct icons for personal and shared configurations (#217)
 - improved xbatd for el8 and el9
 - upgraded LIKWID to v5.5.2 (#247)
+- relocated the xbatd binary to avoid accidental direct execution by users (#185)
 
 ### Fixed
 

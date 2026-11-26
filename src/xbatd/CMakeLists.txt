@@ -117,5 +117,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 # Install target (optional)
-install(TARGETS ${PROJECT_NAME} DESTINATION /usr/local/bin)
+install(TARGETS ${PROJECT_NAME} DESTINATION /usr/libexec)
 install(FILES xbatd.service DESTINATION /etc/systemd/system)
