@@ -182,13 +182,16 @@ watch(
         () => props.defaultMetric,
         () => props.defaultLevel
     ],
-    () => {
-        // do not set defaults if fullscreen or group/metric/level is already set to prevent overwrite
-        if (props.fullscreen || form.group || form.metric || form.level) return;
+    ([group, metric, level]) => {
+        // Preserve existing selections and fullscreen graph state.
+        if (props.fullscreen || form.group || form.metric) return;
 
-        form.group = props.defaultGroup;
-        form.metric = props.defaultMetric;
-        form.level = props.defaultLevel;
+        // Wait until a complete default graph configuration is available.
+        if (!group || !metric || !level) return;
+
+        form.group = group;
+        form.metric = metric;
+        form.level = level;
     },
     { immediate: true }
 );
