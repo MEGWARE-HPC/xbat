@@ -19,7 +19,7 @@ LimitNOFILE=65536
 
 # LD_LIBRARY_PATH for liblikwid and PATH for likwid-accessD binary
 ExecStartPre=sysctl -w kernel.sched_rt_runtime_us=-1
-ExecStart=/bin/bash -c "PATH=$PATH:/usr/local/share/xbatd/sbin LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/lib64:/usr/local/share/xbatd/lib:/usr/local/share/xbatd/lib64 chrt -r 99 /usr/local/bin/xbatd"
+ExecStart=/bin/bash -c "PATH=$PATH:/usr/local/share/xbatd/sbin LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/lib64:/usr/local/share/xbatd/lib:/usr/local/share/xbatd/lib64 chrt -r 99 /usr/libexec/xbatd"
 
 # Alternative for chrt that does not work as reliably as the above
-#ExecStart=/bin/bash -c "PATH=$PATH:/usr/local/share/xbatd/sbin LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/lib64:/usr/local/share/xbatd/lib:/usr/local/share/xbatd/lib64 /usr/bin/nice -n -20 /usr/local/bin/xbatd"
+#ExecStart=/bin/bash -c "PATH=$PATH:/usr/local/share/xbatd/sbin LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/lib64:/usr/local/share/xbatd/lib:/usr/local/share/xbatd/lib64 /usr/bin/nice -n -20 /usr/libexec/xbatd"
