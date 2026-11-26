@@ -261,8 +261,6 @@ const state = reactive({
     showCompareDialog: false,
     showRooflineDialog: false,
     selectedJob: null,
-    noData: false,
-    visitedJobs: [],
     refreshHandler: null
 });
 
@@ -386,9 +384,12 @@ const selectedDetailsRevision = computed(() =>
 );
 
 if (jobs.value.length) {
-    state.selectedJob =
-        benchmark.value.jobIds?.toSorted((a, b) => a - b)[0] ??
-        jobs.value[0].jobId;
+    const availableJobIds = jobs.value
+        .map((job) => Number(job.jobId))
+        .filter(Number.isFinite)
+        .sort((a, b) => a - b);
+
+    state.selectedJob = availableJobIds[0] ?? null;
 }
 
 const metricsCache = useJobResourceCache(
