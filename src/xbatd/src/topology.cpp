@@ -13,6 +13,9 @@ int Topology::getCpuTopology(cpuTopology &topo) {
         return 1;
     }
 
+    // topo inital
+    topo = {};
+
     CpuInfo_t cpuInfo = get_cpuInfo();
 
     topo.name = cpuInfo->name;
