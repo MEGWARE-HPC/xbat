@@ -13,7 +13,7 @@
                     : null
             "
             :refreshPaused="refreshPaused"
-            @refresh="refreshData"
+            @refresh="refreshBenchmark()"
         ></BenchmarkSidebar>
         <v-container fluid>
             <!-- TODO using v-main here causes hydration mismatch -->
@@ -134,6 +134,7 @@
                     <BenchmarkOutput
                         ref="benchmarkOutputRef"
                         :job="currentJob"
+                        :detailsRevision="selectedDetailsRevision"
                         :visible="state.showOutput"
                     ></BenchmarkOutput>
                 </div>
@@ -182,7 +183,7 @@
                                 >
                                     <GraphWrapper
                                         :jobIds="[jobId]"
-                                        :metrics="metrics?.[jobId] || {}"
+                                        :metrics="currentMetrics"
                                         :nodes="nodeInfo"
                                         :defaultGroup="
                                             defaultGraphs?.[id]?.['group']
@@ -239,7 +240,7 @@
     </div>
 </template>
 <script setup>
-import { range } from "~/utils/misc";
+import { getJobState, range } from "~/utils/misc";
 const { $api, $store, $graphStore } = useNuxtApp();
 
 definePageMeta({
@@ -260,8 +261,6 @@ const state = reactive({
     showCompareDialog: false,
     showRooflineDialog: false,
     selectedJob: null,
-    noData: false,
-    visitedJobs: [],
     refreshHandler: null
 });
 
@@ -279,9 +278,8 @@ useSeoMeta({
     description: "xbat benchmark results"
 });
 
-const metrics = ref({});
-const metricsCache = ref({}); // cache raw api responses for metrics call
-const runNr = computed(() => parseInt(route.params.id) || 0);
+const runNr = ref(Number.parseInt(route.params.id, 10) || 0);
+let disposed = false;
 const defaultGraphs = ref([]);
 
 const setDefaultGraphs = (_metrics) => {
@@ -309,20 +307,24 @@ const setDefaultGraphs = (_metrics) => {
     }
 };
 
-const { data, refresh: refreshData } = await useAsyncData(
-    async () => {
-        const [b, j] = await Promise.all([
-            $api.benchmarks.get(runNr.value),
-            $api.jobs.get(runNr.value)
-        ]);
-        return {
-            benchmark: b.data,
-            jobs: j?.data ?? []
-        };
-    },
+const {
+    data,
+    error: refreshDataError,
+    refresh: refreshData
+} = await useAsyncData(`benchmark-data:${runNr.value}`, async () => {
+    const [benchmarkResult, jobsResult] = await Promise.allSettled([
+        $api.benchmarks.get(runNr.value),
+        $api.jobs.get(runNr.value)
+    ]);
 
-    { watch: [runNr] }
-);
+    if (benchmarkResult.status === "rejected") throw benchmarkResult.reason;
+    if (jobsResult.status === "rejected") throw jobsResult.reason;
+
+    return {
+        benchmark: benchmarkResult.value?.data,
+        jobs: jobsResult.value?.data ?? []
+    };
+});
 
 if (
     !data.value?.benchmark ||
@@ -335,49 +337,83 @@ if (
     });
 }
 
-if (data.value.jobs.length && !state.refreshHandler)
-    state.selectedJob = data.value.jobs[0].jobId;
+const benchmark = computed((previous) => data.value?.benchmark ?? previous);
+const jobs = computed((previous) => data.value?.jobs ?? previous ?? []);
+const terminalStates = new Set([
+    "done",
+    "failed",
+    "canceled",
+    "cancelled",
+    "timeout",
+    "deadline"
+]);
+const jobLifecycles = shallowReactive({});
 
-const { data: jobMetrics, refresh: refreshMetrics } = await useAsyncData(
-    async () => {
-        if (!state.selectedJob) return {};
-
-        // if already loaded and not in refresh mode return cached data
-        if (
-            state.selectedJob in metricsCache.value &&
-            Object.keys(metricsCache.value[state.selectedJob]).length &&
-            !state.refreshHandler
-        ) {
-            return metricsCache.value[state.selectedJob];
-        }
-
-        return await $api.metrics.get(state.selectedJob);
-    },
-    { watch: [() => state.selectedJob] }
-);
+const getJobPhase = (job) => {
+    const states = job.jobInfo?.jobState ?? [];
+    if (states.includes("PENDING") || states.includes("RUNNING"))
+        return "active";
+    if (terminalStates.has(getJobState(states).value)) return "terminal";
+    return null;
+};
 
 watch(
-    jobMetrics,
-    (v) => {
-        if (!Object.keys(v).length) {
-            state.noData = true;
-            return;
+    jobs,
+    (items) => {
+        for (const job of items) {
+            const id = Number(job.jobId);
+            const phase = getJobPhase(job);
+            if (!id || !phase) continue;
+
+            const previous = jobLifecycles[id];
+            if (previous?.phase === phase) continue;
+
+            // Change the cache revision on completion or requeue.
+            const revision = previous
+                ? previous.revision + 1
+                : Number(phase === "terminal");
+            jobLifecycles[id] = { phase, revision };
         }
-
-        metricsCache.value[state.selectedJob] = v;
-        metrics.value[state.selectedJob] = v.metrics;
-        state.noData = !Object.keys(v.metrics).length || !v.nodes.length;
-
-        // set default graphs if not in refresh mode
-        if (!state.refreshHandler || !defaultGraphs.value.length)
-            setDefaultGraphs(v.metrics);
-
-        // nextTick(() => {
-        //     fetchPower(state.selectedJob, job);
-        // });
     },
-    { immediate: true, deep: true }
+    { immediate: true, flush: "sync" }
 );
+
+const getDetailsRevision = (id) => jobLifecycles[id]?.revision ?? 0;
+const selectedDetailsRevision = computed(() =>
+    getDetailsRevision(Number(state.selectedJob))
+);
+
+if (jobs.value.length) {
+    const availableJobIds = jobs.value
+        .map((job) => Number(job.jobId))
+        .filter(Number.isFinite)
+        .sort((a, b) => a - b);
+
+    state.selectedJob = availableJobIds[0] ?? null;
+}
+
+const metricsCache = useJobResourceCache(
+    (id) => $api.metrics.get(id),
+    (id, revision) => {
+        if (!disposed && getDetailsRevision(id) === revision) {
+            $graphStore.bustCache([id]);
+        }
+    }
+);
+
+const currentMetrics = computed(
+    () => metricsCache.entries[Number(state.selectedJob)]?.value?.metrics ?? {}
+);
+watch(currentMetrics, setDefaultGraphs, { immediate: true });
+
+const initialJobId = Number(state.selectedJob);
+if (initialJobId) {
+    await metricsCache
+        .load(initialJobId, selectedDetailsRevision.value)
+        .catch((error) =>
+            console.error("Failed to load initial job metrics:", error)
+        );
+}
 
 // TODO maybe load at later stage and cut down on data
 // lazy currently does not work as benchmark data is needed right away
@@ -397,9 +433,6 @@ const currentJob = computed(() => {
     return jobsById.value[state.selectedJob] || {};
 });
 
-const benchmark = computed(() => data.value.benchmark);
-const jobs = computed(() => data.value.jobs);
-
 const { invalidBenchmark } = useBenchmarks({
     runNr,
     benchmarks: generalData.value.benchmarks
@@ -411,7 +444,7 @@ const { jobItems, jobsById, jobIds } = useJobs({
     itemOrder: "asc"
 });
 
-const { jobState, jobId, jobRunning } = useJob(currentJob, benchmark);
+const { jobId, jobRunning } = useJob(currentJob, benchmark);
 
 const { nodeInfo } = useNodes({
     jobs,
@@ -432,104 +465,125 @@ const showRoofline = () => {
     });
 };
 
-const energy = ref({});
+const energyCache = useJobResourceCache((id) =>
+    $api.measurements.getEnergy(id)
+);
+const energy = computed(() => {
+    const value = energyCache.entries[jobId.value]?.value;
+    return value ? { [jobId.value]: value } : {};
+});
 
-const fetchEnergy = async (jobId) => {
-    const energyData = await $api.measurements.getEnergy(jobId);
-    energy.value[jobId] = energyData;
-};
-
-// reset selection and visited jobs
 watch(
     jobItems,
-    (v) => {
-        if (!v.length || state.refreshHandler) return;
-        state.visitedJobs = [];
-        state.selectedJob = v[0].value;
-    },
-    {
-        immediate: true
-    }
-);
+    (items) => {
+        if (!items.length) return;
 
-watch(
-    () => state.selectedJob,
-    (v) => {
-        if (!state.visitedJobs.includes(v) && v) {
-            fetchEnergy(v);
-            state.visitedJobs.push(v);
-        }
-    },
-    {
-        immediate: true
-    }
-);
-
-watch(
-    runNr,
-    () => {
-        $store.benchmarkNr = runNr.value;
+        const selected = items.find(
+            ({ value }) => Number(value) === Number(state.selectedJob)
+        );
+        state.selectedJob = selected?.value ?? items[0].value;
     },
     { immediate: true }
 );
 
 const benchmarkOutputRef = ref(null);
 
-const refreshAll = async () => {
-    let handlers = [refreshData(), refreshMetrics(), fetchEnergy(jobId.value)];
+const loadJobDetails = (id, revision, force = false) => {
+    const reportError = (resource) => (error) =>
+        console.error(`Failed to load ${resource} for job ${id}:`, error);
 
-    if (benchmarkOutputRef.value)
-        handlers.push(benchmarkOutputRef.value.refresh());
+    void metricsCache.load(id, revision, force).catch(reportError("metrics"));
+    void energyCache.load(id, revision, force).catch(reportError("energy"));
 
-    await Promise.all(handlers);
-
-    $graphStore.bustCache([jobId.value]);
+    if (force && benchmarkOutputRef.value) {
+        void benchmarkOutputRef.value
+            .refresh(id, revision)
+            .catch(reportError("output"));
+    }
 };
 
-const terminalStates = ["done", "failed", "canceled", "cancelled", "timeout"];
-
 watch(
-    [() => jobState.value?.value, () => benchmark.value?.state],
-    ([newJobState, newBenchmarkState]) => {
-        if (
-            terminalStates.includes(newJobState) &&
-            terminalStates.includes(newBenchmarkState)
-        ) {
-            clearInterval(state.refreshHandler);
-            state.refreshHandler = null;
-            if (newJobState == "done") refreshAll();
-
-            return;
-        }
+    [jobId, selectedDetailsRevision],
+    ([id, revision]) => {
+        if (id) loadJobDetails(id, revision);
     },
     { immediate: true }
 );
 
-watch(
-    [jobId, refreshPaused],
-    async () => {
-        if (process.server) return;
+const REFRESH_INTERVAL = 30_000;
+const shouldPollJob = computed(() =>
+    Boolean(jobId.value && jobRunning.value && !refreshPaused.value)
+);
+const shouldPoll = computed(
+    () =>
+        ["pending", "running"].includes(benchmark.value?.state) ||
+        shouldPollJob.value
+);
 
-        if (!jobRunning.value || refreshPaused.value) {
-            if (state.refreshHandler) {
-                clearInterval(state.refreshHandler);
-                state.refreshHandler = null;
+let metadataRefresh = null;
+
+const refreshBenchmark = async (poll = false) => {
+    if (poll && metadataRefresh) return;
+
+    // A sidebar edit needs a fresh read after any older request.
+    while (metadataRefresh) await metadataRefresh;
+    if (disposed) return;
+
+    metadataRefresh = (async () => {
+        try {
+            await refreshData();
+            if (refreshDataError.value) throw refreshDataError.value;
+            await nextTick();
+
+            if (!disposed && poll && shouldPollJob.value) {
+                loadJobDetails(
+                    jobId.value,
+                    selectedDetailsRevision.value,
+                    true
+                );
             }
-            return;
+        } catch (error) {
+            console.error("Failed to refresh benchmark:", error);
         }
-        if (!state.refreshHandler) {
-            state.refreshHandler = setInterval(async () => {
-                await refreshAll();
-            }, 30000);
+    })();
+
+    try {
+        await metadataRefresh;
+    } finally {
+        metadataRefresh = null;
+    }
+};
+
+const stopPolling = () => {
+    if (state.refreshHandler === null) return;
+    clearInterval(state.refreshHandler);
+    state.refreshHandler = null;
+};
+
+watch(
+    shouldPoll,
+    (enabled) => {
+        if (import.meta.server) return;
+
+        if (!enabled) {
+            stopPolling();
+        } else if (state.refreshHandler === null) {
+            state.refreshHandler = setInterval(
+                () => void refreshBenchmark(true),
+                REFRESH_INTERVAL
+            );
         }
     },
     { immediate: true }
 );
 
-onBeforeRouteLeave((to, from, next) => {
-    $store.benchmarkNr = null;
-    // $graphStore.cacheClearEvent.reset();
-    if (state.refreshHandler) clearInterval(state.refreshHandler);
-    next();
+onMounted(() => {
+    $store.benchmarkNr = runNr.value;
+});
+
+onBeforeUnmount(() => {
+    disposed = true;
+    stopPolling();
+    if ($store.benchmarkNr === runNr.value) $store.benchmarkNr = null;
 });
 </script>

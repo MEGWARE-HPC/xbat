@@ -29,6 +29,7 @@ This release contains many breaking changes and improvements. Please refer to th
 - improved xbatd for el8 and el9
 - upgraded LIKWID to v5.5.2 (#247)
 - relocated the xbatd binary to avoid accidental direct execution by users (#185)
+- improved benchmark and job refresh management and optimized job resource caching
 
 ### Fixed
 
@@ -40,6 +41,8 @@ This release contains many breaking changes and improvements. Please refer to th
 - improved benchmark submission experience and fix disabled activator (#253)
 - standardized Home folder naming and labels in the folder system (#225)
 - incorrect LIKWID DRAM benchmark working-set sizes caused by uninitialized CPU cache totals (#264)
+- unexpected job selection resets when switching between jobs within a benchmark (#187)
+- potential stale data and race conditions during asynchronous job data loading (#187)
 
 ## v1.3.0 - 2026-05-08
 
