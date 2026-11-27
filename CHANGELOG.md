@@ -43,6 +43,7 @@ This release contains many breaking changes and improvements. Please refer to th
 - incorrect LIKWID DRAM benchmark working-set sizes caused by uninitialized CPU cache totals (#264)
 - unexpected job selection resets when switching between jobs within a benchmark (#187)
 - potential stale data and race conditions during asynchronous job data loading (#187)
+- delayed graph initialization for pending jobs (#273)
 
 ## v1.3.0 - 2026-05-08
 
